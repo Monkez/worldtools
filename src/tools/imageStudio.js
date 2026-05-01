@@ -1901,8 +1901,10 @@ export function renderImageStudio(container) {
             if (p.y > maxY) maxY = p.y;
         });
 
-        const modeBtn = container.querySelector('.is-arrow-mode.active');
-        const arrowMode = modeBtn ? modeBtn.getAttribute('data-mode') : 'single';
+        // Force default mode to none (normal line) on creation
+        const arrowMode = 'none';
+        container.querySelectorAll('.is-arrow-mode').forEach(b => b.classList.toggle('active', b.getAttribute('data-mode') === 'none'));
+        
         const lineStyle = container.querySelector('#is-line-style').value;
         const arrowHead = container.querySelector('#is-arrowhead-style').value;
         
@@ -2246,6 +2248,7 @@ export function renderImageStudio(container) {
                             h = Math.round(h * scale);
                         }
                         vectorShapes.push({
+                            id: nextShapeId(),
                             type: 'image',
                             img: img,
                             x: Math.round(canvas.width/2 - w/2),
@@ -2566,6 +2569,7 @@ export function renderImageStudio(container) {
             }
             
             vectorShapes.push({
+                id: nextShapeId(),
                 type: 'image',
                 img: tempCanvas,
                 x: Math.round(canvas.width/2 - w/2),
