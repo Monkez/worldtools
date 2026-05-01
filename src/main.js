@@ -81,7 +81,6 @@ export const tools = [
         category: 'Test Devices',
         render: renderAudioTest
     },
-    },
     {
         id: 'device-info',
         name: 'Device Info',
