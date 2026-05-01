@@ -21,7 +21,6 @@ import { renderPromptHelper } from './tools/promptHelper.js'
 import { renderCalculator } from './tools/calculator.js'
 import { renderScreenTest } from './tools/screenTest.js'
 import { renderAudioTest } from './tools/audioTest.js'
-import { renderBatteryTest } from './tools/batteryTest.js'
 import { renderDeviceInfo } from './tools/deviceInfo.js'
 import { AIClient } from './utils/aiClient.js'
 
@@ -82,13 +81,6 @@ export const tools = [
         category: 'Test Devices',
         render: renderAudioTest
     },
-    {
-        id: 'battery-test',
-        name: 'Battery Status',
-        icon: 'bx-battery',
-        description: 'Check battery health, level, and charging status.',
-        category: 'Test Devices',
-        render: renderBatteryTest
     },
     {
         id: 'device-info',
