@@ -260,6 +260,108 @@ export function renderImageStudio(container) {
     let currentPathPoints = []; // for brush path recording
     let currentPolyPoints = []; // for polyline arrow tools
     let draggingControlPointIdx = -1; // index of control point being dragged
+    let shapeIdCounter = 0;
+    
+    function nextShapeId() { return 'shape_' + (++shapeIdCounter); }
+    
+    // Get snap/connection points for a shape (like PowerPoint anchor points)
+    function getSnapPoints(s) {
+        if (!s || s.type === 'polyarrow' || s.type === 'path') return [];
+        const cx = s.x + (s.x2 - s.x) / 2;
+        const cy = s.y + (s.y2 - s.y) / 2;
+        const hw = Math.abs(s.x2 - s.x) / 2;
+        const hh = Math.abs(s.y2 - s.y) / 2;
+        return [
+            { x: cx, y: cy - hh, name: 'top' },      // 0: top center
+            { x: cx + hw, y: cy, name: 'right' },     // 1: right center
+            { x: cx, y: cy + hh, name: 'bottom' },    // 2: bottom center
+            { x: cx - hw, y: cy, name: 'left' },      // 3: left center
+            { x: cx - hw, y: cy - hh, name: 'tl' },   // 4: top-left
+            { x: cx + hw, y: cy - hh, name: 'tr' },   // 5: top-right
+            { x: cx + hw, y: cy + hh, name: 'br' },   // 6: bottom-right
+            { x: cx - hw, y: cy + hh, name: 'bl' },   // 7: bottom-left
+        ];
+    }
+    
+    // Find nearest snap point across all shapes within threshold
+    function findNearestSnapPoint(pos, excludeShapeIds, threshold) {
+        threshold = threshold || 20;
+        let best = null;
+        let bestDist = threshold;
+        for (const s of vectorShapes) {
+            if (!s.id || (excludeShapeIds && excludeShapeIds.includes(s.id))) continue;
+            const pts = getSnapPoints(s);
+            for (let i = 0; i < pts.length; i++) {
+                const d = Math.hypot(pos.x - pts[i].x, pos.y - pts[i].y);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = { shapeId: s.id, snapIdx: i, x: pts[i].x, y: pts[i].y };
+                }
+            }
+        }
+        return best;
+    }
+    
+    // Update polyarrow endpoints connected to shapes
+    function updateConnections() {
+        for (const arrow of vectorShapes) {
+            if (arrow.type !== 'polyarrow' || !arrow.connections) continue;
+            const conn = arrow.connections;
+            if (conn.start) {
+                const target = vectorShapes.find(s => s.id === conn.start.shapeId);
+                if (target) {
+                    const pts = getSnapPoints(target);
+                    if (pts[conn.start.snapIdx]) {
+                        const sp = pts[conn.start.snapIdx];
+                        // Update first point
+                        if (arrow.originalPoints && arrow.originalPoints.length > 0) {
+                            arrow.originalPoints[0].x = sp.x;
+                            arrow.originalPoints[0].y = sp.y;
+                        }
+                        if (arrow.points && arrow.points.length > 0) {
+                            arrow.points[0].x = sp.x;
+                            arrow.points[0].y = sp.y;
+                        }
+                    }
+                }
+            }
+            if (conn.end) {
+                const target = vectorShapes.find(s => s.id === conn.end.shapeId);
+                if (target) {
+                    const pts = getSnapPoints(target);
+                    if (pts[conn.end.snapIdx]) {
+                        const sp = pts[conn.end.snapIdx];
+                        const lastIdx = (arrow.originalPoints || arrow.points).length - 1;
+                        if (arrow.originalPoints && lastIdx >= 0) {
+                            arrow.originalPoints[lastIdx].x = sp.x;
+                            arrow.originalPoints[lastIdx].y = sp.y;
+                        }
+                        if (arrow.points && lastIdx >= 0) {
+                            arrow.points[arrow.points.length - 1].x = sp.x;
+                            arrow.points[arrow.points.length - 1].y = sp.y;
+                        }
+                    }
+                }
+            }
+            // Re-apply smooth if connected and smoothed
+            if ((conn.start || conn.end) && arrow.originalPoints && arrow.smoothLevel) {
+                applySmoothToShape(arrow, arrow.smoothLevel);
+            }
+            // Recalculate bounding box
+            if (arrow.points && arrow.points.length > 1) {
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                arrow.points.forEach(p => {
+                    if (p.x < minX) minX = p.x;
+                    if (p.y < minY) minY = p.y;
+                    if (p.x > maxX) maxX = p.x;
+                    if (p.y > maxY) maxY = p.y;
+                });
+                const sw = arrow.strokeWidth || 5;
+                arrow.x = minX - sw; arrow.y = minY - sw;
+                arrow.x2 = maxX + sw; arrow.y2 = maxY + sw;
+            }
+        }
+    }
     
     let history = [];
     let historyStep = -1;
@@ -1296,8 +1398,26 @@ export function renderImageStudio(container) {
 
         // Polyline arrow tools: click to add points
         if (currentTool === 'polyarrow') {
-            currentPolyPoints.push({ x: pos.x, y: pos.y });
+            // Check for snap to shape connection point
+            const snap = findNearestSnapPoint(pos, [], 20);
+            const pt = snap ? { x: snap.x, y: snap.y } : { x: pos.x, y: pos.y };
+            
+            // Store snap info for connections
+            if (currentPolyPoints.length === 0 && snap) {
+                // First point snaps — remember start connection
+                currentPolyPoints._startSnap = snap;
+            }
+            
+            currentPolyPoints.push(pt);
             isDrawing = false;
+            
+            // If snapping to a point and we already have at least 2 points, auto-finish
+            if (snap && currentPolyPoints.length >= 2) {
+                currentPolyPoints._endSnap = snap;
+                finalizePolyArrow();
+                return;
+            }
+            
             // Live preview
             drawSelectionOverlay();
             if (currentPolyPoints.length > 1) {
@@ -1458,9 +1578,27 @@ export function renderImageStudio(container) {
         if (currentTool === 'select') {
             // Handle control point dragging
             if (activeVectorShape && draggingControlPointIdx >= 0 && activeVectorShape.originalPoints) {
+                let currentPos = { x: pos.x, y: pos.y };
+                
+                // Only snap first and last points
+                if (draggingControlPointIdx === 0 || draggingControlPointIdx === activeVectorShape.originalPoints.length - 1) {
+                    const snap = findNearestSnapPoint(pos, [activeVectorShape.id], 20);
+                    if (snap) {
+                        currentPos.x = snap.x;
+                        currentPos.y = snap.y;
+                    }
+                    
+                    if (!activeVectorShape.connections) activeVectorShape.connections = {};
+                    if (draggingControlPointIdx === 0) {
+                        activeVectorShape.connections.start = snap || null;
+                    } else {
+                        activeVectorShape.connections.end = snap || null;
+                    }
+                }
+
                 const cp = activeVectorShape.originalPoints[draggingControlPointIdx];
-                cp.x = pos.x;
-                cp.y = pos.y;
+                cp.x = currentPos.x;
+                cp.y = currentPos.y;
                 // Recalculate bounding box
                 let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
                 activeVectorShape.originalPoints.forEach(p => {
@@ -1477,6 +1615,29 @@ export function renderImageStudio(container) {
                 // Re-apply smooth
                 applySmoothToShape(activeVectorShape, activeVectorShape.smoothLevel || 5);
                 drawSelectionOverlay();
+
+                // Draw visual snap indicators if snapping start/end points
+                if (draggingControlPointIdx === 0 || draggingControlPointIdx === activeVectorShape.originalPoints.length - 1) {
+                    for (const s of vectorShapes) {
+                        if (s.type === 'polyarrow' || s.type === 'path' || !s.id || s.id === activeVectorShape.id) continue;
+                        const pts = getSnapPoints(s);
+                        let anyNear = false;
+                        for (const p of pts) {
+                            if (Math.hypot(pos.x - p.x, pos.y - p.y) < 40) { anyNear = true; break; }
+                        }
+                        if (!anyNear) continue;
+                        for (const p of pts) {
+                            const d = Math.hypot(pos.x - p.x, pos.y - p.y);
+                            octx.beginPath();
+                            octx.arc(p.x, p.y, d < 20 ? 6 : 4, 0, Math.PI * 2);
+                            octx.fillStyle = d < 20 ? '#22c55e' : 'rgba(100,200,255,0.6)';
+                            octx.fill();
+                            octx.strokeStyle = '#fff';
+                            octx.lineWidth = 1.5;
+                            octx.stroke();
+                        }
+                    }
+                }
                 return;
             }
             if (activeVectorShape && resizingHandle) {
@@ -1519,6 +1680,7 @@ export function renderImageStudio(container) {
                     activeVectorShape.y2 += dy;
                 }
                 startX = pos.x; startY = pos.y;
+                updateConnections();
                 drawSelectionOverlay();
                 return;
             }
@@ -1645,6 +1807,27 @@ export function renderImageStudio(container) {
                     octx.stroke();
                     octx.setLineDash([]);
                     octx.globalAlpha = 1;
+                    
+                    // Show snap points on nearby shapes
+                    for (const s of vectorShapes) {
+                        if (s.type === 'polyarrow' || s.type === 'path' || !s.id) continue;
+                        const pts = getSnapPoints(s);
+                        let anyNear = false;
+                        for (const p of pts) {
+                            if (Math.hypot(pos.x - p.x, pos.y - p.y) < 40) { anyNear = true; break; }
+                        }
+                        if (!anyNear) continue;
+                        for (const p of pts) {
+                            const d = Math.hypot(pos.x - p.x, pos.y - p.y);
+                            octx.beginPath();
+                            octx.arc(p.x, p.y, d < 20 ? 6 : 4, 0, Math.PI * 2);
+                            octx.fillStyle = d < 20 ? '#22c55e' : 'rgba(100,200,255,0.6)';
+                            octx.fill();
+                            octx.strokeStyle = '#fff';
+                            octx.lineWidth = 1.5;
+                            octx.stroke();
+                        }
+                    }
                 }
             }
             return;
@@ -1717,15 +1900,29 @@ export function renderImageStudio(container) {
             if (p.x > maxX) maxX = p.x;
             if (p.y > maxY) maxY = p.y;
         });
+
+        const modeBtn = container.querySelector('.is-arrow-mode.active');
+        const arrowMode = modeBtn ? modeBtn.getAttribute('data-mode') : 'single';
+        const lineStyle = container.querySelector('#is-line-style').value;
+        const arrowHead = container.querySelector('#is-arrowhead-style').value;
         
         vectorShapes.push({
+            id: nextShapeId(),
             type: currentTool,
             points: currentPolyPoints.slice(),
+            originalPoints: currentPolyPoints.slice(),
             x: minX - shapeStroke, y: minY - shapeStroke,
             x2: maxX + shapeStroke, y2: maxY + shapeStroke,
             stroke: shapeColor,
             strokeWidth: shapeStroke,
-            rotation: 0, flipH: false, flipV: false
+            rotation: 0, flipH: false, flipV: false,
+            arrowMode: arrowMode,
+            lineStyle: lineStyle,
+            arrowHead: arrowHead,
+            connections: {
+                start: currentPolyPoints._startSnap || null,
+                end: currentPolyPoints._endSnap || null
+            }
         });
         activeVectorShape = vectorShapes[vectorShapes.length - 1];
         currentPolyPoints = [];
@@ -1914,6 +2111,7 @@ export function renderImageStudio(container) {
             const shapeColor = container.querySelector('#is-shape-color').value;
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
             vectorShapes.push({
+                id: nextShapeId(),
                 type: currentTool,
                 x: startX, y: startY, x2: pos.x, y2: pos.y,
                 stroke: shapeColor,
