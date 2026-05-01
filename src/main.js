@@ -18,6 +18,7 @@ import { renderMediaEditor } from './tools/mediaEditor.js'
 import { renderImageStudio } from './tools/imageStudio.js'
 import { renderAiDetector } from './tools/aiDetector.js'
 import { renderPromptHelper } from './tools/promptHelper.js'
+import { renderCalculator } from './tools/calculator.js'
 import { AIClient } from './utils/aiClient.js'
 
 // List of all tools
@@ -52,6 +53,14 @@ export const tools = [
         description: 'Simple and elegant stopwatch.',
         category: 'Utilities',
         render: renderStopwatch
+    },
+    {
+        id: 'calculator',
+        name: 'Smart Calculator',
+        icon: 'bx-calculator',
+        description: 'Professional calculator with history and smart expressions.',
+        category: 'Utilities',
+        render: renderCalculator
     },
     {
         id: 'json-formatter',
