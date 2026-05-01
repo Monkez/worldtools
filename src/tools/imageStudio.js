@@ -1233,13 +1233,18 @@ export function renderImageStudio(container) {
     canvasContainer.addEventListener('wheel', (e) => {
         if (e.ctrlKey) {
             e.preventDefault();
-            let zoom = parseInt(zoomSlider.value);
-            zoom += e.deltaY > 0 ? -15 : 15;
-            zoom = Math.max(10, Math.min(400, zoom));
-            zoomSlider.value = zoom;
-            zoomSlider.dispatchEvent(new Event('input'));
+            let zoom = parseFloat(zoomSlider.value);
+            // Scale the zoom by deltaY instead of fixed increments for trackpad/mouse smoothness
+            // Typical mouse notch is ~100 deltaY, giving ~10% zoom change. Trackpads give smaller deltas.
+            zoom -= e.deltaY * 0.1;
+            zoom = Math.max(10, Math.min(400, Math.round(zoom)));
+            
+            if (zoomSlider.value != zoom) {
+                zoomSlider.value = zoom;
+                zoomSlider.dispatchEvent(new Event('input'));
+            }
         }
-    });
+    }, { passive: false });
 
     // Mouse Events
     function getMousePos(evt) {
