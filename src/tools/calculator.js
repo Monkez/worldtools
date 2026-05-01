@@ -19,45 +19,52 @@ export function renderCalculator(container) {
 
                 <!-- Keypad -->
                 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; flex: 1;">
-                    <button class="calc-btn sci" data-val="sin(">sin</button>
-                    <button class="calc-btn sci" data-val="cos(">cos</button>
-                    <button class="calc-btn sci" data-val="tan(">tan</button>
-                    <button class="calc-btn action" data-val="C" style="color: #ef4444;">C</button>
-                    <button class="calc-btn action" data-val="BACKSPACE" style="color: #ef4444;">⌫</button>
+                    <!-- Row 1: Scientific -->
+                    <button class="calc-btn" data-val="sin(">sin</button>
+                    <button class="calc-btn" data-val="cos(">cos</button>
+                    <button class="calc-btn" data-val="tan(">tan</button>
+                    <button class="calc-btn" data-val="(">(</button>
+                    <button class="calc-btn" data-val=")">)</button>
 
-                    <button class="calc-btn sci" data-val="ln(">ln</button>
-                    <button class="calc-btn sci" data-val="log(">log</button>
-                    <button class="calc-btn sci" data-val="π">π</button>
-                    <button class="calc-btn action" data-val="(">(</button>
-                    <button class="calc-btn action" data-val=")">)</button>
+                    <!-- Row 2: Scientific -->
+                    <button class="calc-btn" data-val="√(">√</button>
+                    <button class="calc-btn" data-val="^2">x²</button>
+                    <button class="calc-btn" data-val="^">xʸ</button>
+                    <button class="calc-btn" data-val="log(">log</button>
+                    <button class="calc-btn" data-val="ln(">ln</button>
 
-                    <button class="calc-btn sci" data-val="√(">√</button>
-                    <button class="calc-btn sci" data-val="^2">x²</button>
-                    <button class="calc-btn sci" data-val="^">xʸ</button>
-                    <button class="calc-btn sci" data-val="!">x!</button>
-                    <button class="calc-btn op" data-val="/" style="color: var(--accent-color);">÷</button>
+                    <!-- Row 3: Scientific -->
+                    <button class="calc-btn" data-val="π">π</button>
+                    <button class="calc-btn" data-val="e">e</button>
+                    <button class="calc-btn" data-val="!">x!</button>
+                    <button class="calc-btn" data-val="E">EXP</button>
+                    <button class="calc-btn" data-val="Ans">Ans</button>
 
+                    <!-- Row 4: Numpad & Actions -->
                     <button class="calc-btn num" data-val="7">7</button>
                     <button class="calc-btn num" data-val="8">8</button>
                     <button class="calc-btn num" data-val="9">9</button>
-                    <button class="calc-btn action" data-val="%">%</button>
-                    <button class="calc-btn op" data-val="*" style="color: var(--accent-color);">×</button>
+                    <button class="calc-btn" data-val="C" style="color: #ef4444; font-weight: bold;">C</button>
+                    <button class="calc-btn" data-val="BACKSPACE" style="color: #ef4444; font-weight: bold;">⌫</button>
 
+                    <!-- Row 5: Numpad & Operators -->
                     <button class="calc-btn num" data-val="4">4</button>
                     <button class="calc-btn num" data-val="5">5</button>
                     <button class="calc-btn num" data-val="6">6</button>
-                    <button class="calc-btn sci" data-val="e">e</button>
-                    <button class="calc-btn op" data-val="-" style="color: var(--accent-color);">-</button>
+                    <button class="calc-btn op" data-val="*">×</button>
+                    <button class="calc-btn op" data-val="/">÷</button>
 
+                    <!-- Row 6: Numpad & Operators -->
                     <button class="calc-btn num" data-val="1">1</button>
                     <button class="calc-btn num" data-val="2">2</button>
                     <button class="calc-btn num" data-val="3">3</button>
-                    <button class="calc-btn sci" data-val="E">EXP</button>
-                    <button class="calc-btn op" data-val="+" style="color: var(--accent-color);">+</button>
+                    <button class="calc-btn op" data-val="+">+</button>
+                    <button class="calc-btn op" data-val="-">-</button>
 
+                    <!-- Row 7: Numpad & Equals -->
                     <button class="calc-btn num" data-val="0" style="grid-column: span 2;">0</button>
                     <button class="calc-btn num" data-val=".">.</button>
-                    <button class="calc-btn sci" data-val="Ans">Ans</button>
+                    <button class="calc-btn" data-val="%">%</button>
                     <button class="calc-btn op" id="calc-eq" data-val="=" style="background: var(--accent-color); color: white; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">=</button>
                 </div>
             </div>
@@ -77,11 +84,11 @@ export function renderCalculator(container) {
 
         <style>
             .calc-btn {
-                background: #333333;
-                border: 1px solid rgba(255,255,255,0.05);
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.05);
                 border-radius: 8px;
-                color: #fff;
-                font-size: 18px;
+                color: #ccc;
+                font-size: 15px;
                 font-weight: 500;
                 cursor: pointer;
                 transition: all 0.2s;
@@ -92,28 +99,28 @@ export function renderCalculator(container) {
                 user-select: none;
             }
             .calc-btn:hover {
-                background: #444444;
+                background: rgba(255, 255, 255, 0.1);
                 transform: translateY(-2px);
             }
             .calc-btn:active {
-                background: #555555;
+                background: rgba(255, 255, 255, 0.15);
                 transform: translateY(0);
             }
+            .calc-btn.num {
+                background: rgba(255, 255, 255, 0.12);
+                color: #fff;
+                font-size: 20px;
+            }
+            .calc-btn.num:hover {
+                background: rgba(255, 255, 255, 0.18);
+            }
             .calc-btn.op {
-                background: #2a2a35;
+                background: rgba(255, 255, 255, 0.08);
+                color: var(--accent-color);
                 font-size: 22px;
             }
             .calc-btn.op:hover {
-                background: #353545;
-            }
-            .calc-btn.sci {
-                background: #23232c;
-                font-size: 15px;
-                color: #aaa;
-            }
-            .calc-btn.sci:hover {
-                background: #2d2d3a;
-                color: #fff;
+                background: rgba(255, 255, 255, 0.14);
             }
             
             .calc-history-item {
