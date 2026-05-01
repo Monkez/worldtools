@@ -19,6 +19,10 @@ import { renderImageStudio } from './tools/imageStudio.js'
 import { renderAiDetector } from './tools/aiDetector.js'
 import { renderPromptHelper } from './tools/promptHelper.js'
 import { renderCalculator } from './tools/calculator.js'
+import { renderScreenTest } from './tools/screenTest.js'
+import { renderAudioTest } from './tools/audioTest.js'
+import { renderBatteryTest } from './tools/batteryTest.js'
+import { renderDeviceInfo } from './tools/deviceInfo.js'
 import { AIClient } from './utils/aiClient.js'
 
 // List of all tools
@@ -61,6 +65,38 @@ export const tools = [
         description: 'Professional calculator with history and smart expressions.',
         category: 'Utilities',
         render: renderCalculator
+    },
+    {
+        id: 'screen-test',
+        name: 'Screen Test',
+        icon: 'bx-desktop',
+        description: 'Check for dead pixels and screen bleeding.',
+        category: 'Test Devices',
+        render: renderScreenTest
+    },
+    {
+        id: 'audio-test',
+        name: 'Audio & Stereo Test',
+        icon: 'bx-headphone',
+        description: 'Test left/right channels and speaker frequency.',
+        category: 'Test Devices',
+        render: renderAudioTest
+    },
+    {
+        id: 'battery-test',
+        name: 'Battery Status',
+        icon: 'bx-battery',
+        description: 'Check battery health, level, and charging status.',
+        category: 'Test Devices',
+        render: renderBatteryTest
+    },
+    {
+        id: 'device-info',
+        name: 'Device Info',
+        icon: 'bx-info-circle',
+        description: 'View browser, OS, hardware, and network details.',
+        category: 'Test Devices',
+        render: renderDeviceInfo
     },
     {
         id: 'json-formatter',
@@ -212,7 +248,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filteredTools = tools.filter(t => !t.hidden && t.name.toLowerCase().includes(filter.toLowerCase()));
         
         // Define desired order of categories
-        const categoryOrder = ['AI Smart Tools', 'Design & Media', 'Developer Tools', 'Text & Content', 'Utilities', 'Other'];
+        const categoryOrder = ['AI Smart Tools', 'Design & Media', 'Developer Tools', 'Text & Content', 'Utilities', 'Test Devices', 'Other'];
         
         const categories = {};
         filteredTools.forEach(t => {
