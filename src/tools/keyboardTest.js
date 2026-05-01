@@ -1,7 +1,7 @@
 export function renderKeyboardTest(container) {
     container.innerHTML = `
         <div class="tool-header">
-            <h2><i class='bx bx-keyboard'></i> Full Keyboard Tester</h2>
+            <h2><i class='bx bxs-keyboard'></i> Full Keyboard Tester</h2>
             <p>Press any key. Keys will turn <span style="color:#22c55e">green</span> if working. Hold them to see them light up.</p>
         </div>
         

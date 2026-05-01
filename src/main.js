@@ -86,7 +86,7 @@ export const tools = [
     {
         id: 'keyboard-test',
         name: 'Keyboard Tester',
-        icon: 'bx-keyboard',
+        icon: 'bxs-keyboard',
         description: 'Test keys, modifiers, and view KeyCode properties.',
         category: 'Test Devices',
         render: renderKeyboardTest
