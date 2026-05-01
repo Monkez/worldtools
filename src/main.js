@@ -242,8 +242,18 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSidebarList();
 
     // Search filter
+    const clearSearchBtn = document.getElementById('clear-search');
     searchInput.addEventListener('input', (e) => {
-        renderSidebarList(e.target.value);
+        const val = e.target.value;
+        clearSearchBtn.style.display = val ? 'block' : 'none';
+        renderSidebarList(val);
+    });
+
+    clearSearchBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        clearSearchBtn.style.display = 'none';
+        renderSidebarList('');
+        searchInput.focus();
     });
 
     // Load initial tool

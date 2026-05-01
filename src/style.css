@@ -97,7 +97,7 @@ body {
 
 .search-box input {
   width: 100%;
-  padding: 12px 12px 12px 40px;
+  padding: 12px 36px 12px 40px;
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
@@ -111,6 +111,22 @@ body {
   outline: none;
   border-color: var(--accent-color);
   background-color: rgba(255, 255, 255, 0.08);
+}
+
+.search-box .clear-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  font-size: 20px;
+  cursor: pointer;
+  display: none;
+  transition: var(--transition);
+}
+
+.search-box .clear-icon:hover {
+  color: var(--text-primary);
 }
 
 .tool-list {
