@@ -105,6 +105,16 @@ export function renderImageStudio(container) {
                         <button class="is-btn-icon is-text-style" id="is-font-bold" title="Bold" style="font-weight: bold; font-size: 14px;">B</button>
                         <button class="is-btn-icon is-text-style" id="is-font-italic" title="Italic" style="font-style: italic; font-size: 14px;">I</button>
                         <button class="is-btn-icon is-text-style" id="is-font-underline" title="Underline" style="text-decoration: underline; font-size: 14px;">U</button>
+                        <div class="is-divider"></div>
+                        <span style="font-size: 11px; color: #888;">Style</span>
+                        <select id="is-text-render-style" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 80px; cursor: pointer;">
+                            <option value="normal">Normal</option>
+                            <option value="solid-bg">Solid Bg</option>
+                            <option value="outline">Outline</option>
+                            <option value="glow">Glow</option>
+                            <option value="shadow">Shadow</option>
+                        </select>
+                        <input type="color" id="is-text-bg-color" value="#000000" title="Background/Effect Color" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none; margin-left: 4px;">
                     </span>
                     <!-- Shape-specific controls -->
                     <span id="is-ctx-shape" style="display: none; contents;">
@@ -620,16 +630,67 @@ export function renderImageStudio(container) {
             if (s.fontItalic) fontStyle += 'italic ';
             if (s.fontBold) fontStyle += 'bold ';
             targetCtx.font = `${fontStyle}${s.fontSize}px ${s.fontFamily || 'Arial'}`;
-            targetCtx.fillStyle = s.stroke;
             targetCtx.textBaseline = 'top';
+            
+            const metrics = targetCtx.measureText(s.text);
+            const textWidth = metrics.width;
+            const textHeight = s.fontSize;
+            
+            // Effect background / glow
+            if (s.textStyle === 'solid-bg' || s.textStyle === 'shadow') {
+                targetCtx.save();
+                const padX = s.fontSize * 0.4;
+                const padY = s.fontSize * 0.2;
+                
+                if (s.textStyle === 'shadow') {
+                    targetCtx.shadowColor = 'rgba(0,0,0,0.5)';
+                    targetCtx.shadowBlur = s.fontSize * 0.2;
+                    targetCtx.shadowOffsetX = s.fontSize * 0.1;
+                    targetCtx.shadowOffsetY = s.fontSize * 0.1;
+                }
+                
+                targetCtx.fillStyle = s.textBgColor || '#000000';
+                const rx = s.x - padX, ry = s.y - padY, rw = textWidth + padX * 2, rh = textHeight + padY * 2, r = s.fontSize * 0.2;
+                targetCtx.beginPath();
+                targetCtx.moveTo(rx + r, ry);
+                targetCtx.lineTo(rx + rw - r, ry);
+                targetCtx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + r);
+                targetCtx.lineTo(rx + rw, ry + rh - r);
+                targetCtx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - r, ry + rh);
+                targetCtx.lineTo(rx + r, ry + rh);
+                targetCtx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - r);
+                targetCtx.lineTo(rx, ry + r);
+                targetCtx.quadraticCurveTo(rx, ry, rx + r, ry);
+                targetCtx.closePath();
+                targetCtx.fill();
+                targetCtx.restore();
+            } else if (s.textStyle === 'glow') {
+                targetCtx.save();
+                targetCtx.shadowColor = s.textBgColor || '#000000';
+                targetCtx.shadowBlur = s.fontSize * 0.4;
+                targetCtx.fillStyle = s.stroke;
+                targetCtx.fillText(s.text, s.x, s.y);
+                targetCtx.restore();
+            }
+            
+            targetCtx.fillStyle = s.stroke;
+            
+            // Effect outline
+            if (s.textStyle === 'outline') {
+                targetCtx.strokeStyle = s.textBgColor || '#000000';
+                targetCtx.lineWidth = s.fontSize * 0.12;
+                targetCtx.lineJoin = 'round';
+                targetCtx.strokeText(s.text, s.x, s.y);
+            }
+            
             targetCtx.fillText(s.text, s.x, s.y);
+            
             if (s.fontUnderline) {
-                const metrics = targetCtx.measureText(s.text);
                 targetCtx.beginPath();
                 targetCtx.strokeStyle = s.stroke;
                 targetCtx.lineWidth = Math.max(1, s.fontSize / 15);
                 targetCtx.moveTo(s.x, s.y + s.fontSize + 2);
-                targetCtx.lineTo(s.x + metrics.width, s.y + s.fontSize + 2);
+                targetCtx.lineTo(s.x + textWidth, s.y + s.fontSize + 2);
                 targetCtx.stroke();
             }
         } else if (s.type === 'path' && s.points && s.points.length > 1) {
@@ -862,6 +923,8 @@ export function renderImageStudio(container) {
                 container.querySelector('#is-font-bold').classList.toggle('active', !!s.fontBold);
                 container.querySelector('#is-font-italic').classList.toggle('active', !!s.fontItalic);
                 container.querySelector('#is-font-underline').classList.toggle('active', !!s.fontUnderline);
+                container.querySelector('#is-text-render-style').value = s.textStyle || 'normal';
+                container.querySelector('#is-text-bg-color').value = s.textBgColor || '#000000';
             } else if (s.type === 'path') {
                 ctxTextSpan.style.display = 'none';
                 ctxShapeSpan.style.display = 'none';
@@ -1037,6 +1100,18 @@ export function renderImageStudio(container) {
         if (activeVectorShape && activeVectorShape.type === 'text') {
             activeVectorShape.fontSize = parseInt(container.querySelector('#is-font-size').value) || 24;
             recalcTextBounds(activeVectorShape);
+            drawSelectionOverlay();
+        }
+    });
+    container.querySelector('#is-text-render-style').addEventListener('change', () => {
+        if (activeVectorShape && activeVectorShape.type === 'text') {
+            activeVectorShape.textStyle = container.querySelector('#is-text-render-style').value;
+            drawSelectionOverlay();
+        }
+    });
+    container.querySelector('#is-text-bg-color').addEventListener('input', () => {
+        if (activeVectorShape && activeVectorShape.type === 'text') {
+            activeVectorShape.textBgColor = container.querySelector('#is-text-bg-color').value;
             drawSelectionOverlay();
         }
     });
@@ -1527,6 +1602,8 @@ export function renderImageStudio(container) {
                         fontBold: isBold,
                         fontItalic: isItalic,
                         fontUnderline: isUnderline,
+                        textStyle: container.querySelector('#is-text-render-style').value,
+                        textBgColor: container.querySelector('#is-text-bg-color').value,
                         rotation: 0, flipH: false, flipV: false
                     });
                     activeVectorShape = vectorShapes[vectorShapes.length - 1];
