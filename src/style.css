@@ -115,6 +115,7 @@ body {
 
 .search-box .clear-icon {
   position: absolute;
+  left: auto;
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
