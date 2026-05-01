@@ -6,13 +6,13 @@ export function renderDeviceInfo(container) {
     const platform = navigator.platform;
     const maxTouchPoints = navigator.maxTouchPoints;
     const hardwareConcurrency = navigator.hardwareConcurrency || 'Unknown';
-    const deviceMemory = navigator.deviceMemory ? \`\${navigator.deviceMemory} GB\` : 'Unknown';
+    const deviceMemory = navigator.deviceMemory ? `${navigator.deviceMemory} GB` : 'Unknown';
     const language = navigator.language;
     const online = navigator.onLine ? '<span style="color: #4ade80;">Online</span>' : '<span style="color: #ef4444;">Offline</span>';
     
     let connectionType = 'Unknown';
     if (navigator.connection) {
-        connectionType = \`\${navigator.connection.effectiveType || 'unknown'} (Downlink: \${navigator.connection.downlink || 0} Mbps)\`;
+        connectionType = `${navigator.connection.effectiveType || 'unknown'} (Downlink: ${navigator.connection.downlink || 0} Mbps)`;
     }
 
     container.innerHTML = `
@@ -48,7 +48,7 @@ export function renderDeviceInfo(container) {
                 <div style="font-weight: 500;">~${deviceMemory}</div>
                 
                 <div style="color: var(--text-secondary); font-size: 14px;">Touch Support</div>
-                <div style="font-weight: 500;">${maxTouchPoints > 0 ? \`Yes (\${maxTouchPoints} touch points)\` : 'No'}</div>
+                <div style="font-weight: 500;">${maxTouchPoints > 0 ? `Yes (${maxTouchPoints} touch points)` : 'No'}</div>
             </div>
 
             <h3 style="margin-top: 0; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">Network Status</h3>

@@ -18,8 +18,8 @@ export function renderBatteryTest(container) {
         if (!seconds || seconds === Infinity) return "Unknown";
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
-        if (h > 0) return \`\${h} hours \${m} minutes\`;
-        return \`\${m} minutes\`;
+        if (h > 0) return `${h} hours ${m} minutes`;
+        return `${m} minutes`;
     };
 
     const updateBatteryUI = (battery) => {
@@ -43,7 +43,7 @@ export function renderBatteryTest(container) {
                 <div style="position: relative; width: 120px; height: 60px; border: 4px solid #fff; border-radius: 8px; padding: 4px;">
                     <div style="position: absolute; right: -10px; top: 16px; width: 6px; height: 20px; background: #fff; border-radius: 0 4px 4px 0;"></div>
                     <div style="width: ${level}%; height: 100%; background: ${color}; border-radius: 4px; transition: width 0.5s;"></div>
-                    ${battery.charging ? \`<i class='bx bxs-zap' style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></i>\` : ''}
+                    ${battery.charging ? `<i class='bx bxs-zap' style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 32px; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></i>` : ''}
                 </div>
                 <div style="text-align: left;">
                     <h1 style="margin: 0; font-size: 48px; color: ${color};">${level}%</h1>
