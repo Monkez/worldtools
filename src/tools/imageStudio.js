@@ -1233,16 +1233,24 @@ export function renderImageStudio(container) {
     canvasContainer.addEventListener('wheel', (e) => {
         if (e.ctrlKey) {
             e.preventDefault();
+            // Temporarily remove transition for instant scroll feedback
+            canvasWrapper.style.transition = 'none';
+            
             let zoom = parseFloat(zoomSlider.value);
-            // Scale the zoom by deltaY instead of fixed increments for trackpad/mouse smoothness
-            // Typical mouse notch is ~100 deltaY, giving ~10% zoom change. Trackpads give smaller deltas.
-            zoom -= e.deltaY * 0.1;
+            // Increase multiplier to make it zoom faster
+            zoom -= e.deltaY * 0.25;
             zoom = Math.max(10, Math.min(400, Math.round(zoom)));
             
             if (zoomSlider.value != zoom) {
                 zoomSlider.value = zoom;
                 zoomSlider.dispatchEvent(new Event('input'));
             }
+            
+            // Restore transition shortly after scrolling stops
+            clearTimeout(canvasWrapper._zoomTimer);
+            canvasWrapper._zoomTimer = setTimeout(() => {
+                canvasWrapper.style.transition = 'transform 0.1s';
+            }, 50);
         }
     }, { passive: false });
 
