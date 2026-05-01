@@ -1,0 +1,330 @@
+const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+const OpenAI = require('openai');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
+const youtubedl = require('youtube-dl-exec');
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+
+const app = express();
+app.use(cors());
+
+const upload = multer({ dest: 'uploads/' });
+
+if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
+if (!fs.existsSync('outputs')) fs.mkdirSync('outputs');
+
+app.post('/api/convert', upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const targetFormat = req.body.format;
+    if (!targetFormat) {
+        return res.status(400).json({ error: 'Target format not specified' });
+    }
+
+    const inputPath = req.file.path;
+    const originalName = req.file.originalname;
+    const baseName = path.parse(originalName).name;
+    const outputFileName = `${baseName}-converted.${targetFormat}`;
+    const outputPath = path.join(__dirname, 'outputs', outputFileName);
+
+    console.log(`Starting conversion: ${originalName} -> ${targetFormat}`);
+
+    ffmpeg(inputPath)
+        .toFormat(targetFormat)
+        .on('end', () => {
+            console.log(`Conversion finished: ${outputFileName}`);
+            res.download(outputPath, outputFileName, (err) => {
+                // Cleanup
+                if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+                if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            });
+        })
+        .on('error', (err) => {
+            console.error('Error converting file:', err);
+            if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+            res.status(500).json({ error: 'Conversion failed: ' + err.message });
+        })
+        .save(outputPath);
+});
+
+app.post('/api/trim', upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    
+    const { startTime, endTime } = req.body;
+    if (!startTime || !endTime) return res.status(400).json({ error: 'Missing start or end time' });
+
+    const inputPath = req.file.path;
+    const originalName = req.file.originalname;
+    const ext = path.extname(originalName);
+    const baseName = path.basename(originalName, ext);
+    const outputFileName = `${baseName}-trimmed${ext}`;
+    const outputPath = path.join(__dirname, 'outputs', outputFileName);
+
+    console.log(`Starting trim: ${originalName} from ${startTime} to ${endTime}`);
+
+    ffmpeg(inputPath)
+        .outputOptions([
+            `-ss ${startTime}`,
+            `-to ${endTime}`,
+            '-c copy' // copy codec for blazing fast trim without re-encoding!
+        ])
+        .on('end', () => {
+            console.log(`Trim finished: ${outputFileName}`);
+            res.download(outputPath, outputFileName, (err) => {
+                if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+                if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            });
+        })
+        .on('error', (err) => {
+            console.error('Error trimming file:', err);
+            if (fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+            res.status(500).json({ error: 'Trim failed: ' + err.message });
+        })
+        .save(outputPath);
+});
+
+app.post('/api/merge', upload.array('files', 10), (req, res) => {
+    if (!req.files || req.files.length < 2) {
+        return res.status(400).json({ error: 'Please upload at least 2 files to merge' });
+    }
+
+    const ext = path.extname(req.files[0].originalname);
+    const outputFileName = `merged-media${ext}`;
+    const outputPath = path.join(__dirname, 'outputs', outputFileName);
+    const listFilePath = path.join(__dirname, 'outputs', `list-${Date.now()}.txt`);
+
+    // Create a concat demuxer file
+    // file 'path/to/file1'
+    // file 'path/to/file2'
+    let listContent = '';
+    req.files.forEach(file => {
+        // Needs absolute path with forward slashes for ffmpeg on windows
+        const safePath = path.resolve(file.path).replace(/\\/g, '/');
+        listContent += `file '${safePath}'\n`;
+    });
+    fs.writeFileSync(listFilePath, listContent);
+
+    console.log(`Starting merge of ${req.files.length} files`);
+
+    ffmpeg()
+        .input(listFilePath)
+        .inputOptions(['-f concat', '-safe 0'])
+        .outputOptions('-c copy')
+        .on('end', () => {
+            console.log(`Merge finished: ${outputFileName}`);
+            res.download(outputPath, outputFileName, (err) => {
+                if (fs.existsSync(listFilePath)) fs.unlinkSync(listFilePath);
+                req.files.forEach(f => {
+                    if (fs.existsSync(f.path)) fs.unlinkSync(f.path);
+                });
+                if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+            });
+        })
+        .on('error', (err) => {
+            console.error('Error merging files:', err);
+            if (fs.existsSync(listFilePath)) fs.unlinkSync(listFilePath);
+            req.files.forEach(f => {
+                if (fs.existsSync(f.path)) fs.unlinkSync(f.path);
+            });
+            res.status(500).json({ error: 'Merge failed: ' + err.message });
+        })
+        .save(outputPath);
+});
+
+// =====================================
+// YOUTUBE DOWNLOADER ENDPOINTS
+// =====================================
+
+app.get('/api/yt/info', async (req, res) => {
+    try {
+        const url = req.query.url;
+        if (!url) {
+            return res.status(400).send('Invalid YouTube URL');
+        }
+        
+        const info = await youtubedl(url, { dumpJson: true });
+        
+        // Find all available video heights
+        const availableHeights = [...new Set(info.formats.map(f => f.height).filter(h => h))].sort((a,b) => b - a);
+        
+        const frontendFormats = availableHeights.map(h => ({
+            itag: `bestvideo[height<=${h}]+bestaudio/best[height<=${h}]`,
+            qualityLabel: `${h}p`,
+            hasVideo: true,
+            hasAudio: true,
+            container: 'mp4',
+            contentLength: null
+        }));
+        
+        frontendFormats.push({
+            itag: `bestaudio[ext=m4a]/bestaudio`,
+            qualityLabel: 'Audio Only',
+            hasVideo: false,
+            hasAudio: true,
+            container: 'm4a',
+            contentLength: null
+        });
+
+        res.json({
+            title: info.title,
+            thumbnail: info.thumbnail,
+            duration: info.duration,
+            formats: frontendFormats
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send("Failed to extract video info.");
+    }
+});
+
+app.get('/api/yt/download', async (req, res) => {
+    try {
+        const { url, itag } = req.query;
+        if (!url || !itag) {
+            return res.status(400).send('Missing URL or Format ID');
+        }
+        
+        const info = await youtubedl(url, { dumpJson: true });
+        const safeTitle = info.title.replace(/[^\w\s\u00C0-\u1FFF\u2C00-\uD7FF.-]/g, '').trim();
+        const isAudio = itag.includes('bestaudio') && !itag.includes('bestvideo');
+        const ext = isAudio ? 'm4a' : 'mkv';
+        const filename = `${Date.now()}.${ext}`;
+        const outputPath = path.join(__dirname, 'outputs', filename);
+        
+        // We must download to disk first to allow yt-dlp to merge video and audio with ffmpeg
+        await youtubedl(url, {
+            format: itag,
+            output: outputPath,
+            mergeOutputFormat: ext,
+            ffmpegLocation: ffmpegInstaller.path
+        });
+        
+        res.download(outputPath, `${safeTitle}.${ext}`, (err) => {
+            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+        });
+        
+    } catch (err) {
+        console.error(err);
+        res.status(500).send(err.message);
+    }
+});
+
+// =====================================
+// AI LLM PROXY ENDPOINTS (GEMINI)
+// =====================================
+app.post('/api/ai/chat', express.json(), async (req, res) => {
+    // Set headers for Server-Sent Events
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    try {
+        const { settings, prompt, systemInstruction } = req.body;
+        
+        if (settings.provider === 'custom') {
+            if (!settings.customBaseUrl) {
+                res.write(`event: error\ndata: ${JSON.stringify({ message: "Custom Base URL is required." })}\n\n`);
+                return res.end();
+            }
+
+            const openai = new OpenAI({
+                apiKey: settings.customApiKey || 'dummy-key-for-local',
+                baseURL: settings.customBaseUrl
+            });
+            
+            const messages = [];
+            if (systemInstruction) {
+                messages.push({ role: 'system', content: systemInstruction });
+            }
+            messages.push({ role: 'user', content: prompt });
+            
+            const stream = await openai.chat.completions.create({
+                model: settings.customModelId || 'local-model',
+                messages: messages,
+                stream: true,
+            });
+            
+            for await (const chunk of stream) {
+                const text = chunk.choices[0]?.delta?.content || '';
+                if (text) {
+                    res.write(`data: ${JSON.stringify({ text })}\n\n`);
+                }
+            }
+            res.write('event: done\ndata: {}\n\n');
+            return res.end();
+        }
+
+        // DEFAULT TO GEMINI
+        const key = settings.geminiKey || process.env.GEMINI_API_KEY;
+        
+        if (!key) {
+            res.write(`event: error\ndata: ${JSON.stringify({ message: "API Key is missing. Please set it in Settings." })}\n\n`);
+            return res.end();
+        }
+
+        const genAI = new GoogleGenerativeAI(key);
+        const modelOpts = { model: "gemini-1.5-flash" };
+        if (systemInstruction) {
+            modelOpts.systemInstruction = systemInstruction;
+        }
+        
+        const model = genAI.getGenerativeModel(modelOpts);
+        const result = await model.generateContentStream(prompt);
+
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+        }
+        
+        res.write('event: done\ndata: {}\n\n');
+        res.end();
+    } catch (err) {
+        console.error('AI Stream Error:', err);
+        res.write(`event: error\ndata: ${JSON.stringify({ message: err.message })}\n\n`);
+        res.end();
+    }
+});
+
+app.post('/api/ai/test', express.json(), async (req, res) => {
+    try {
+        const { settings } = req.body;
+        
+        if (settings.provider === 'custom') {
+            if (!settings.customBaseUrl) return res.status(400).json({ success: false, message: "Custom Base URL is required." });
+            const openai = new OpenAI({
+                apiKey: settings.customApiKey || 'dummy-key-for-local',
+                baseURL: settings.customBaseUrl
+            });
+            await openai.chat.completions.create({
+                model: settings.customModelId || 'local-model',
+                messages: [{ role: 'user', content: 'Say OK' }],
+                max_tokens: 5
+            });
+            return res.json({ success: true, message: "Connection OK" });
+        }
+
+        // GEMINI
+        const key = settings.geminiKey || process.env.GEMINI_API_KEY;
+        if (!key) return res.status(400).json({ success: false, message: "API Key is missing." });
+        const genAI = new GoogleGenerativeAI(key);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        await model.generateContent("Say OK");
+        return res.json({ success: true, message: "Connection OK" });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`WorldTools Backend is running on http://localhost:${PORT}`);
+});

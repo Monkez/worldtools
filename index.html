@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <title>WorldTools - Premium Tools Collection</title>
+  </head>
+  <body>
+    <div id="app">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="logo">
+                    <i class='bx bx-planet logo-icon'></i>
+                    <h2>WorldTools</h2>
+                </div>
+                <div style="display: flex; gap: 4px;">
+                    <button id="btn-settings" class="icon-btn" title="Global Settings"><i class='bx bx-cog'></i></button>
+                    <button id="close-sidebar" class="icon-btn"><i class='bx bx-menu-alt-left'></i></button>
+                </div>
+            </div>
+            <div class="search-box">
+                <i class='bx bx-search'></i>
+                <input type="text" id="tool-search" placeholder="Search tools..." autocomplete="off" spellcheck="false" data-lpignore="true" data-form-type="other">
+            </div>
+            <nav class="tool-list" id="tool-list">
+                <!-- Tool list will be injected here -->
+            </nav>
+        </aside>
+        
+        <main class="main-content" style="position: relative;">
+            <button id="open-sidebar" class="icon-btn floating-toggle" style="display: none;"><i class='bx bx-menu'></i></button>
+            <div class="tool-container" id="tool-container">
+                <!-- Content injected here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class='bx bx-cog'></i> Global Settings</h2>
+                <button id="close-settings" class="icon-btn"><i class='bx bx-x'></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <h3 style="display: flex; align-items: center; gap: 8px; margin-top:0; margin-bottom: 8px; font-size: 16px;"><i class='bx bx-bot' style="color: #a855f7;"></i> AI & LLM Configuration</h3>
+                    <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px; line-height: 1.4;">Configure your AI Provider to unlock "Smart Tools". Keys are stored locally.</p>
+                    
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label style="margin-bottom: 4px; font-size: 12px;">AI Provider</label>
+                        <select id="ai-provider" class="input-field" style="padding: 8px 12px; font-size: 14px;">
+                            <option value="gemini">Google Gemini</option>
+                            <option value="custom">Custom (OpenAI Compatible)</option>
+                        </select>
+                    </div>
+
+                    <!-- Gemini Settings -->
+                    <div id="settings-gemini">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="margin-bottom: 4px; font-size: 12px;">Google Gemini API Key</label>
+                            <input type="password" id="gemini-key-input" class="input-field" placeholder="AIzaSy..." style="padding: 8px 12px; font-size: 14px;" autocomplete="new-password" data-lpignore="true">
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Leave blank to use the server's default key.</div>
+                        </div>
+                    </div>
+
+                    <!-- Custom Provider Settings -->
+                    <div id="settings-custom" style="display: none; flex-direction: column; gap: 12px;">
+                        <div style="display: flex; gap: 12px;">
+                            <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                                <label style="margin-bottom: 4px; font-size: 12px;">Base URL</label>
+                                <input type="text" id="custom-base-url" class="input-field" placeholder="http://localhost:11434/v1" style="padding: 8px 12px; font-size: 14px;">
+                            </div>
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label style="margin-bottom: 4px; font-size: 12px;">Model ID</label>
+                                <input type="text" id="custom-model-id" class="input-field" placeholder="llama3" style="padding: 8px 12px; font-size: 14px;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="margin-bottom: 4px; font-size: 12px;">API Key (Optional)</label>
+                            <input type="password" id="custom-api-key" class="input-field" placeholder="sk-..." style="padding: 8px 12px; font-size: 14px;" autocomplete="new-password" data-lpignore="true">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 0 24px 24px 24px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="test-connection-btn" class="btn-secondary" style="padding: 8px 16px; font-size: 13px;"><i class='bx bx-wifi'></i> Test Connection</button>
+                    <span id="test-connection-res" style="font-size: 12px; font-weight: 600; display: none;"></span>
+                </div>
+                <button id="save-settings" class="btn-primary" style="background: var(--accent-color);">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

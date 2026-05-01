@@ -1,0 +1,24 @@
+{
+  "name": "worldtools",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.0.10"
+  },
+  "dependencies": {
+    "@distube/ytdl-core": "^4.16.12",
+    "@imgly/background-removal": "^1.7.0",
+    "bcryptjs": "^3.0.3",
+    "crypto-js": "^4.2.0",
+    "fabric": "^7.3.1",
+    "mammoth": "^1.12.0",
+    "wavesurfer.js": "^7.12.6",
+    "youtube-dl-exec": "^3.1.5"
+  }
+}
