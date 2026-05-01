@@ -70,7 +70,7 @@ export function renderCalculator(container) {
             </div>
 
             <!-- History Panel -->
-            <div style="flex: 1; max-width: 350px; background: rgba(37,37,38,0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; display: none;" id="calc-history-panel">
+            <div style="flex: 1; max-width: 350px; background: rgba(37,37,38,0.6); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;" id="calc-history-panel">
                 <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
                     <h3 style="margin: 0; font-size: 16px; font-weight: 500;"><i class='bx bx-history'></i> History</h3>
                     <button id="calc-clear-history" class="is-btn-icon" title="Clear History"><i class='bx bx-trash'></i></button>
@@ -165,10 +165,9 @@ export function renderCalculator(container) {
     });
 
     function renderHistory() {
-        if (history.length > 0) {
-            historyPanel.style.display = 'flex';
-        } else {
-            historyPanel.style.display = 'none';
+        if (history.length === 0) {
+            historyList.innerHTML = '<div style="text-align: center; color: #666; margin-top: 20px; font-size: 14px;">No history yet</div>';
+            return;
         }
         
         historyList.innerHTML = history.map((item, index) => `
