@@ -2,7 +2,7 @@ import { removeBackground } from '@imgly/background-removal';
 
 export function renderImageStudio(container) {
     container.innerHTML = `
-        <div style="display: flex; flex-direction: column; height: calc(100vh - 100px); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; background: #1e1e1e; margin-top: -10px;">
+        <div style="display: flex; flex-direction: column; height: calc(100vh - 48px); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; background: #1e1e1e; margin-top: -10px;">
             <!-- ULTRA COMPACT TOP BAR -->
             <div style="display: flex; justify-content: space-between; align-items: center; background: #252526; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <div style="display: flex; gap: 4px; align-items: center;">
@@ -69,10 +69,15 @@ export function renderImageStudio(container) {
                     <button class="is-btn-icon is-tool" data-tool="eraser" title="Eraser"><i class='bx bx-eraser'></i></button>
                     <div style="width: 24px; height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
                     <button class="is-btn-icon is-tool" data-tool="line" title="Line"><i class='bx bx-minus'></i></button>
-                    <button class="is-btn-icon is-tool" data-tool="arrow" title="Arrow"><i class='bx bx-right-arrow-alt'></i></button>
+                    <button class="is-btn-icon is-tool" data-tool="polyarrow" title="Arrow — Click to add points, Space to finish, Esc to cancel"><i class='bx bx-trending-up'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="rect" title="Rectangle"><i class='bx bx-square'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="circle" title="Circle"><i class='bx bx-circle'></i></button>
+                    <button class="is-btn-icon is-tool" data-tool="ellipse" title="Ellipse"><i class='bx bx-shape-circle'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="triangle" title="Triangle"><i class='bx bx-shape-triangle'></i></button>
+                    <button class="is-btn-icon is-tool" data-tool="diamond" title="Diamond"><i class='bx bx-diamond'></i></button>
+                    <button class="is-btn-icon is-tool" data-tool="parallelogram" title="Parallelogram"><i class='bx bx-tag'></i></button>
+                    <button class="is-btn-icon is-tool" data-tool="pentagon" title="Pentagon"><i class='bx bx-shape-polygon'></i></button>
+                    <button class="is-btn-icon is-tool" data-tool="hexagon" title="Hexagon"><i class='bx bx-polygon'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="star" title="Star"><i class='bx bx-star'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="text" title="Text"><i class='bx bx-text'></i></button>
                 </div>
@@ -122,12 +127,13 @@ export function renderImageStudio(container) {
                         <span style="font-size: 11px; color: #888;">Opacity</span>
                         <input type="range" id="is-brush-opacity" min="10" max="100" value="100" style="width: 80px; accent-color: #3b82f6;">
                         <span id="is-brush-opacity-val" style="font-size: 11px; color: #aaa; min-width: 32px;">100%</span>
-                        <div class="is-divider" id="is-brush-smooth-divider" style="display: none;"></div>
-                        <span id="is-smooth-level-label" style="display: none; font-size: 11px; color: #888;">Smooth</span>
-                        <input type="range" id="is-smooth-level" min="1" max="20" value="10" style="display: none; width: 80px; accent-color: #3b82f6;">
-                        <span id="is-smooth-level-val" style="display: none; font-size: 11px; color: #aaa; min-width: 16px;">10</span>
-                        <button class="is-btn-icon" id="is-brush-smooth" title="Apply Smoothing" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px;"><i class='bx bx-pulse'></i> Apply</button>
                     </span>
+                    <!-- Smooth controls (shared by brush paths and polyarrow) -->
+                    <div class="is-divider" id="is-brush-smooth-divider" style="display: none;"></div>
+                    <span id="is-smooth-level-label" style="display: none; font-size: 11px; color: #888;">Smooth</span>
+                    <input type="range" id="is-smooth-level" min="1" max="20" value="10" style="display: none; width: 80px; accent-color: #3b82f6;">
+                    <span id="is-smooth-level-val" style="display: none; font-size: 11px; color: #aaa; min-width: 16px;">10</span>
+                    <button class="is-btn-icon" id="is-brush-smooth" title="Apply Smoothing" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px;"><i class='bx bx-pulse'></i> Smooth</button>
                     <!-- Eraser controls -->
                     <span id="is-ctx-eraser" style="display: none; contents;">
                         <span style="font-size: 11px; color: #888;">Size</span>
@@ -176,13 +182,14 @@ export function renderImageStudio(container) {
                     </span>
                     <div class="is-divider" id="is-ctx-del-divider" style="display: none;"></div>
                     <button class="is-btn-icon" id="is-obj-remove-bg" title="Remove Background" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ec4899;"><i class='bx bx-cut'></i> Remove BG</button>
+                    <button class="is-btn-icon" id="is-polyarrow-dbl" title="Toggle Double Arrow" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #60a5fa;"><i class='bx bx-transfer'></i> <span id="is-polyarrow-dbl-label">→ Single</span></button>
                     <button class="is-btn-icon" id="is-ctx-front" title="Bring to Front" style="display: none; font-size: 14px;"><i class='bx bx-arrow-to-top'></i></button>
                     <button class="is-btn-icon" id="is-ctx-back" title="Send to Back" style="display: none; font-size: 14px;"><i class='bx bx-arrow-to-bottom'></i></button>
                     <button class="is-btn-icon" id="is-ctx-del" title="Delete (Del)" style="color: #fca5a5; display: none;"><i class='bx bx-trash'></i></button>
                 </div>
 
                 <!-- MAIN CANVAS AREA -->
-                <div id="is-canvas-container" style="flex: 1; background: #111; overflow: auto; display: flex; align-items: center; justify-content: center; position: relative;">
+                <div id="is-canvas-container" style="flex: 1; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative;">
                     <div id="is-canvas-wrapper" style="position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.8); background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/ENF5gNqGoB4TjxrAwDAJg4MGAgB/xwgfV7oJlwAAAABJRU5ErkJggg==') repeat; transition: transform 0.1s;">
                         <canvas id="is-canvas" width="800" height="600" style="display: block;"></canvas>
                         <canvas id="is-overlay" width="800" height="600" style="display: block; position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
@@ -229,6 +236,8 @@ export function renderImageStudio(container) {
     let activeVectorShape = null;
     let resizingHandle = null;
     let currentPathPoints = []; // for brush path recording
+    let currentPolyPoints = []; // for polyline arrow tools
+    let draggingControlPointIdx = -1; // index of control point being dragged
     
     let history = [];
     let historyStep = -1;
@@ -250,7 +259,20 @@ export function renderImageStudio(container) {
         if (historyStep < history.length - 1) {
             history = history.slice(0, historyStep + 1);
         }
-        history.push(canvas.toDataURL());
+        // Deep clone vectorShapes (handle Image objects in 'image' shapes)
+        const shapesClone = vectorShapes.map(s => {
+            const clone = { ...s };
+            if (s.points) clone.points = s.points.map(p => ({ ...p }));
+            if (s.originalPoints) clone.originalPoints = s.originalPoints.map(p => ({ ...p }));
+            if (s.type === 'image' && s.img) {
+                clone.img = s.img; // keep same Image reference
+            }
+            return clone;
+        });
+        history.push({
+            dataURL: canvas.toDataURL(),
+            shapes: shapesClone
+        });
         historyStep++;
     }
     
@@ -414,6 +436,59 @@ export function renderImageStudio(container) {
             }
             targetCtx.lineTo(cx, cy - outerRadius);
             targetCtx.closePath();
+        } else if (s.type === 'dblarrow') {
+            targetCtx.moveTo(s.x, s.y);
+            targetCtx.lineTo(s.x2, s.y2);
+            const angle = Math.atan2(s.y2 - s.y, s.x2 - s.x);
+            const headlen = 15 + s.strokeWidth;
+            // Arrow head at end
+            targetCtx.moveTo(s.x2, s.y2);
+            targetCtx.lineTo(s.x2 - headlen * Math.cos(angle - Math.PI / 6), s.y2 - headlen * Math.sin(angle - Math.PI / 6));
+            targetCtx.moveTo(s.x2, s.y2);
+            targetCtx.lineTo(s.x2 - headlen * Math.cos(angle + Math.PI / 6), s.y2 - headlen * Math.sin(angle + Math.PI / 6));
+            // Arrow head at start
+            const angle2 = angle + Math.PI;
+            targetCtx.moveTo(s.x, s.y);
+            targetCtx.lineTo(s.x - headlen * Math.cos(angle2 - Math.PI / 6), s.y - headlen * Math.sin(angle2 - Math.PI / 6));
+            targetCtx.moveTo(s.x, s.y);
+            targetCtx.lineTo(s.x - headlen * Math.cos(angle2 + Math.PI / 6), s.y - headlen * Math.sin(angle2 + Math.PI / 6));
+        } else if (s.type === 'ellipse') {
+            const rx = Math.abs(w) / 2;
+            const ry = Math.abs(h) / 2;
+            targetCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        } else if (s.type === 'diamond') {
+            targetCtx.moveTo(cx, s.y);
+            targetCtx.lineTo(s.x2, cy);
+            targetCtx.lineTo(cx, s.y2);
+            targetCtx.lineTo(s.x, cy);
+            targetCtx.closePath();
+        } else if (s.type === 'parallelogram') {
+            const offset = Math.abs(w) * 0.2;
+            targetCtx.moveTo(s.x + offset, s.y);
+            targetCtx.lineTo(s.x2, s.y);
+            targetCtx.lineTo(s.x2 - offset, s.y2);
+            targetCtx.lineTo(s.x, s.y2);
+            targetCtx.closePath();
+        } else if (s.type === 'pentagon') {
+            const r = Math.min(Math.abs(w), Math.abs(h)) / 2;
+            for (let i = 0; i < 5; i++) {
+                const a = (i * 2 * Math.PI / 5) - Math.PI / 2;
+                const px = cx + r * Math.cos(a);
+                const py = cy + r * Math.sin(a);
+                if (i === 0) targetCtx.moveTo(px, py);
+                else targetCtx.lineTo(px, py);
+            }
+            targetCtx.closePath();
+        } else if (s.type === 'hexagon') {
+            const r = Math.min(Math.abs(w), Math.abs(h)) / 2;
+            for (let i = 0; i < 6; i++) {
+                const a = (i * 2 * Math.PI / 6) - Math.PI / 6;
+                const px = cx + r * Math.cos(a);
+                const py = cy + r * Math.sin(a);
+                if (i === 0) targetCtx.moveTo(px, py);
+                else targetCtx.lineTo(px, py);
+            }
+            targetCtx.closePath();
         } else if (s.type === 'image') {
             targetCtx.drawImage(s.img, s.x, s.y, w, h);
         } else if (s.type === 'text') {
@@ -444,9 +519,39 @@ export function renderImageStudio(container) {
             }
             targetCtx.stroke();
             targetCtx.globalAlpha = 1;
+        } else if (s.type === 'polyarrow' && s.points && s.points.length > 1) {
+            targetCtx.beginPath();
+            targetCtx.moveTo(s.points[0].x, s.points[0].y);
+            for (let i = 1; i < s.points.length; i++) {
+                targetCtx.lineTo(s.points[i].x, s.points[i].y);
+            }
+            targetCtx.stroke();
+            // Arrow head at end
+            const lastPt = s.points[s.points.length - 1];
+            const prevPt = s.points[s.points.length - 2];
+            const angle = Math.atan2(lastPt.y - prevPt.y, lastPt.x - prevPt.x);
+            const headlen = 15 + s.strokeWidth;
+            targetCtx.beginPath();
+            targetCtx.moveTo(lastPt.x, lastPt.y);
+            targetCtx.lineTo(lastPt.x - headlen * Math.cos(angle - Math.PI / 6), lastPt.y - headlen * Math.sin(angle - Math.PI / 6));
+            targetCtx.moveTo(lastPt.x, lastPt.y);
+            targetCtx.lineTo(lastPt.x - headlen * Math.cos(angle + Math.PI / 6), lastPt.y - headlen * Math.sin(angle + Math.PI / 6));
+            targetCtx.stroke();
+            // Arrow head at start (for double)
+            if (s.doubleEnded) {
+                const firstPt = s.points[0];
+                const nextPt = s.points[1];
+                const a2 = Math.atan2(firstPt.y - nextPt.y, firstPt.x - nextPt.x);
+                targetCtx.beginPath();
+                targetCtx.moveTo(firstPt.x, firstPt.y);
+                targetCtx.lineTo(firstPt.x - headlen * Math.cos(a2 - Math.PI / 6), firstPt.y - headlen * Math.sin(a2 - Math.PI / 6));
+                targetCtx.moveTo(firstPt.x, firstPt.y);
+                targetCtx.lineTo(firstPt.x - headlen * Math.cos(a2 + Math.PI / 6), firstPt.y - headlen * Math.sin(a2 + Math.PI / 6));
+                targetCtx.stroke();
+            }
         }
         
-        if (s.type !== 'image' && s.type !== 'text' && s.type !== 'path') {
+        if (s.type !== 'image' && s.type !== 'text' && s.type !== 'path' && s.type !== 'polyarrow') {
             targetCtx.stroke();
         }
         
@@ -516,6 +621,38 @@ export function renderImageStudio(container) {
             
             octx.restore();
             
+            // Draw control points for smoothed polyarrow shapes only
+            if (s.type === 'polyarrow' && s.originalPoints && s.originalPoints.length > 1) {
+                octx.save();
+                // Draw original path faintly
+                octx.beginPath();
+                octx.moveTo(s.originalPoints[0].x, s.originalPoints[0].y);
+                for (let i = 1; i < s.originalPoints.length; i++) {
+                    octx.lineTo(s.originalPoints[i].x, s.originalPoints[i].y);
+                }
+                octx.strokeStyle = s.stroke || '#6366f1';
+                octx.globalAlpha = 0.25;
+                octx.lineWidth = s.strokeWidth || 2;
+                octx.setLineDash([4, 4]);
+                octx.stroke();
+                octx.setLineDash([]);
+                octx.globalAlpha = 1;
+                
+                // Draw draggable diamond handles at each control point
+                s.originalPoints.forEach((p, idx) => {
+                    octx.save();
+                    octx.translate(p.x, p.y);
+                    octx.rotate(Math.PI / 4);
+                    octx.fillStyle = idx === 0 || idx === s.originalPoints.length - 1 ? '#60a5fa' : '#f59e0b';
+                    octx.strokeStyle = '#000';
+                    octx.lineWidth = 1.5;
+                    octx.fillRect(-5, -5, 10, 10);
+                    octx.strokeRect(-5, -5, 10, 10);
+                    octx.restore();
+                });
+                octx.restore();
+            }
+            
             // Position toolbar (transform top-left corner to screen space)
             const cosR = Math.cos(rot);
             const sinR = Math.sin(rot);
@@ -532,6 +669,13 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-front').style.display = 'flex';
             container.querySelector('#is-ctx-back').style.display = 'flex';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
+            container.querySelector('#is-polyarrow-dbl').style.display = 'none';
+            // Hide smooth controls (shown selectively for path/polyarrow)
+            container.querySelector('#is-brush-smooth').style.display = 'none';
+            container.querySelector('#is-brush-smooth-divider').style.display = 'none';
+            container.querySelector('#is-smooth-level').style.display = 'none';
+            container.querySelector('#is-smooth-level-label').style.display = 'none';
+            container.querySelector('#is-smooth-level-val').style.display = 'none';
             if (s.type === 'text') {
                 ctxTextSpan.style.display = 'contents';
                 ctxShapeSpan.style.display = 'none';
@@ -555,6 +699,19 @@ export function renderImageStudio(container) {
                 container.querySelector('#is-smooth-level').style.display = '';
                 container.querySelector('#is-smooth-level-label').style.display = '';
                 container.querySelector('#is-smooth-level-val').style.display = '';
+            } else if (s.type === 'polyarrow') {
+                ctxTextSpan.style.display = 'none';
+                ctxShapeSpan.style.display = 'contents';
+                container.querySelector('#is-shape-color').value = s.stroke || '#6366f1';
+                container.querySelector('#is-shape-stroke').value = s.strokeWidth || 5;
+                container.querySelector('#is-brush-smooth').style.display = 'flex';
+                container.querySelector('#is-brush-smooth-divider').style.display = '';
+                container.querySelector('#is-smooth-level').style.display = '';
+                container.querySelector('#is-smooth-level-label').style.display = '';
+                container.querySelector('#is-smooth-level-val').style.display = '';
+                // Show double-arrow toggle
+                container.querySelector('#is-polyarrow-dbl').style.display = 'flex';
+                container.querySelector('#is-polyarrow-dbl-label').textContent = s.doubleEnded ? '↔ Double' : '→ Single';
             } else if (s.type === 'image') {
                 ctxTextSpan.style.display = 'none';
                 ctxShapeSpan.style.display = 'none';
@@ -602,6 +759,9 @@ export function renderImageStudio(container) {
             tools.forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
             currentTool = btn.getAttribute('data-tool');
+            currentPolyPoints = []; // Reset poly points on tool switch
+            const polyTip = container.querySelector('#is-poly-tooltip');
+            if (polyTip) polyTip.remove();
             if (currentTool === 'text') canvas.style.cursor = 'text';
             else if (currentTool === 'select' || currentTool === 'region') canvas.style.cursor = 'default';
             else if (currentTool === 'fill') canvas.style.cursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' stroke='%23000' stroke-width='1.5' d='M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z'/%3E%3C/svg%3E") 2 22, crosshair`;
@@ -612,7 +772,7 @@ export function renderImageStudio(container) {
             allCtxSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
             contextBar.style.display = 'flex';
             
-            const isShapeTool = ['line', 'arrow', 'rect', 'circle', 'triangle', 'star'].includes(currentTool);
+            const isShapeTool = ['line', 'arrow', 'dblarrow', 'polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool);
             if (currentTool === 'text') {
                 ctxTextSpan.style.display = 'contents';
             } else if (isShapeTool) {
@@ -646,6 +806,8 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-del-divider').style.display = 'none';
             container.querySelector('#is-ctx-front').style.display = 'none';
             container.querySelector('#is-ctx-back').style.display = 'none';
+            container.querySelector('#is-obj-remove-bg').style.display = 'none';
+            container.querySelector('#is-polyarrow-dbl').style.display = 'none';
             
             drawSelectionOverlay();
         });
@@ -925,6 +1087,18 @@ export function renderImageStudio(container) {
                 let localX = dx * cosR - dy * sinR;
                 let localY = dx * sinR + dy * cosR;
 
+                // Check control points (for smoothed polyarrow/path shapes)
+                if (s.originalPoints && s.originalPoints.length > 1) {
+                    for (let i = 0; i < s.originalPoints.length; i++) {
+                        const cp = s.originalPoints[i];
+                        if (Math.abs(pos.x - cp.x) < 8 && Math.abs(pos.y - cp.y) < 8) {
+                            draggingControlPointIdx = i;
+                            isDrawing = true;
+                            return;
+                        }
+                    }
+                }
+
                 // Check rotation handle (circle above top-center, in local space)
                 let rotHandleLocalX = 0;
                 let rotHandleLocalY = -h/2 - 28;
@@ -976,7 +1150,7 @@ export function renderImageStudio(container) {
                 let p = s.strokeWidth / 2 + 5;
                 let hw = w / 2 + p;
                 let hh = h / 2 + p;
-                if (s.type === 'circle') {
+                if (s.type === 'circle' || s.type === 'ellipse') {
                     let r = Math.max(w, h) / 2 + p;
                     hw = r; hh = r;
                 }
@@ -987,6 +1161,12 @@ export function renderImageStudio(container) {
             }
             
             if (hitShape) {
+                // If we're in control point editing mode on the active shape,
+                // clicking the shape body should not start a move - only handles work
+                if (hitShape === activeVectorShape && activeVectorShape.originalPoints && activeVectorShape.originalPoints.length > 1) {
+                    // Stay selected but don't start move
+                    return;
+                }
                 activeVectorShape = hitShape;
                 resizingHandle = 'move';
                 startX = pos.x; startY = pos.y;
@@ -995,12 +1175,15 @@ export function renderImageStudio(container) {
                 return;
             }
             
+            
             activeVectorShape = null;
             // Hide object buttons, show canvas context
             container.querySelector('#is-ctx-del').style.display = 'none';
             container.querySelector('#is-ctx-del-divider').style.display = 'none';
             container.querySelector('#is-ctx-front').style.display = 'none';
             container.querySelector('#is-ctx-back').style.display = 'none';
+            container.querySelector('#is-obj-remove-bg').style.display = 'none';
+            container.querySelector('#is-polyarrow-dbl').style.display = 'none';
             const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
             allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
             container.querySelector('#is-ctx-select').style.display = 'contents';
@@ -1023,6 +1206,35 @@ export function renderImageStudio(container) {
             isDrawing = true;
             startX = pos.x;
             startY = pos.y;
+            return;
+        }
+
+        // Polyline arrow tools: click to add points
+        if (currentTool === 'polyarrow') {
+            currentPolyPoints.push({ x: pos.x, y: pos.y });
+            isDrawing = false;
+            // Live preview
+            drawSelectionOverlay();
+            if (currentPolyPoints.length > 1) {
+                const shapeColor = container.querySelector('#is-shape-color').value;
+                const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+                drawShape(octx, {
+                    type: currentTool,
+                    points: currentPolyPoints.slice(),
+                    x: 0, y: 0, x2: 0, y2: 0,
+                    stroke: shapeColor,
+                    strokeWidth: shapeStroke
+                });
+            }
+            // Show floating tooltip hint
+            let tip = container.querySelector('#is-poly-tooltip');
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.id = 'is-poly-tooltip';
+                tip.style.cssText = 'position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); color:#fff; padding:6px 14px; border-radius:6px; font-size:12px; pointer-events:none; z-index:100; white-space:nowrap; backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.1);';
+                tip.innerHTML = "Click to add points &nbsp;·&nbsp; <b style='color:#60a5fa;'>Space</b> to finish &nbsp;·&nbsp; <b style='color:#f87171;'>Esc</b> to cancel";
+                container.querySelector('#is-canvas-container').appendChild(tip);
+            }
             return;
         }
 
@@ -1159,6 +1371,29 @@ export function renderImageStudio(container) {
         const pos = getMousePos(e);
 
         if (currentTool === 'select') {
+            // Handle control point dragging
+            if (activeVectorShape && draggingControlPointIdx >= 0 && activeVectorShape.originalPoints) {
+                const cp = activeVectorShape.originalPoints[draggingControlPointIdx];
+                cp.x = pos.x;
+                cp.y = pos.y;
+                // Recalculate bounding box
+                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                activeVectorShape.originalPoints.forEach(p => {
+                    if (p.x < minX) minX = p.x;
+                    if (p.y < minY) minY = p.y;
+                    if (p.x > maxX) maxX = p.x;
+                    if (p.y > maxY) maxY = p.y;
+                });
+                const sw = activeVectorShape.strokeWidth || 5;
+                activeVectorShape.x = minX - sw;
+                activeVectorShape.y = minY - sw;
+                activeVectorShape.x2 = maxX + sw;
+                activeVectorShape.y2 = maxY + sw;
+                // Re-apply smooth
+                applySmoothToShape(activeVectorShape, activeVectorShape.smoothLevel || 5);
+                drawSelectionOverlay();
+                return;
+            }
             if (activeVectorShape && resizingHandle) {
                 const dx = pos.x - startX;
                 const dy = pos.y - startY;
@@ -1280,7 +1515,7 @@ export function renderImageStudio(container) {
                 octx.strokeStyle = '#fff';
                 octx.lineWidth = 1;
                 octx.stroke();
-            } else if (['line', 'arrow', 'rect', 'circle', 'triangle', 'star', 'crop', 'text'].includes(currentTool)) {
+            } else if (['line', 'arrow', 'dblarrow', 'polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star', 'crop', 'text'].includes(currentTool)) {
                 // Draw a custom crosshair cursor on overlay
                 drawSelectionOverlay();
                 octx.strokeStyle = '#000';
@@ -1299,6 +1534,33 @@ export function renderImageStudio(container) {
                 octx.moveTo(pos.x - 1, pos.y - 9);
                 octx.lineTo(pos.x - 1, pos.y + 9);
                 octx.stroke();
+                // Live preview for polyarrow: show existing path + rubber-band to cursor
+                if (currentTool === 'polyarrow' && currentPolyPoints.length > 0) {
+                    const shapeColor = container.querySelector('#is-shape-color').value;
+                    const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+                    // Draw existing segments
+                    if (currentPolyPoints.length > 1) {
+                        drawShape(octx, {
+                            type: currentTool,
+                            points: currentPolyPoints.slice(),
+                            x: 0, y: 0, x2: 0, y2: 0,
+                            stroke: shapeColor,
+                            strokeWidth: shapeStroke
+                        });
+                    }
+                    // Rubber-band line from last point to cursor
+                    octx.setLineDash([6, 4]);
+                    octx.strokeStyle = shapeColor;
+                    octx.lineWidth = shapeStroke;
+                    octx.globalAlpha = 0.5;
+                    octx.beginPath();
+                    const last = currentPolyPoints[currentPolyPoints.length - 1];
+                    octx.moveTo(last.x, last.y);
+                    octx.lineTo(pos.x, pos.y);
+                    octx.stroke();
+                    octx.setLineDash([]);
+                    octx.globalAlpha = 1;
+                }
             }
             return;
         }
@@ -1344,7 +1606,7 @@ export function renderImageStudio(container) {
             octx.strokeStyle = '#fff';
             octx.lineWidth = 1;
             octx.stroke();
-        } else if (['line', 'arrow', 'rect', 'circle', 'triangle', 'star'].includes(currentTool)) {
+        } else if (['line', 'arrow', 'dblarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = container.querySelector('#is-shape-color').value;
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
             drawSelectionOverlay();
@@ -1354,6 +1616,57 @@ export function renderImageStudio(container) {
                 stroke: shapeColor,
                 strokeWidth: shapeStroke
             });
+        }
+    });
+
+    // Finalize polyarrow shape (shared logic)
+    function finalizePolyArrow() {
+        if (currentTool !== 'polyarrow' || currentPolyPoints.length < 2) return;
+        const shapeColor = container.querySelector('#is-shape-color').value;
+        const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+        
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        currentPolyPoints.forEach(p => {
+            if (p.x < minX) minX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y > maxY) maxY = p.y;
+        });
+        
+        vectorShapes.push({
+            type: currentTool,
+            points: currentPolyPoints.slice(),
+            x: minX - shapeStroke, y: minY - shapeStroke,
+            x2: maxX + shapeStroke, y2: maxY + shapeStroke,
+            stroke: shapeColor,
+            strokeWidth: shapeStroke,
+            rotation: 0, flipH: false, flipV: false
+        });
+        activeVectorShape = vectorShapes[vectorShapes.length - 1];
+        currentPolyPoints = [];
+        // Remove tooltip
+        const tip = container.querySelector('#is-poly-tooltip');
+        if (tip) tip.remove();
+        currentTool = 'select';
+        tools.forEach(t => t.classList.toggle('active', t.getAttribute('data-tool') === 'select'));
+        canvas.style.cursor = 'default';
+        drawSelectionOverlay();
+        saveState();
+    }
+    
+    // Space to finish polyarrow, Escape to cancel
+    document.addEventListener('keydown', (e) => {
+        if (!container.querySelector('#is-canvas')) return;
+        if (currentTool === 'polyarrow') {
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault();
+                finalizePolyArrow();
+            } else if (e.key === 'Escape' && currentPolyPoints.length > 0) {
+                currentPolyPoints = [];
+                const tip = container.querySelector('#is-poly-tooltip');
+                if (tip) tip.remove();
+                drawSelectionOverlay();
+            }
         }
     });
 
@@ -1461,11 +1774,19 @@ export function renderImageStudio(container) {
         const pos = getMousePos(e);
 
         if (currentTool === 'select') {
-            if (resizingHandle) {
-                resizingHandle = null;
+            if (draggingControlPointIdx >= 0) {
+                draggingControlPointIdx = -1;
+                isDrawing = false;
                 saveState();
                 return;
             }
+            if (resizingHandle) {
+                resizingHandle = null;
+                isDrawing = false;
+                saveState();
+                return;
+            }
+            isDrawing = false;
             return;
         }
         
@@ -1504,7 +1825,7 @@ export function renderImageStudio(container) {
             return;
         }
         
-        if (['line', 'arrow', 'rect', 'circle', 'triangle', 'star'].includes(currentTool)) {
+        if (['line', 'arrow', 'dblarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = container.querySelector('#is-shape-color').value;
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
             vectorShapes.push({
@@ -1532,7 +1853,7 @@ export function renderImageStudio(container) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.drawImage(img, 0, 0);
                 };
-                img.src = history[historyStep];
+                img.src = history[historyStep].dataURL;
             }
             
             // Calculate bounding box from points
@@ -1817,15 +2138,12 @@ export function renderImageStudio(container) {
         container.querySelector('#is-smooth-level-val').textContent = e.target.value;
     });
     
-    // Smooth button for brush paths
-    container.querySelector('#is-brush-smooth').addEventListener('click', () => {
-        if (!activeVectorShape || activeVectorShape.type !== 'path') return;
-        const pts = activeVectorShape.points;
-        if (pts.length < 3) return;
+    // Helper: apply Chaikin smoothing on control points
+    function applySmoothToShape(shape, level) {
+        const pts = shape.originalPoints || shape.points;
+        if (pts.length < 3) { shape.points = pts.slice(); return; }
         
-        const level = parseInt(container.querySelector('#is-smooth-level').value) || 5;
-        
-        // Step 1: Simplify - higher level = more aggressive simplification
+        // Step 1: Simplify
         const simplified = [pts[0]];
         const threshold = level * 1.5;
         for (let i = 1; i < pts.length - 1; i++) {
@@ -1837,7 +2155,7 @@ export function renderImageStudio(container) {
         }
         simplified.push(pts[pts.length - 1]);
         
-        // Step 2: Chaikin smoothing - iterations scale with level
+        // Step 2: Chaikin smoothing
         const iterations = Math.max(2, Math.ceil(level / 2));
         let result = simplified;
         for (let iter = 0; iter < iterations; iter++) {
@@ -1852,7 +2170,31 @@ export function renderImageStudio(container) {
             result = smooth;
         }
         
-        activeVectorShape.points = result;
+        shape.points = result;
+        shape.smoothLevel = level;
+    }
+    
+    // Smooth button for brush/polyarrow paths
+    container.querySelector('#is-brush-smooth').addEventListener('click', () => {
+        if (!activeVectorShape || !['path', 'polyarrow'].includes(activeVectorShape.type)) return;
+        const level = parseInt(container.querySelector('#is-smooth-level').value) || 5;
+        
+        if (activeVectorShape.type === 'path') {
+            // Brush path: simple smooth, just replace points
+            const pts = activeVectorShape.points;
+            if (pts.length < 3) return;
+            applySmoothToShape(activeVectorShape, level);
+            delete activeVectorShape.originalPoints; // no control point editing for brush
+        } else {
+            // Polyarrow: save original points for control point editing
+            const pts = activeVectorShape.originalPoints || activeVectorShape.points;
+            if (pts.length < 3) return;
+            if (!activeVectorShape.originalPoints) {
+                activeVectorShape.originalPoints = pts.map(p => ({ x: p.x, y: p.y }));
+            }
+            applySmoothToShape(activeVectorShape, level);
+        }
+        
         drawSelectionOverlay();
         saveState();
         
@@ -1860,6 +2202,15 @@ export function renderImageStudio(container) {
         const btn = container.querySelector('#is-brush-smooth');
         btn.style.color = '#4ade80';
         setTimeout(() => btn.style.color = '', 500);
+    });
+
+    // Polyarrow double-ended toggle
+    container.querySelector('#is-polyarrow-dbl').addEventListener('click', () => {
+        if (!activeVectorShape || activeVectorShape.type !== 'polyarrow') return;
+        activeVectorShape.doubleEnded = !activeVectorShape.doubleEnded;
+        container.querySelector('#is-polyarrow-dbl-label').textContent = activeVectorShape.doubleEnded ? '↔ Double' : '→ Single';
+        drawSelectionOverlay();
+        saveState();
     });
 
     function performCut() {
@@ -2020,12 +2371,27 @@ export function renderImageStudio(container) {
 
     // Undo / Redo
     const restoreState = (step) => {
+        const entry = history[step];
+        if (!entry) return;
         const img = new Image();
         img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
         };
-        img.src = history[step];
+        img.src = entry.dataURL;
+        // Restore vector shapes
+        vectorShapes = entry.shapes.map(s => {
+            const clone = { ...s };
+            if (s.points) clone.points = s.points.map(p => ({ ...p }));
+            if (s.originalPoints) clone.originalPoints = s.originalPoints.map(p => ({ ...p }));
+            if (s.type === 'image' && s.img) {
+                clone.img = s.img;
+            }
+            return clone;
+        });
+        activeVectorShape = null;
+        selection = null;
+        drawSelectionOverlay();
     };
 
     container.querySelector('#is-undo').addEventListener('click', () => {
