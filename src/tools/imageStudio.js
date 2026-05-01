@@ -68,8 +68,7 @@ export function renderImageStudio(container) {
                     <button class="is-btn-icon is-tool" data-tool="fill" title="Paint Bucket"><i class='bx bx-color-fill'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="eraser" title="Eraser"><i class='bx bx-eraser'></i></button>
                     <div style="width: 24px; height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
-                    <button class="is-btn-icon is-tool" data-tool="line" title="Line"><i class='bx bx-minus'></i></button>
-                    <button class="is-btn-icon is-tool" data-tool="polyarrow" title="Arrow — Click to add points, Space to finish, Esc to cancel"><i class='bx bx-trending-up'></i></button>
+                    <button class="is-btn-icon is-tool" data-tool="polyarrow" title="Line/Arrow — Click to add points, Space to finish, Esc to cancel"><i class='bx bx-trending-up'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="rect" title="Rectangle"><i class='bx bx-square'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="circle" title="Circle"><i class='bx bx-circle'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="ellipse" title="Ellipse"><i class='bx bx-shape-circle'></i></button>
@@ -182,7 +181,30 @@ export function renderImageStudio(container) {
                     </span>
                     <div class="is-divider" id="is-ctx-del-divider" style="display: none;"></div>
                     <button class="is-btn-icon" id="is-obj-remove-bg" title="Remove Background" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ec4899;"><i class='bx bx-cut'></i> Remove BG</button>
-                    <button class="is-btn-icon" id="is-polyarrow-dbl" title="Toggle Double Arrow" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #60a5fa;"><i class='bx bx-transfer'></i> <span id="is-polyarrow-dbl-label">→ Single</span></button>
+                    <span id="is-polyarrow-opts" style="display:none; align-items:center; gap:6px;">
+                        <div class="is-divider"></div>
+                        <span style="font-size:11px;color:#888">Mode</span>
+                        <button class="is-btn-icon is-arrow-mode active" data-mode="none" title="Normal Line" style="font-size:13px;width:26px;height:22px;padding:0"><i class='bx bx-minus'></i></button>
+                        <button class="is-btn-icon is-arrow-mode" data-mode="single" title="One Direction" style="font-size:13px;width:26px;height:22px;padding:0"><i class='bx bx-right-arrow-alt'></i></button>
+                        <button class="is-btn-icon is-arrow-mode" data-mode="double" title="Bidirectional" style="font-size:13px;width:26px;height:22px;padding:0"><i class='bx bx-transfer'></i></button>
+                        <div class="is-divider"></div>
+                        <span style="font-size:11px;color:#888">Style</span>
+                        <select id="is-line-style" style="background:#333;color:#ccc;border:1px solid #555;border-radius:4px;font-size:11px;padding:2px 4px;cursor:pointer">
+                            <option value="solid">━━ Solid</option>
+                            <option value="dashed">╌╌ Dashed</option>
+                            <option value="dotted">··· Dotted</option>
+                            <option value="dashdot">╌·╌ Dash-dot</option>
+                        </select>
+                        <div class="is-divider" id="is-arrowhead-divider"></div>
+                        <span id="is-arrowhead-label" style="font-size:11px;color:#888">Head</span>
+                        <select id="is-arrowhead-style" style="background:#333;color:#ccc;border:1px solid #555;border-radius:4px;font-size:11px;padding:2px 4px;cursor:pointer">
+                            <option value="open">▷ Open</option>
+                            <option value="filled">▶ Filled</option>
+                            <option value="diamond">◇ Diamond</option>
+                            <option value="circle">○ Circle</option>
+                            <option value="square">□ Square</option>
+                        </select>
+                    </span>
                     <button class="is-btn-icon" id="is-ctx-front" title="Bring to Front" style="display: none; font-size: 14px;"><i class='bx bx-arrow-to-top'></i></button>
                     <button class="is-btn-icon" id="is-ctx-back" title="Send to Back" style="display: none; font-size: 14px;"><i class='bx bx-arrow-to-bottom'></i></button>
                     <button class="is-btn-icon" id="is-ctx-del" title="Delete (Del)" style="color: #fca5a5; display: none;"><i class='bx bx-trash'></i></button>
@@ -520,34 +542,87 @@ export function renderImageStudio(container) {
             targetCtx.stroke();
             targetCtx.globalAlpha = 1;
         } else if (s.type === 'polyarrow' && s.points && s.points.length > 1) {
+            // Apply line style
+            const ls = s.lineStyle || 'solid';
+            const sw = s.strokeWidth || 5;
+            if (ls === 'dashed') targetCtx.setLineDash([sw * 3, sw * 2]);
+            else if (ls === 'dotted') targetCtx.setLineDash([sw, sw * 1.5]);
+            else if (ls === 'dashdot') targetCtx.setLineDash([sw * 3, sw * 1.5, sw, sw * 1.5]);
+            else targetCtx.setLineDash([]);
+            
+            targetCtx.lineCap = 'round';
+            targetCtx.lineJoin = 'round';
             targetCtx.beginPath();
             targetCtx.moveTo(s.points[0].x, s.points[0].y);
             for (let i = 1; i < s.points.length; i++) {
                 targetCtx.lineTo(s.points[i].x, s.points[i].y);
             }
             targetCtx.stroke();
-            // Arrow head at end
-            const lastPt = s.points[s.points.length - 1];
-            const prevPt = s.points[s.points.length - 2];
-            const angle = Math.atan2(lastPt.y - prevPt.y, lastPt.x - prevPt.x);
-            const headlen = 15 + s.strokeWidth;
-            targetCtx.beginPath();
-            targetCtx.moveTo(lastPt.x, lastPt.y);
-            targetCtx.lineTo(lastPt.x - headlen * Math.cos(angle - Math.PI / 6), lastPt.y - headlen * Math.sin(angle - Math.PI / 6));
-            targetCtx.moveTo(lastPt.x, lastPt.y);
-            targetCtx.lineTo(lastPt.x - headlen * Math.cos(angle + Math.PI / 6), lastPt.y - headlen * Math.sin(angle + Math.PI / 6));
-            targetCtx.stroke();
-            // Arrow head at start (for double)
-            if (s.doubleEnded) {
+            targetCtx.setLineDash([]);
+            
+            const mode = s.arrowMode || 'none';
+            const headStyle = s.arrowHead || 'open';
+            const headlen = 12 + sw * 1.5;
+            
+            function drawArrowHead(tipPt, refPt) {
+                const angle = Math.atan2(tipPt.y - refPt.y, tipPt.x - refPt.x);
+                targetCtx.save();
+                targetCtx.translate(tipPt.x, tipPt.y);
+                targetCtx.rotate(angle);
+                
+                if (headStyle === 'open') {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(-headlen * Math.cos(Math.PI / 6), -headlen * Math.sin(Math.PI / 6));
+                    targetCtx.lineTo(0, 0);
+                    targetCtx.lineTo(-headlen * Math.cos(Math.PI / 6), headlen * Math.sin(Math.PI / 6));
+                    targetCtx.stroke();
+                } else if (headStyle === 'filled') {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(0, 0);
+                    targetCtx.lineTo(-headlen, -headlen * 0.4);
+                    targetCtx.lineTo(-headlen, headlen * 0.4);
+                    targetCtx.closePath();
+                    targetCtx.fillStyle = s.stroke;
+                    targetCtx.fill();
+                    targetCtx.stroke();
+                } else if (headStyle === 'diamond') {
+                    const hl = headlen * 0.7;
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(0, 0);
+                    targetCtx.lineTo(-hl, -hl * 0.5);
+                    targetCtx.lineTo(-hl * 2, 0);
+                    targetCtx.lineTo(-hl, hl * 0.5);
+                    targetCtx.closePath();
+                    targetCtx.fillStyle = s.stroke;
+                    targetCtx.fill();
+                    targetCtx.stroke();
+                } else if (headStyle === 'circle') {
+                    const r = headlen * 0.35;
+                    targetCtx.beginPath();
+                    targetCtx.arc(-r, 0, r, 0, Math.PI * 2);
+                    targetCtx.fillStyle = s.stroke;
+                    targetCtx.fill();
+                    targetCtx.stroke();
+                } else if (headStyle === 'square') {
+                    const sz = headlen * 0.5;
+                    targetCtx.beginPath();
+                    targetCtx.rect(-sz * 2, -sz, sz * 2, sz * 2);
+                    targetCtx.fillStyle = s.stroke;
+                    targetCtx.fill();
+                    targetCtx.stroke();
+                }
+                targetCtx.restore();
+            }
+            
+            if (mode === 'single' || mode === 'double') {
+                const lastPt = s.points[s.points.length - 1];
+                const prevPt = s.points[s.points.length - 2];
+                drawArrowHead(lastPt, prevPt);
+            }
+            if (mode === 'double') {
                 const firstPt = s.points[0];
                 const nextPt = s.points[1];
-                const a2 = Math.atan2(firstPt.y - nextPt.y, firstPt.x - nextPt.x);
-                targetCtx.beginPath();
-                targetCtx.moveTo(firstPt.x, firstPt.y);
-                targetCtx.lineTo(firstPt.x - headlen * Math.cos(a2 - Math.PI / 6), firstPt.y - headlen * Math.sin(a2 - Math.PI / 6));
-                targetCtx.moveTo(firstPt.x, firstPt.y);
-                targetCtx.lineTo(firstPt.x - headlen * Math.cos(a2 + Math.PI / 6), firstPt.y - headlen * Math.sin(a2 + Math.PI / 6));
-                targetCtx.stroke();
+                drawArrowHead(firstPt, nextPt);
             }
         }
         
@@ -669,7 +744,7 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-front').style.display = 'flex';
             container.querySelector('#is-ctx-back').style.display = 'flex';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
-            container.querySelector('#is-polyarrow-dbl').style.display = 'none';
+            container.querySelector('#is-polyarrow-opts').style.display = 'none';
             // Hide smooth controls (shown selectively for path/polyarrow)
             container.querySelector('#is-brush-smooth').style.display = 'none';
             container.querySelector('#is-brush-smooth-divider').style.display = 'none';
@@ -709,9 +784,19 @@ export function renderImageStudio(container) {
                 container.querySelector('#is-smooth-level').style.display = '';
                 container.querySelector('#is-smooth-level-label').style.display = '';
                 container.querySelector('#is-smooth-level-val').style.display = '';
-                // Show double-arrow toggle
-                container.querySelector('#is-polyarrow-dbl').style.display = 'flex';
-                container.querySelector('#is-polyarrow-dbl-label').textContent = s.doubleEnded ? '↔ Double' : '→ Single';
+                // Show polyarrow options
+                container.querySelector('#is-polyarrow-opts').style.display = 'flex';
+                // Sync mode buttons
+                const mode = s.arrowMode || 'none';
+                container.querySelectorAll('.is-arrow-mode').forEach(b => b.classList.toggle('active', b.getAttribute('data-mode') === mode));
+                // Sync line style
+                container.querySelector('#is-line-style').value = s.lineStyle || 'solid';
+                // Sync arrowhead style & visibility
+                const hasArrow = mode !== 'none';
+                container.querySelector('#is-arrowhead-divider').style.display = hasArrow ? '' : 'none';
+                container.querySelector('#is-arrowhead-label').style.display = hasArrow ? '' : 'none';
+                container.querySelector('#is-arrowhead-style').style.display = hasArrow ? '' : 'none';
+                container.querySelector('#is-arrowhead-style').value = s.arrowHead || 'open';
             } else if (s.type === 'image') {
                 ctxTextSpan.style.display = 'none';
                 ctxShapeSpan.style.display = 'none';
@@ -772,7 +857,7 @@ export function renderImageStudio(container) {
             allCtxSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
             contextBar.style.display = 'flex';
             
-            const isShapeTool = ['line', 'arrow', 'dblarrow', 'polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool);
+            const isShapeTool = ['polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool);
             if (currentTool === 'text') {
                 ctxTextSpan.style.display = 'contents';
             } else if (isShapeTool) {
@@ -807,7 +892,7 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-front').style.display = 'none';
             container.querySelector('#is-ctx-back').style.display = 'none';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
-            container.querySelector('#is-polyarrow-dbl').style.display = 'none';
+            container.querySelector('#is-polyarrow-opts').style.display = 'none';
             
             drawSelectionOverlay();
         });
@@ -1183,7 +1268,7 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-front').style.display = 'none';
             container.querySelector('#is-ctx-back').style.display = 'none';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
-            container.querySelector('#is-polyarrow-dbl').style.display = 'none';
+            container.querySelector('#is-polyarrow-opts').style.display = 'none';
             const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
             allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
             container.querySelector('#is-ctx-select').style.display = 'contents';
@@ -1515,7 +1600,7 @@ export function renderImageStudio(container) {
                 octx.strokeStyle = '#fff';
                 octx.lineWidth = 1;
                 octx.stroke();
-            } else if (['line', 'arrow', 'dblarrow', 'polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star', 'crop', 'text'].includes(currentTool)) {
+            } else if (['polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star', 'crop', 'text'].includes(currentTool)) {
                 // Draw a custom crosshair cursor on overlay
                 drawSelectionOverlay();
                 octx.strokeStyle = '#000';
@@ -1606,7 +1691,7 @@ export function renderImageStudio(container) {
             octx.strokeStyle = '#fff';
             octx.lineWidth = 1;
             octx.stroke();
-        } else if (['line', 'arrow', 'dblarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
+        } else if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = container.querySelector('#is-shape-color').value;
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
             drawSelectionOverlay();
@@ -1825,7 +1910,7 @@ export function renderImageStudio(container) {
             return;
         }
         
-        if (['line', 'arrow', 'dblarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
+        if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = container.querySelector('#is-shape-color').value;
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
             vectorShapes.push({
@@ -1955,13 +2040,20 @@ export function renderImageStudio(container) {
                 reader.onload = (event) => {
                     const img = new Image();
                     img.onload = () => {
+                        // Scale down to fit canvas if needed (keep aspect ratio)
+                        let w = img.width, h = img.height;
+                        if (w > canvas.width || h > canvas.height) {
+                            const scale = Math.min(canvas.width / w, canvas.height / h);
+                            w = Math.round(w * scale);
+                            h = Math.round(h * scale);
+                        }
                         vectorShapes.push({
                             type: 'image',
                             img: img,
-                            x: Math.round(canvas.width/2 - img.width/2),
-                            y: Math.round(canvas.height/2 - img.height/2),
-                            x2: Math.round(canvas.width/2 + img.width/2),
-                            y2: Math.round(canvas.height/2 + img.height/2),
+                            x: Math.round(canvas.width/2 - w/2),
+                            y: Math.round(canvas.height/2 - h/2),
+                            x2: Math.round(canvas.width/2 + w/2),
+                            y2: Math.round(canvas.height/2 + h/2),
                             strokeWidth: 0
                         });
                         activeVectorShape = vectorShapes[vectorShapes.length - 1];
@@ -2204,11 +2296,35 @@ export function renderImageStudio(container) {
         setTimeout(() => btn.style.color = '', 500);
     });
 
-    // Polyarrow double-ended toggle
-    container.querySelector('#is-polyarrow-dbl').addEventListener('click', () => {
+    // Polyarrow mode buttons (none / single / double)
+    container.querySelectorAll('.is-arrow-mode').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (!activeVectorShape || activeVectorShape.type !== 'polyarrow') return;
+            const mode = btn.getAttribute('data-mode');
+            activeVectorShape.arrowMode = mode;
+            container.querySelectorAll('.is-arrow-mode').forEach(b => b.classList.toggle('active', b.getAttribute('data-mode') === mode));
+            // Show/hide arrowhead options
+            const hasArrow = mode !== 'none';
+            container.querySelector('#is-arrowhead-divider').style.display = hasArrow ? '' : 'none';
+            container.querySelector('#is-arrowhead-label').style.display = hasArrow ? '' : 'none';
+            container.querySelector('#is-arrowhead-style').style.display = hasArrow ? '' : 'none';
+            drawSelectionOverlay();
+            saveState();
+        });
+    });
+
+    // Line style selector
+    container.querySelector('#is-line-style').addEventListener('change', (e) => {
         if (!activeVectorShape || activeVectorShape.type !== 'polyarrow') return;
-        activeVectorShape.doubleEnded = !activeVectorShape.doubleEnded;
-        container.querySelector('#is-polyarrow-dbl-label').textContent = activeVectorShape.doubleEnded ? '↔ Double' : '→ Single';
+        activeVectorShape.lineStyle = e.target.value;
+        drawSelectionOverlay();
+        saveState();
+    });
+
+    // Arrowhead style selector
+    container.querySelector('#is-arrowhead-style').addEventListener('change', (e) => {
+        if (!activeVectorShape || activeVectorShape.type !== 'polyarrow') return;
+        activeVectorShape.arrowHead = e.target.value;
         drawSelectionOverlay();
         saveState();
     });
@@ -2243,13 +2359,21 @@ export function renderImageStudio(container) {
             tempCanvas.height = clipboardData.height;
             tempCanvas.getContext('2d').putImageData(clipboardData, 0, 0);
             
+            // Scale down to fit canvas if needed (keep aspect ratio)
+            let w = clipboardData.width, h = clipboardData.height;
+            if (w > canvas.width || h > canvas.height) {
+                const scale = Math.min(canvas.width / w, canvas.height / h);
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+            }
+            
             vectorShapes.push({
                 type: 'image',
                 img: tempCanvas,
-                x: Math.round(canvas.width/2 - clipboardData.width/2),
-                y: Math.round(canvas.height/2 - clipboardData.height/2),
-                x2: Math.round(canvas.width/2 + clipboardData.width/2),
-                y2: Math.round(canvas.height/2 + clipboardData.height/2),
+                x: Math.round(canvas.width/2 - w/2),
+                y: Math.round(canvas.height/2 - h/2),
+                x2: Math.round(canvas.width/2 + w/2),
+                y2: Math.round(canvas.height/2 + h/2),
                 strokeWidth: 0
             });
             activeVectorShape = vectorShapes[vectorShapes.length - 1];
