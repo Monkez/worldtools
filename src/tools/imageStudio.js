@@ -61,10 +61,10 @@ export function renderImageStudio(container) {
             <div style="display: flex; flex: 1; overflow: hidden; position: relative;">
                 <!-- ULTRA COMPACT LEFT TOOLBAR -->
                 <div style="width: 40px; background: #252526; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 4px; z-index: 10;">
-                    <button class="is-btn-icon is-tool" data-tool="select" title="Select Object (V)"><i class='bx bx-pointer'></i></button>
+                    <button class="is-btn-icon is-tool active" data-tool="select" title="Select Object (V)"><i class='bx bx-pointer'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="region" title="Select Region"><i class='bx bx-crop'></i></button>
                     <div style="width: 24px; height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
-                    <button class="is-btn-icon is-tool active" data-tool="brush" title="Brush"><i class='bx bx-paint'></i></button>
+                    <button class="is-btn-icon is-tool" data-tool="brush" title="Brush"><i class='bx bx-paint'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="fill" title="Paint Bucket"><i class='bx bx-color-fill'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="eraser" title="Eraser"><i class='bx bx-eraser'></i></button>
                     <div style="width: 24px; height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
@@ -244,7 +244,7 @@ export function renderImageStudio(container) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // State
-    let currentTool = 'brush';
+    let currentTool = 'select';
     let isDrawing = false;
     let startX = 0;
     let startY = 0;
@@ -2987,4 +2987,8 @@ export function renderImageStudio(container) {
             setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000);
         }
     });
+
+    // Initialize default tool to select
+    const defaultToolBtn = container.querySelector('.is-tool[data-tool="select"]');
+    if (defaultToolBtn) defaultToolBtn.click();
 }
