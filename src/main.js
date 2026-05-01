@@ -21,6 +21,8 @@ import { renderPromptHelper } from './tools/promptHelper.js'
 import { renderCalculator } from './tools/calculator.js'
 import { renderScreenTest } from './tools/screenTest.js'
 import { renderAudioTest } from './tools/audioTest.js'
+import { renderKeyboardTest } from './tools/keyboardTest.js'
+import { renderMouseTest } from './tools/mouseTest.js'
 import { renderDeviceInfo } from './tools/deviceInfo.js'
 import { AIClient } from './utils/aiClient.js'
 
@@ -80,6 +82,22 @@ export const tools = [
         description: 'Test left/right channels and speaker frequency.',
         category: 'Test Devices',
         render: renderAudioTest
+    },
+    {
+        id: 'keyboard-test',
+        name: 'Keyboard Tester',
+        icon: 'bx-keyboard',
+        description: 'Test keys, modifiers, and view KeyCode properties.',
+        category: 'Test Devices',
+        render: renderKeyboardTest
+    },
+    {
+        id: 'mouse-test',
+        name: 'Mouse & Scroll Tester',
+        icon: 'bx-mouse',
+        description: 'Test mouse buttons, double-click, and scroll speed.',
+        category: 'Test Devices',
+        render: renderMouseTest
     },
     {
         id: 'device-info',
