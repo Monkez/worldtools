@@ -294,6 +294,60 @@ app.post('/api/ai/chat', express.json(), async (req, res) => {
     }
 });
 
+app.post('/api/ai/vision', express.json({limit: '50mb'}), async (req, res) => {
+    try {
+        const { imageBase64, prompt, settings } = req.body;
+        
+        if (settings && settings.provider === 'custom') {
+            if (!settings.customBaseUrl) return res.status(400).json({ error: "Custom Base URL is required." });
+            const openai = new OpenAI({
+                apiKey: settings.customApiKey || 'dummy-key-for-local',
+                baseURL: settings.customBaseUrl
+            });
+            const content = [{ type: 'text', text: prompt || "Phân tích ảnh này." }];
+            if (imageBase64) {
+                const b64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+                const mimeType = imageBase64.match(/^data:(image\/\w+);base64,/)?.[1] || "image/jpeg";
+                content.push({
+                    type: 'image_url',
+                    image_url: { url: `data:${mimeType};base64,${b64}` }
+                });
+            }
+            const resp = await openai.chat.completions.create({
+                model: settings.customModelId || 'local-model',
+                messages: [{ role: 'user', content }],
+                max_tokens: 1000
+            });
+            return res.json({ result: resp.choices[0]?.message?.content || "" });
+        }
+
+        const key = (settings && settings.geminiKey) || process.env.GEMINI_API_KEY;
+        if (!key) return res.status(400).json({ error: "API Key is missing." });
+        
+        const genAI = new GoogleGenerativeAI(key);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        const parts = [ { text: prompt || "Phân tích ảnh này." } ];
+        
+        if (imageBase64) {
+            const b64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+            const mimeType = imageBase64.match(/^data:(image\/\w+);base64,/)?.[1] || "image/jpeg";
+            parts.push({
+                inlineData: {
+                    data: b64,
+                    mimeType: mimeType
+                }
+            });
+        }
+        
+        const result = await model.generateContent(parts);
+        res.json({ result: result.response.text() });
+    } catch (err) {
+        console.error('Vision API Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/ai/test', express.json(), async (req, res) => {
     try {
         const { settings } = req.body;

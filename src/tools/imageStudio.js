@@ -19,6 +19,8 @@ export function renderImageStudio(container) {
                     <div class="is-divider"></div>
                     <button class="is-btn-icon" id="is-clear" title="Clear Canvas" style="color: #fca5a5;"><i class='bx bx-trash'></i></button>
                     <div class="is-divider"></div>
+                    <button class="is-btn-text" id="is-ai-history-btn" title="View AI Analysis History"><i class='bx bx-history' style="color:#60a5fa;"></i> AI History</button>
+                    <div class="is-divider"></div>
                     
                     <!-- Adjustments Dropdown -->
                     <div style="position: relative;" id="is-adj-container">
@@ -233,7 +235,7 @@ export function renderImageStudio(container) {
         <style>
             .is-btn-icon { background: transparent; border: none; color: #ccc; width: 28px; height: 28px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: 0.1s; }
             .is-btn-icon:hover { background: rgba(255,255,255,0.1); color: #fff; }
-            .is-btn-text { background: transparent; border: none; color: #ccc; height: 28px; padding: 0 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: 0.1s; }
+            .is-btn-text { background: transparent; border: none; color: #ccc; height: 28px; padding: 0 8px; border-radius: 4px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: 0.1s; }
             .is-btn-text:hover { background: rgba(255,255,255,0.1); color: #fff; }
             .is-divider { width: 1px; height: 16px; background: rgba(255,255,255,0.1); margin: 0 4px; }
             .is-tool.active { background: #3b82f6 !important; color: #fff; }
@@ -3635,22 +3637,170 @@ export function renderImageStudio(container) {
                 btn.innerHTML = origHTML;
             }, 1000);
         });
-
         // Action 4: Analysis with AI
-        menu.querySelector('#is-ai-opt-analyze').addEventListener('click', (e) => {
+        menu.querySelector('#is-ai-opt-analyze').addEventListener('click', async (e) => {
             e.stopPropagation();
             menu.remove();
             document.removeEventListener('pointerdown', closeMenu);
             
-            const btn = e.target;
-            const origHTML = btn.innerHTML;
-            btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Analyzing...";
-            setTimeout(() => {
-                alert('AI Analysis: This image appears to contain a scenic view with people.');
-                btn.innerHTML = origHTML;
-            }, 1500);
+            // Lấy dữ liệu ảnh
+            let imageDataUrl = '';
+            if (activeVectorShape && activeVectorShape.type === 'image') {
+                const tempC = document.createElement('canvas');
+                tempC.width = Math.abs(activeVectorShape.x2 - activeVectorShape.x);
+                tempC.height = Math.abs(activeVectorShape.y2 - activeVectorShape.y);
+                const tCtx = tempC.getContext('2d');
+                tCtx.drawImage(activeVectorShape.img, 0, 0, tempC.width, tempC.height);
+                imageDataUrl = tempC.toDataURL('image/jpeg', 0.8);
+            } else {
+                imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            }
+
+            if (!window.aiAnalysisHistory) window.aiAnalysisHistory = [];
+            
+            // Add a temporary loading item
+            const loadingId = Date.now();
+            window.aiAnalysisHistory.unshift({
+                id: loadingId,
+                image: imageDataUrl,
+                result: null, // null indicates loading
+                time: new Date().toLocaleTimeString()
+            });
+            
+            showAiAnalysisPopup(loadingId);
+
+            try {
+                const reqPrompt = "Hãy phân tích chi tiết bức ảnh này theo các mục sau:\n1. **Nội dung chính**: Bức ảnh chứa những gì?\n2. **Style & Màu sắc**: Phong cách nghệ thuật, ánh sáng, tone màu chủ đạo?\n3. **Prompt gợi ý**: Đề xuất 1 prompt tiếng Anh chi tiết để tạo ra bức ảnh có phong cách và nội dung tương tự.";
+                
+                const settings = {
+                    provider: localStorage.getItem('worldtools_ai_provider') || 'gemini',
+                    geminiKey: localStorage.getItem('worldtools_gemini_key') || '',
+                    customBaseUrl: localStorage.getItem('worldtools_custom_url') || '',
+                    customModelId: localStorage.getItem('worldtools_custom_model') || '',
+                    customApiKey: localStorage.getItem('worldtools_custom_key') || ''
+                };
+
+                const res = await fetch('http://localhost:3000/api/ai/vision', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageBase64: imageDataUrl,
+                        prompt: reqPrompt,
+                        settings: settings
+                    })
+                });
+                
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                // Update the loading item with actual result
+                const itemIdx = window.aiAnalysisHistory.findIndex(i => i.id === loadingId);
+                if (itemIdx !== -1) {
+                    window.aiAnalysisHistory[itemIdx].result = data.result;
+                }
+                showAiAnalysisPopup(loadingId);
+
+            } catch (err) {
+                console.error(err);
+                const itemIdx = window.aiAnalysisHistory.findIndex(i => i.id === loadingId);
+                if (itemIdx !== -1) {
+                    window.aiAnalysisHistory[itemIdx].result = "**Lỗi phân tích:** " + err.message;
+                }
+                showAiAnalysisPopup(loadingId);
+            }
         });
     };
+
+    function showAiAnalysisPopup(activeId = null) {
+        let popup = container.querySelector('#is-ai-analysis-popup');
+        if (!popup) {
+            popup = document.createElement('div');
+            popup.id = 'is-ai-analysis-popup';
+            popup.style.cssText = 'position:absolute; top:10%; left:50%; transform:translateX(-50%); width:700px; max-width:90%; max-height:80%; background:#252526; border:1px solid rgba(255,255,255,0.1); border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.8); z-index:1000; display:flex; flex-direction:column; overflow:hidden; font-family:system-ui,sans-serif;';
+            container.appendChild(popup);
+        }
+        
+        if (!window.aiAnalysisHistory || window.aiAnalysisHistory.length === 0) {
+            alert("Chưa có lịch sử phân tích ảnh nào.");
+            popup.remove();
+            return;
+        }
+        
+        let activeIdx = 0;
+        if (activeId) {
+            const idx = window.aiAnalysisHistory.findIndex(i => i.id === activeId);
+            if (idx !== -1) activeIdx = idx;
+        }
+        
+        let historyHTML = window.aiAnalysisHistory.map((item, idx) => `
+            <div class="is-ai-history-item" data-idx="${idx}" style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; gap: 8px; align-items: center; background: ${idx === activeIdx ? 'rgba(255,255,255,0.1)' : 'transparent'};">
+                <img src="${item.image}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 4px; background: #111;">
+                <div style="flex:1; overflow:hidden;">
+                    <div style="font-size: 11px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><i class='bx bx-time'></i> ${item.time}</div>
+                    <div style="font-size: 10px; color: #888; margin-top:2px;">
+                        ${item.result === null ? '<i class="bx bx-loader-alt bx-spin" style="color:#60a5fa;"></i> Đang xử lý...' : (item.result.substring(0, 20) + '...')}
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        const currentItem = window.aiAnalysisHistory[activeIdx];
+
+        popup.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:rgba(0,0,0,0.2); border-bottom:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size: 14px; font-weight: 600; color: #fff;"><i class='bx bx-search-alt' style="color:#60a5fa; margin-right:4px;"></i> AI Image Analysis</div>
+                <button id="is-ai-analysis-close" class="is-btn-icon" style="color:#aaa;"><i class='bx bx-x' style="font-size:20px;"></i></button>
+            </div>
+            <div style="display:flex; flex:1; overflow:hidden; height: 500px;">
+                <div style="width: 180px; background: rgba(0,0,0,0.1); border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto;" id="is-ai-history-list">
+                    ${historyHTML}
+                </div>
+                <div style="flex:1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; background: #1e1e1e;" id="is-ai-analysis-content">
+                    <!-- Content injected here -->
+                </div>
+            </div>
+        `;
+
+        const renderContent = (item) => {
+            let contentHTML = '';
+            if (item.result === null) {
+                contentHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height: 200px; color: #aaa;">
+                    <i class='bx bx-loader-alt bx-spin' style="font-size: 32px; color: #60a5fa; margin-bottom: 12px;"></i>
+                    <span style="font-size: 13px;">AI đang phân tích ảnh, vui lòng chờ...</span>
+                </div>`;
+            } else {
+                const formattedText = item.result
+                    .replace(/^#+\s+/gm, '') // Remove markdown headers completely
+                    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#60a5fa;">$1</strong>')
+                    .replace(/\n/g, '<br>')
+                    .replace(/\* (.*?)(<br>|$)/g, '<li style="margin-bottom:4px;">$1</li>');
+                    
+                contentHTML = `<div style="font-size: 13px; color: #ddd; line-height: 1.6; user-select: text; padding-bottom: 20px;">${formattedText}</div>`;
+            }
+
+            container.querySelector('#is-ai-analysis-content').innerHTML = `
+                <div style="text-align: center; background: #111; padding: 8px; border-radius: 6px; border:1px solid rgba(255,255,255,0.05); flex-shrink: 0;">
+                    <img src="${item.image}" style="max-width: 100%; max-height: 220px; object-fit: contain; border-radius: 4px;">
+                </div>
+                ${contentHTML}
+            `;
+        };
+
+        renderContent(currentItem);
+
+        popup.querySelector('#is-ai-analysis-close').addEventListener('click', () => popup.remove());
+        
+        popup.querySelectorAll('.is-ai-history-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.getAttribute('data-idx'));
+                popup.querySelectorAll('.is-ai-history-item').forEach(i => i.style.background = 'transparent');
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                renderContent(window.aiAnalysisHistory[idx]);
+            });
+        });
+    }
+
+    container.querySelector('#is-ai-history-btn').addEventListener('click', () => showAiAnalysisPopup());
 
     container.querySelector('#is-canvas-smart-remove').addEventListener('click', smartRemoveHandler);
     container.querySelector('#is-obj-smart-remove').addEventListener('click', smartRemoveHandler);
