@@ -328,6 +328,19 @@ export function renderImageStudio(container) {
                 margin-top: -5.5px;
             }
             input[type="range"]:focus { outline: none; }
+            #is-cp-hue::-webkit-slider-runnable-track {
+                background: transparent;
+                height: 12px;
+                margin-top: 0;
+            }
+            #is-cp-hue::-webkit-slider-thumb {
+                height: 16px;
+                width: 16px;
+                background: #fff;
+                border: 2px solid #333;
+                margin-top: -2px;
+                box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            }
         </style>
     `;
 
