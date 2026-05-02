@@ -36,7 +36,7 @@ function createWindow() {
   // Load the frontend (which is now served by the server on port 3000)
   // Give the server a couple seconds to start up
   setTimeout(() => {
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
   }, 1000);
 }
 

@@ -680,18 +680,14 @@ app.post('/api/ai/generate-fill', express.json({limit: '50mb'}), async (req, res
 });
 // Serve the compiled frontend (for production/Electron)
 const distPath = path.join(__dirname, '../dist');
-if (fs.existsSync(distPath)) {
-    console.log('Found dist folder. Serving frontend statically.');
-    app.use(express.static(distPath));
-    app.use((req, res) => {
-        if (!req.path.startsWith('/api/')) {
-            res.sendFile(path.join(distPath, 'index.html'));
-        } else {
-            res.status(404).json({ error: 'API endpoint not found' });
-        }
-    });
-}
-
+app.use(express.static(distPath));
+app.use((req, res) => {
+    if (!req.path.startsWith('/api/')) {
+        res.sendFile(path.join(distPath, 'index.html'));
+    } else {
+        res.status(404).json({ error: 'API endpoint not found' });
+    }
+});
 app.listen(PORT, () => {
     console.log(`WorldTools Backend is running on http://localhost:${PORT}`);
     if (process.send) process.send('server-ready'); // Notify Electron main process
