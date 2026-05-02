@@ -308,7 +308,6 @@ export function renderImageStudio(container) {
                 -webkit-appearance: none;
                 width: 100%;
                 background: transparent;
-                height: 14px;
             }
             input[type="range"]::-webkit-slider-runnable-track {
                 width: 100%;
@@ -316,7 +315,6 @@ export function renderImageStudio(container) {
                 cursor: pointer;
                 background: linear-gradient(to right, #3b82f6 var(--val, 50%), #444 var(--val, 50%));
                 border-radius: 2px;
-                margin-top: 5.5px;
             }
             input[type="range"]::-webkit-slider-thumb {
                 height: 14px;
