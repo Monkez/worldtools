@@ -1570,7 +1570,7 @@ export function renderImageStudio(container) {
                 let slocalX = sdx * scosR - sdy * ssinR;
                 let slocalY = sdx * ssinR + sdy * scosR;
                 
-                let p = s.strokeWidth / 2 + 5;
+                let p = (s.strokeWidth || 0) / 2 + 5;
                 let hw = w / 2 + p;
                 let hh = h / 2 + p;
                 if (s.type === 'circle' || s.type === 'ellipse') {
@@ -1598,7 +1598,7 @@ export function renderImageStudio(container) {
                     const shcos = Math.cos(-shrot), shsin = Math.sin(-shrot);
                     const shlx = shdx * shcos - shdy * shsin;
                     const shly = shdx * shsin + shdy * shcos;
-                    const shp = sh.strokeWidth / 2 + 5;
+                    const shp = (sh.strokeWidth || 0) / 2 + 5;
                     if (Math.abs(shlx) <= shw / 2 + shp && Math.abs(shly) <= shh / 2 + shp) allHits.push(sh);
                 }
                 if (allHits.length > 1) {
@@ -2076,7 +2076,7 @@ export function renderImageStudio(container) {
                 }
                 // Check if hovering body of shape for move cursor
                 if (!foundCursor) {
-                    let p = s.strokeWidth / 2 + 5;
+                    let p = (s.strokeWidth || 0) / 2 + 5;
                     if (Math.abs(localX) <= sw/2 + p && Math.abs(localY) <= sh/2 + p) {
                         canvas.style.cursor = 'move';
                     } else {
@@ -2631,7 +2631,7 @@ export function renderImageStudio(container) {
                             w = Math.round(w * scale);
                             h = Math.round(h * scale);
                         }
-                        vectorShapes.push({
+                        const obj = {
                             id: nextShapeId(),
                             type: 'image',
                             img: img,
@@ -2640,8 +2640,9 @@ export function renderImageStudio(container) {
                             x2: Math.round(canvas.width/2 + w/2),
                             y2: Math.round(canvas.height/2 + h/2),
                             strokeWidth: 0
-                        });
-                        activeVectorShape = vectorShapes[vectorShapes.length - 1];
+                        };
+                        vectorShapes.push(obj);
+                        activeVectorShape = obj;
                         currentTool = 'select';
                         tools.forEach(t => t.classList.toggle('active', t.getAttribute('data-tool') === 'select'));
                         canvas.style.cursor = 'default';
@@ -2952,7 +2953,7 @@ export function renderImageStudio(container) {
                 h = Math.round(h * scale);
             }
             
-            vectorShapes.push({
+            const obj = {
                 id: nextShapeId(),
                 type: 'image',
                 img: tempCanvas,
@@ -2961,8 +2962,9 @@ export function renderImageStudio(container) {
                 x2: Math.round(canvas.width/2 + w/2),
                 y2: Math.round(canvas.height/2 + h/2),
                 strokeWidth: 0
-            });
-            activeVectorShape = vectorShapes[vectorShapes.length - 1];
+            };
+            vectorShapes.push(obj);
+            activeVectorShape = obj;
             currentTool = 'select';
             tools.forEach(t => t.classList.toggle('active', t.getAttribute('data-tool') === 'select'));
             canvas.style.cursor = 'default';
@@ -3377,9 +3379,12 @@ export function renderImageStudio(container) {
         menu.style.top = top + 'px';
 
         menu.innerHTML = `
-            <button class="is-btn-icon" id="is-ai-opt-whole" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-image-alt' style="margin-right: 6px;"></i> Prompt AI</button>
+            <div style="padding: 4px 10px; font-size: 10px; color: #9ca3af; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">AI Generation</div>
+            <button class="is-btn-icon" id="is-ai-opt-create" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bxs-magic-wand' style="margin-right: 6px; color:#10b981;"></i> Create Image Object</button>
+            <button class="is-btn-icon" id="is-ai-opt-whole" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-image-alt' style="margin-right: 6px;"></i> Prompt AI (Edit)</button>
             <button class="is-btn-icon" id="is-ai-opt-area" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-highlight' style="margin-right: 6px;"></i> Select Area to Prompt</button>
             <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0; width: 100%;"></div>
+            <div style="padding: 4px 10px; font-size: 10px; color: #9ca3af; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">AI Enhancement</div>
             <button class="is-btn-icon" id="is-ai-opt-super" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-zoom-in' style="margin-right: 6px;"></i> Super Resolution</button>
             <button class="is-btn-icon" id="is-ai-opt-analyze" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-search-alt' style="margin-right: 6px;"></i> Analysis with AI</button>
         `;
@@ -3429,8 +3434,211 @@ export function renderImageStudio(container) {
             drawSelectionOverlay();
         }
 
+        function showAiEditModal(imageDataUrl, isObj, maskDataUrl = null) {
+            const modalOverlay = document.createElement('div');
+            modalOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(3px);';
+            
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = 'background:#1e1e1e;width:450px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.8);border:1px solid rgba(255,255,255,0.1);display:flex;flex-direction:column;overflow:hidden;font-family:inherit;';
+            
+            modalContent.innerHTML = `
+                <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+                    <h3 style="margin:0;color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;">
+                        ${maskDataUrl ? "<i class='bx bx-highlight' style='color:#f43f5e;'></i> Prompt AI (Inpainting)" : "<i class='bx bx-image-alt' style='color:#3b82f6;'></i> Prompt AI (Image Edit)"}
+                    </h3>
+                    <button id="is-ai-modal-edit-close" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:20px;padding:0;"><i class='bx bx-x'></i></button>
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+                    <div>
+                        <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Edit Instructions ${maskDataUrl ? '' : '<span style="color:#ef4444">*</span>'}</label>
+                        <textarea id="is-ai-edit-prompt-input" rows="4" placeholder="${maskDataUrl ? 'Describe what to put in the mask area, or leave blank to remove the object...' : 'How should the AI edit or transform this image?...'}" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:10px;font-size:13px;outline:none;resize:none;box-sizing:border-box;"></textarea>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+                            <button id="is-ai-edit-refine-btn" style="background:transparent;color:#3b82f6;border:1px solid rgba(59,130,246,0.3);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:4px;transition:all 0.2s;"><i class='bx bx-brush'></i> Refine Prompt</button>
+                            <button id="is-ai-edit-revert-btn" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;font-size:11px;display:none;text-decoration:underline;">Revert</button>
+                        </div>
+                    </div>
+                    ${!maskDataUrl ? `
+                    <div style="display:flex;gap:12px;">
+                        <div style="flex:1;">
+                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Image Editing API</label>
+                            <select id="is-ai-edit-model-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
+                                <option value="mystic" selected>Mystic (Default Edit)</option>
+                                <option value="upscaler">Upscaler - Magnific API</option>
+                                <option value="relight">Relight - Magnific API</option>
+                                <option value="style-transfer">Style Transfer - Magnific API</option>
+                                <option value="remove-background">Remove Background</option>
+                                <option value="reimagine-flux">Reimagine Flux</option>
+                                <option value="image-expand">Image Expand API</option>
+                                <option value="skin-enhancer">Skin Enhancer API</option>
+                                <option value="change-camera">Change Camera</option>
+                            </select>
+                        </div>
+                    </div>` : ''}
+                </div>
+                <div style="padding:16px 20px;background:rgba(255,255,255,0.02);border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:flex-end;gap:10px;">
+                    <button id="is-ai-modal-edit-cancel" style="background:transparent;color:#d1d5db;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;transition:all 0.2s;">Cancel</button>
+                    <button id="is-ai-modal-edit-submit" style="background:${maskDataUrl ? '#f43f5e' : '#3b82f6'};color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:all 0.2s;"><i class='bx bxs-magic-wand'></i> Apply Edit</button>
+                </div>
+            `;
+            
+            modalOverlay.appendChild(modalContent);
+            document.body.appendChild(modalOverlay);
+            
+            const closeModal = () => {
+                modalOverlay.remove();
+                if (maskDataUrl) exitSmartRemove();
+            };
+            
+            modalContent.querySelector('#is-ai-modal-edit-close').addEventListener('click', closeModal);
+            modalContent.querySelector('#is-ai-modal-edit-cancel').addEventListener('click', closeModal);
+            modalOverlay.addEventListener('click', (ev) => { if(ev.target === modalOverlay) closeModal(); });
+            
+            const promptInput = modalContent.querySelector('#is-ai-edit-prompt-input');
+            promptInput.focus();
+            
+            const refineBtn = modalContent.querySelector('#is-ai-edit-refine-btn');
+            const revertBtn = modalContent.querySelector('#is-ai-edit-revert-btn');
+            let originalPrompt = '';
+
+            refineBtn.addEventListener('click', async () => {
+                const currentVal = promptInput.value.trim();
+                if (!currentVal) {
+                    promptInput.style.borderColor = '#ef4444';
+                    return;
+                }
+                
+                originalPrompt = currentVal;
+                refineBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Refining...";
+                refineBtn.disabled = true;
+                refineBtn.style.opacity = '0.5';
+                
+                try {
+                    const settings = {
+                        provider: localStorage.getItem('worldtools_ai_provider') || 'gemini',
+                        geminiKey: localStorage.getItem('worldtools_gemini_key') || '',
+                        customBaseUrl: localStorage.getItem('worldtools_custom_url') || '',
+                        customModelId: localStorage.getItem('worldtools_custom_model') || '',
+                        customApiKey: localStorage.getItem('worldtools_custom_key') || ''
+                    };
+                    const res = await fetch('http://localhost:3000/api/ai/refine-prompt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: currentVal, settings })
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) throw new Error(data.error);
+                    
+                    promptInput.value = data.prompt;
+                    revertBtn.style.display = 'block';
+                } catch (err) {
+                    alert('Refine failed: ' + err.message);
+                } finally {
+                    refineBtn.innerHTML = "<i class='bx bx-brush'></i> Refine Prompt";
+                    refineBtn.disabled = false;
+                    refineBtn.style.opacity = '1';
+                }
+            });
+
+            revertBtn.addEventListener('click', () => {
+                promptInput.value = originalPrompt;
+                revertBtn.style.display = 'none';
+            });
+            
+            modalContent.querySelector('#is-ai-modal-edit-submit').addEventListener('click', async () => {
+                const promptVal = promptInput.value.trim();
+                if (!maskDataUrl && !promptVal) {
+                    promptInput.style.borderColor = '#ef4444';
+                    return;
+                }
+                
+                const btnSubmit = modalContent.querySelector('#is-ai-modal-edit-submit');
+                btnSubmit.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Processing...";
+                btnSubmit.disabled = true;
+                btnSubmit.style.opacity = '0.7';
+                
+                const loadingMsg = document.createElement('div');
+                loadingMsg.innerHTML = "This may take 10-30 seconds. Please wait...";
+                loadingMsg.style.cssText = "color:#3b82f6;font-size:12px;margin-top:10px;text-align:center;width:100%;";
+                modalContent.querySelector('.bx-loader-alt').parentElement.parentElement.appendChild(loadingMsg);
+                
+                try {
+                    const baseSettings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini', geminiKey: '' };
+                    const settings = {
+                        ...baseSettings,
+                        imageKey: localStorage.getItem('worldtools_image_key') || ''
+                    };
+
+                    let res, data;
+                    if (maskDataUrl) {
+                        res = await fetch('http://localhost:3000/api/ai/generate-fill', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                prompt: promptVal, 
+                                image: imageDataUrl,
+                                mask: maskDataUrl,
+                                settings 
+                            })
+                        });
+                        data = await res.json();
+                        if (!res.ok || !data.success) throw new Error(data.message || data.error || "Failed to generate fill");
+                    } else {
+                        const modelVal = modalContent.querySelector('#is-ai-edit-model-select').value;
+                        res = await fetch('http://localhost:3000/api/ai/edit-image', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                prompt: promptVal, 
+                                model: modelVal, 
+                                image: imageDataUrl,
+                                settings 
+                            })
+                        });
+                        data = await res.json();
+                        if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to edit image");
+                    }
+
+                    const newImg = new Image();
+                    newImg.crossOrigin = 'anonymous';
+                    newImg.onload = () => {
+                        closeModal();
+                        
+                        if (isObj && activeVectorShape) {
+                            if (maskDataUrl) {
+                                activeVectorShape.img = newImg;
+                                saveState(); drawSelectionOverlay();
+                            } else {
+                                activeVectorShape.img = newImg;
+                                saveState(); drawSelectionOverlay();
+                            }
+                        } else {
+                            if (!maskDataUrl) {
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                vectorShapes.splice(0, vectorShapes.length);
+                            }
+                            ctx.drawImage(newImg, 0, 0, canvas.width, canvas.height);
+                            saveState();
+                            drawSelectionOverlay();
+                        }
+                    };
+                    newImg.onerror = () => {
+                        closeModal();
+                        alert("Failed to load edited image.");
+                    };
+                    newImg.src = data.imageUrl || data.imageBase64;
+                    
+                } catch (err) {
+                    console.error(err);
+                    alert("Edit failed: " + err.message);
+                    btnSubmit.innerHTML = "<i class='bx bxs-magic-wand'></i> Apply Edit";
+                    btnSubmit.disabled = false;
+                    btnSubmit.style.opacity = '1';
+                    loadingMsg.remove();
+                }
+            });
+        }
+
         function createActionBar(x, y) {
-            if (actionBar) actionBar.remove();
             actionBar = document.createElement('div');
             actionBar.id = 'is-smart-remove-actionbar';
             actionBar.style.cssText = 'position: absolute; display: flex; align-items: center; gap: 4px; background: #252526; padding: 6px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); z-index: 100;';
@@ -3481,7 +3689,11 @@ export function renderImageStudio(container) {
                         const imgBase64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(imgBlob); });
                         const maskBase64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(maskBlob); });
                         
-                        const settings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini', geminiKey: '' };
+                        const baseSettings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini', geminiKey: '' };
+                        const settings = {
+                            ...baseSettings,
+                            imageKey: localStorage.getItem('worldtools_image_key') || ''
+                        };
                         
                         const response = await fetch('http://localhost:3000/api/ai/generate-fill', {
                             method: 'POST',
@@ -3495,17 +3707,8 @@ export function renderImageStudio(container) {
                         const newImage = new Image();
                         newImage.onload = () => {
                             if (activeVectorShape && activeVectorShape.type === 'image') {
-                                const tc = document.createElement('canvas');
-                                tc.width = activeVectorShape.x2 - activeVectorShape.x;
-                                tc.height = activeVectorShape.y2 - activeVectorShape.y;
-                                const ctx2 = tc.getContext('2d');
-                                ctx2.drawImage(newImage, activeVectorShape.x, activeVectorShape.y, tc.width, tc.height, 0, 0, tc.width, tc.height);
-                                const croppedImg = new Image();
-                                croppedImg.onload = () => {
-                                    activeVectorShape.img = croppedImg;
-                                    saveState(); drawSelectionOverlay();
-                                };
-                                croppedImg.src = tc.toDataURL();
+                                activeVectorShape.img = newImage;
+                                saveState(); drawSelectionOverlay();
                             } else {
                                 ctx.drawImage(newImage, 0, 0, canvas.width, canvas.height);
                                 saveState(); drawSelectionOverlay();
@@ -3514,7 +3717,7 @@ export function renderImageStudio(container) {
                         newImage.src = data.imageUrl || data.imageBase64;
                     } catch (err) {
                         console.error("AI Generation error:", err);
-                        alert("AI Generation failed: " + err.message + "\n\nBạn cần viết endpoint /api/ai/generate-fill trên server Node.js.");
+                        alert("AI Generation failed: " + err.message);
                     }
                 } else {
                     console.log("No prompt, skipping legacy remove");
@@ -3556,7 +3759,13 @@ export function renderImageStudio(container) {
             const maskCanvas = document.createElement('canvas');
             maskCanvas.width = canvas.width; maskCanvas.height = canvas.height;
             const mctx = maskCanvas.getContext('2d');
-            mctx.fillStyle = 'rgba(255, 80, 80, 1)';
+            
+            // Background must be white (unchanged areas)
+            mctx.fillStyle = '#ffffff';
+            mctx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+            
+            // Mask area must be black (edited areas)
+            mctx.fillStyle = '#000000';
             mctx.beginPath();
             mctx.moveTo(window.currentMaskPoints[0].x, window.currentMaskPoints[0].y);
             for(let i=1; i<window.currentMaskPoints.length; i++) mctx.lineTo(window.currentMaskPoints[i].x, window.currentMaskPoints[i].y);
@@ -3566,39 +3775,87 @@ export function renderImageStudio(container) {
             window.currentMaskCanvas = maskCanvas;
             drawSelectionOverlay();
             
-            const lastPt = window.currentMaskPoints[window.currentMaskPoints.length - 1];
-            createActionBar(lastPt.x + 10, lastPt.y + 10);
+            window.currentMaskCanvas = maskCanvas;
+            drawSelectionOverlay();
+            
+            // Capture image data
+            let imageDataUrl = '';
+            let isObj = false;
+            let targetW = canvas.width;
+            let targetH = canvas.height;
+            if (activeVectorShape && activeVectorShape.type === 'image') {
+                const tempC = document.createElement('canvas');
+                targetW = Math.abs(activeVectorShape.x2 - activeVectorShape.x);
+                targetH = Math.abs(activeVectorShape.y2 - activeVectorShape.y);
+                tempC.width = targetW;
+                tempC.height = targetH;
+                const tCtx = tempC.getContext('2d');
+                tCtx.drawImage(activeVectorShape.img, 0, 0, tempC.width, tempC.height);
+                imageDataUrl = tempC.toDataURL('image/jpeg', 0.9);
+                
+                // Also crop the mask to the exact same dimensions
+                const croppedMask = document.createElement('canvas');
+                croppedMask.width = targetW;
+                croppedMask.height = targetH;
+                const cmCtx = croppedMask.getContext('2d');
+                cmCtx.drawImage(maskCanvas, activeVectorShape.x, activeVectorShape.y, targetW, targetH, 0, 0, targetW, targetH);
+                maskCanvas.width = targetW;
+                maskCanvas.height = targetH;
+                maskCanvas.getContext('2d').drawImage(croppedMask, 0, 0);
+                
+                isObj = true;
+            } else {
+                const tempC = document.createElement('canvas');
+                tempC.width = canvas.width; tempC.height = canvas.height;
+                const tCtx = tempC.getContext('2d');
+                tCtx.fillStyle = canvasBgColor;
+                tCtx.fillRect(0, 0, canvas.width, canvas.height);
+                tCtx.drawImage(canvas, 0, 0);
+                if (typeof vectorShapes !== 'undefined') {
+                    vectorShapes.forEach(s => { if (typeof drawShape === 'function') drawShape(tCtx, s); });
+                }
+                imageDataUrl = tempC.toDataURL('image/jpeg', 0.9);
+            }
+            
+            const maskDataUrl = maskCanvas.toDataURL('image/png');
+            showAiEditModal(imageDataUrl, isObj, maskDataUrl);
         }
 
         // Action 1: Prompt AI
-        menu.querySelector('#is-ai-opt-whole').addEventListener('click', (e) => {
+        menu.querySelector('#is-ai-opt-whole').addEventListener('click', async (e) => {
             e.stopPropagation();
             menu.remove();
             document.removeEventListener('pointerdown', closeMenu);
             
-            currentTool = 'smartremove';
-            canvas.style.cursor = 'crosshair';
-            const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
-            allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
-            contextBar.style.display = 'flex';
-            
-            window.currentMaskPoints = [];
-            const maskCanvas = document.createElement('canvas');
-            maskCanvas.width = canvas.width; maskCanvas.height = canvas.height;
-            const mctx = maskCanvas.getContext('2d');
-            mctx.fillStyle = 'rgba(255, 80, 80, 1)';
-            
+            // Capture image data
+            let imageDataUrl = '';
+            let isObj = false;
+            let targetW = canvas.width;
+            let targetH = canvas.height;
             if (activeVectorShape && activeVectorShape.type === 'image') {
-                mctx.fillRect(activeVectorShape.x, activeVectorShape.y, activeVectorShape.x2 - activeVectorShape.x, activeVectorShape.y2 - activeVectorShape.y);
+                const tempC = document.createElement('canvas');
+                targetW = Math.abs(activeVectorShape.x2 - activeVectorShape.x);
+                targetH = Math.abs(activeVectorShape.y2 - activeVectorShape.y);
+                tempC.width = targetW;
+                tempC.height = targetH;
+                const tCtx = tempC.getContext('2d');
+                tCtx.drawImage(activeVectorShape.img, 0, 0, tempC.width, tempC.height);
+                imageDataUrl = tempC.toDataURL('image/jpeg', 0.9);
+                isObj = true;
             } else {
-                mctx.fillRect(0, 0, canvas.width, canvas.height);
+                const tempC = document.createElement('canvas');
+                tempC.width = canvas.width; tempC.height = canvas.height;
+                const tCtx = tempC.getContext('2d');
+                tCtx.fillStyle = canvasBgColor;
+                tCtx.fillRect(0, 0, canvas.width, canvas.height);
+                tCtx.drawImage(canvas, 0, 0);
+                if (typeof vectorShapes !== 'undefined') {
+                    vectorShapes.forEach(s => { if (typeof drawShape === 'function') drawShape(tCtx, s); });
+                }
+                imageDataUrl = tempC.toDataURL('image/jpeg', 0.9);
             }
-            window.currentMaskCanvas = maskCanvas;
-            window.isMaskFinished = true;
             
-            drawSelectionOverlay();
-            createActionBar(canvas.width / 2 - 150, canvas.height / 2);
-            setCanvasTooltip("Enter a prompt to apply to the whole image/object");
+            showAiEditModal(imageDataUrl, isObj, null);
         });
 
         // Action 2: Select Area to Prompt
@@ -3624,18 +3881,296 @@ export function renderImageStudio(container) {
         });
 
         // Action 3: Super Resolution
-        menu.querySelector('#is-ai-opt-super').addEventListener('click', (e) => {
+        menu.querySelector('#is-ai-opt-super').addEventListener('click', async (e) => {
             e.stopPropagation();
             menu.remove();
             document.removeEventListener('pointerdown', closeMenu);
             
+            let isObj = false;
+            let targetW = canvas.width;
+            let targetH = canvas.height;
+            let imageDataUrl = '';
+            
+            if (activeVectorShape && activeVectorShape.type === 'image') {
+                const tempC = document.createElement('canvas');
+                targetW = Math.abs(activeVectorShape.x2 - activeVectorShape.x);
+                targetH = Math.abs(activeVectorShape.y2 - activeVectorShape.y);
+                tempC.width = targetW;
+                tempC.height = targetH;
+                const tCtx = tempC.getContext('2d');
+                tCtx.drawImage(activeVectorShape.img, 0, 0, tempC.width, tempC.height);
+                imageDataUrl = tempC.toDataURL('image/jpeg', 0.9);
+                isObj = true;
+            } else {
+                imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            }
+            
             const btn = e.target;
             const origHTML = btn.innerHTML;
-            btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Upscaling...";
-            setTimeout(() => {
-                alert('Super Resolution is not fully implemented yet.');
-                btn.innerHTML = origHTML;
-            }, 1000);
+            
+            const toast = document.createElement('div');
+            toast.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Running Super Resolution (10-30s)...";
+            toast.style.cssText = "position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#10b981;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;font-family:sans-serif;";
+            container.appendChild(toast);
+            
+            try {
+                const baseSettings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini', geminiKey: '' };
+                const settings = {
+                    ...baseSettings,
+                    imageKey: localStorage.getItem('worldtools_image_key') || ''
+                };
+                
+                const response = await fetch('http://localhost:3000/api/ai/edit-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings, image: imageDataUrl, model: 'super-resolution', prompt: 'upscale' })
+                });
+                
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || data.error || 'Super Resolution failed');
+                
+                const newImg = new Image();
+                newImg.crossOrigin = 'anonymous';
+                newImg.onload = () => {
+                    toast.remove();
+                    if (isObj && activeVectorShape) {
+                        activeVectorShape.img = newImg;
+                    } else {
+                        ctx.drawImage(newImg, 0, 0, canvas.width, canvas.height);
+                    }
+                    saveState(); drawSelectionOverlay();
+                };
+                newImg.onerror = () => { toast.remove(); alert("Failed to load upscaled image"); };
+                newImg.src = data.imageUrl || data.imageBase64;
+            } catch(err) {
+                toast.remove();
+                alert("Super Resolution Error: " + err.message);
+            }
+
+        });
+
+        // Action 3.5: Create Image Object
+        menu.querySelector('#is-ai-opt-create').addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.remove();
+            document.removeEventListener('pointerdown', closeMenu);
+            
+            const modalOverlay = document.createElement('div');
+            modalOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(3px);';
+            
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = 'background:#1e1e1e;width:450px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.8);border:1px solid rgba(255,255,255,0.1);display:flex;flex-direction:column;overflow:hidden;font-family:inherit;';
+            
+            modalContent.innerHTML = `
+                <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;justify-content:space-between;align-items:center;">
+                    <h3 style="margin:0;color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;"><i class='bx bxs-magic-wand' style="color:#10b981;"></i> Create Image Object</h3>
+                    <button id="is-ai-modal-create-close" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:20px;padding:0;"><i class='bx bx-x'></i></button>
+                </div>
+                <div style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+                    <div>
+                        <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Image Prompt <span style="color:#ef4444">*</span></label>
+                        <textarea id="is-ai-create-prompt-input" rows="4" placeholder="Describe the object you want to generate..." style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:10px;font-size:13px;outline:none;resize:none;box-sizing:border-box;"></textarea>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
+                            <button id="is-ai-create-refine-btn" style="background:transparent;color:#3b82f6;border:1px solid rgba(59,130,246,0.3);border-radius:4px;padding:4px 8px;cursor:pointer;font-size:11px;display:flex;align-items:center;gap:4px;transition:all 0.2s;"><i class='bx bx-brush'></i> Refine Prompt</button>
+                            <button id="is-ai-create-revert-btn" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;font-size:11px;display:none;text-decoration:underline;">Revert</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:12px;">
+                        <div style="flex:1;">
+                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Model</label>
+                            <select id="is-ai-create-model-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
+                                <option value="mystic" selected>Mystic</option>
+                                <option value="reimagine-flux">Reimagine Flux</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Aspect Ratio</label>
+                            <select id="is-ai-create-ratio" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
+                                <option value="square_1_1" selected>1:1 (Square)</option>
+                                <option value="widescreen_16_9">16:9 (Landscape)</option>
+                                <option value="social_story_9_16">9:16 (Portrait)</option>
+                                <option value="classic_4_3">4:3</option>
+                                <option value="traditional_3_4">3:4</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Size on Canvas</label>
+                            <select id="is-ai-create-size" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
+                                <option value="small">Small (25%)</option>
+                                <option value="medium" selected>Medium (50%)</option>
+                                <option value="large">Large (75%)</option>
+                                <option value="full">100% (Full Size)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding:16px 20px;background:rgba(255,255,255,0.02);border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:flex-end;gap:10px;">
+                    <button id="is-ai-modal-create-cancel" style="background:transparent;color:#d1d5db;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;transition:all 0.2s;">Cancel</button>
+                    <button id="is-ai-modal-create-submit" style="background:#10b981;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;transition:all 0.2s;"><i class='bx bxs-magic-wand'></i> Generate</button>
+                </div>
+            `;
+            
+            modalOverlay.appendChild(modalContent);
+            document.body.appendChild(modalOverlay);
+            
+            const closeModal = () => modalOverlay.remove();
+            
+            modalContent.querySelector('#is-ai-modal-create-close').addEventListener('click', closeModal);
+            modalContent.querySelector('#is-ai-modal-create-cancel').addEventListener('click', closeModal);
+            modalOverlay.addEventListener('click', (ev) => { if(ev.target === modalOverlay) closeModal(); });
+            
+            const promptInput = modalContent.querySelector('#is-ai-create-prompt-input');
+            promptInput.focus();
+
+            const refineBtn = modalContent.querySelector('#is-ai-create-refine-btn');
+            const revertBtn = modalContent.querySelector('#is-ai-create-revert-btn');
+            let originalPrompt = '';
+
+            refineBtn.addEventListener('click', async () => {
+                const currentVal = promptInput.value.trim();
+                if (!currentVal) {
+                    promptInput.style.borderColor = '#ef4444';
+                    return;
+                }
+                
+                originalPrompt = currentVal;
+                refineBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Refining...";
+                refineBtn.disabled = true;
+                refineBtn.style.opacity = '0.5';
+                
+                try {
+                    const settings = {
+                        provider: localStorage.getItem('worldtools_ai_provider') || 'gemini',
+                        geminiKey: localStorage.getItem('worldtools_gemini_key') || '',
+                        customBaseUrl: localStorage.getItem('worldtools_custom_url') || '',
+                        customModelId: localStorage.getItem('worldtools_custom_model') || '',
+                        customApiKey: localStorage.getItem('worldtools_custom_key') || ''
+                    };
+                    const res = await fetch('http://localhost:3000/api/ai/refine-prompt', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: currentVal, settings })
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) throw new Error(data.error);
+                    
+                    promptInput.value = data.prompt;
+                    revertBtn.style.display = 'block';
+                } catch (err) {
+                    alert('Refine failed: ' + err.message);
+                } finally {
+                    refineBtn.innerHTML = "<i class='bx bx-brush'></i> Refine Prompt";
+                    refineBtn.disabled = false;
+                    refineBtn.style.opacity = '1';
+                }
+            });
+
+            revertBtn.addEventListener('click', () => {
+                promptInput.value = originalPrompt;
+                revertBtn.style.display = 'none';
+            });
+            
+            modalContent.querySelector('#is-ai-modal-create-submit').addEventListener('click', async () => {
+                const promptVal = promptInput.value.trim();
+                if (!promptVal) {
+                    promptInput.style.borderColor = '#ef4444';
+                    return;
+                }
+                
+                const modelVal = modalContent.querySelector('#is-ai-create-model-select').value;
+                const ratioVal = modalContent.querySelector('#is-ai-create-ratio').value;
+                const sizeVal = modalContent.querySelector('#is-ai-create-size').value;
+                
+                const btnSubmit = modalContent.querySelector('#is-ai-modal-create-submit');
+                btnSubmit.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Generating...";
+                btnSubmit.disabled = true;
+                btnSubmit.style.opacity = '0.7';
+                
+                const loadingMsg = document.createElement('div');
+                loadingMsg.innerHTML = "This may take 10-30 seconds. Please wait...";
+                loadingMsg.style.cssText = "color:#10b981;font-size:12px;margin-top:10px;text-align:center;width:100%;";
+                modalContent.querySelector('.bx-loader-alt').parentElement.parentElement.appendChild(loadingMsg);
+                
+                try {
+                    const settings = { imageKey: localStorage.getItem('worldtools_image_key') || '' };
+
+                    const res = await fetch('http://localhost:3000/api/ai/generate-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            prompt: promptVal, 
+                            model: modelVal, 
+                            aspect_ratio: ratioVal,
+                            settings 
+                        })
+                    });
+                    
+                    const data = await res.json();
+                    if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to generate image");
+
+                    const newImg = new Image();
+                    newImg.crossOrigin = 'anonymous';
+                    newImg.onload = () => {
+                        closeModal();
+                        
+                        // Calculate dimensions based on size selection
+                        let scale = 0.5;
+                        if (sizeVal === 'small') scale = 0.25;
+                        else if (sizeVal === 'large') scale = 0.75;
+                        else if (sizeVal === 'full') scale = 1.0;
+                        
+                        let iw = newImg.width;
+                        let ih = newImg.height;
+                        
+                        // Scale down to fit inside canvas based on scale
+                        let drawW = canvas.width * scale;
+                        let drawH = (ih / iw) * drawW;
+                        
+                        if (drawH > canvas.height * scale) {
+                            drawH = canvas.height * scale;
+                            drawW = (iw / ih) * drawH;
+                        }
+                        
+                        const shape = {
+                            id: nextShapeId(),
+                            type: 'image',
+                            img: newImg,
+                            x: (canvas.width - drawW) / 2,
+                            y: (canvas.height - drawH) / 2,
+                            x2: (canvas.width - drawW) / 2 + drawW,
+                            y2: (canvas.height - drawH) / 2 + drawH
+                        };
+                        
+                        vectorShapes.push(shape);
+                        activeVectorShape = shape;
+                        
+                        // Switch to Select tool to let user interact with object
+                        if (typeof currentTool !== 'undefined') {
+                            currentTool = 'select';
+                            document.querySelectorAll('.is-tool-btn').forEach(t => t.classList.remove('active'));
+                            const selBtn = document.querySelector('[data-tool="select"]');
+                            if (selBtn) selBtn.classList.add('active');
+                            canvas.style.cursor = 'default';
+                        }
+                        
+                        saveState();
+                        drawSelectionOverlay();
+                    };
+                    newImg.onerror = () => {
+                        closeModal();
+                        alert("Failed to load generated image.");
+                    };
+                    newImg.src = data.imageUrl || data.imageBase64;
+                    
+                } catch (err) {
+                    console.error(err);
+                    alert("Generation failed: " + err.message);
+                    btnSubmit.innerHTML = "<i class='bx bxs-magic-wand'></i> Generate";
+                    btnSubmit.disabled = false;
+                    btnSubmit.style.opacity = '1';
+                    loadingMsg.remove();
+                }
+            });
         });
         // Action 4: Analysis with AI
         menu.querySelector('#is-ai-opt-analyze').addEventListener('click', async (e) => {

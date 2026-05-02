@@ -323,6 +323,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const customBaseUrl = document.getElementById('custom-base-url');
     const customModelId = document.getElementById('custom-model-id');
     const customApiKey = document.getElementById('custom-api-key');
+    const imageKeyInput = document.getElementById('image-api-key-input');
+    const testImageConnectionBtn = document.getElementById('test-image-connection-btn');
+    const testImageConnectionRes = document.getElementById('test-image-connection-res');
 
     aiProvider.addEventListener('change', () => {
         if (aiProvider.value === 'gemini') {
@@ -341,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
         customBaseUrl.value = settings.customBaseUrl;
         customModelId.value = settings.customModelId;
         customApiKey.value = settings.customApiKey;
+        imageKeyInput.value = settings.imageKey || '';
         
         aiProvider.dispatchEvent(new Event('change'));
         settingsModal.style.display = 'flex';
@@ -381,13 +385,42 @@ document.addEventListener('DOMContentLoaded', () => {
         testConnectionBtn.disabled = false;
     });
 
+    testImageConnectionBtn.addEventListener('click', async () => {
+        testImageConnectionRes.style.display = 'none';
+        testImageConnectionBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Testing...";
+        testImageConnectionBtn.disabled = true;
+
+        const currentSettings = {
+            imageKey: imageKeyInput.value,
+            geminiKey: geminiKeyInput.value // Fallback
+        };
+
+        try {
+            await AIClient.testImageConnection(currentSettings);
+            testImageConnectionRes.innerHTML = "<i class='bx bx-check'></i> OK";
+            testImageConnectionRes.style.color = '#10b981';
+        } catch (err) {
+            testImageConnectionRes.innerHTML = `<i class='bx bx-error'></i> Failed`;
+            testImageConnectionRes.style.color = '#ef4444';
+            testImageConnectionRes.title = err.message;
+            alert(`Magnific API Test Failed:\n${err.message}`);
+        }
+        
+        testImageConnectionRes.style.display = 'inline-flex';
+        testImageConnectionRes.style.alignItems = 'center';
+        testImageConnectionRes.style.gap = '4px';
+        testImageConnectionBtn.innerHTML = "<i class='bx bx-image-alt'></i> Test Connection";
+        testImageConnectionBtn.disabled = false;
+    });
+
     saveSettings.addEventListener('click', () => {
         AIClient.setSettings({
             provider: aiProvider.value,
             geminiKey: geminiKeyInput.value,
             customBaseUrl: customBaseUrl.value,
             customModelId: customModelId.value,
-            customApiKey: customApiKey.value
+            customApiKey: customApiKey.value,
+            imageKey: imageKeyInput.value
         });
         
         // Visual feedback

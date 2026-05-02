@@ -87,13 +87,28 @@
                             <input type="password" id="custom-api-key" class="input-field" placeholder="sk-..." style="padding: 8px 12px; font-size: 14px;" autocomplete="new-password" data-lpignore="true">
                         </div>
                     </div>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
+                        <button id="test-connection-btn" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;"><i class='bx bx-wifi'></i> Test Connection</button>
+                        <span id="test-connection-res" style="font-size: 11px; font-weight: 600; display: none;"></span>
+                    </div>
+                </div>
+
+                <div class="settings-group" style="margin-top: 20px;">
+                    <h3 style="display: flex; align-items: center; gap: 8px; margin-top:0; margin-bottom: 8px; font-size: 16px;"><i class='bx bx-image' style="color: #10b981;"></i> Magnific API</h3>
+                    <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px; line-height: 1.4;">Configure API Key for Magnific Image-to-Prompt and Generation tools.</p>
+                    
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label style="margin-bottom: 4px; font-size: 12px;">Magnific API Key</label>
+                        <input type="password" id="image-api-key-input" class="input-field" placeholder="sk-magnific-..." style="padding: 8px 12px; font-size: 14px;" autocomplete="new-password" data-lpignore="true">
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button id="test-image-connection-btn" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;"><i class='bx bx-image-alt'></i> Test Connection</button>
+                        <span id="test-image-connection-res" style="font-size: 11px; font-weight: 600; display: none;"></span>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer" style="padding: 0 24px 24px 24px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <button id="test-connection-btn" class="btn-secondary" style="padding: 8px 16px; font-size: 13px;"><i class='bx bx-wifi'></i> Test Connection</button>
-                    <span id="test-connection-res" style="font-size: 12px; font-weight: 600; display: none;"></span>
-                </div>
+            <div class="modal-footer" style="padding: 0 24px 24px 24px; display: flex; justify-content: flex-end; align-items: center;">
                 <button id="save-settings" class="btn-primary" style="background: var(--accent-color);">Save Settings</button>
             </div>
         </div>

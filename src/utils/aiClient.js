@@ -5,7 +5,8 @@ export class AIClient {
             geminiKey: localStorage.getItem('worldtools_gemini_key') || '',
             customBaseUrl: localStorage.getItem('worldtools_custom_url') || '',
             customModelId: localStorage.getItem('worldtools_custom_model') || '',
-            customApiKey: localStorage.getItem('worldtools_custom_key') || ''
+            customApiKey: localStorage.getItem('worldtools_custom_key') || '',
+            imageKey: localStorage.getItem('worldtools_image_key') || ''
         };
     }
 
@@ -15,6 +16,7 @@ export class AIClient {
         localStorage.setItem('worldtools_custom_url', settings.customBaseUrl);
         localStorage.setItem('worldtools_custom_model', settings.customModelId);
         localStorage.setItem('worldtools_custom_key', settings.customApiKey);
+        if (settings.imageKey !== undefined) localStorage.setItem('worldtools_image_key', settings.imageKey);
     }
 
     static async testConnection(settings) {
@@ -26,6 +28,19 @@ export class AIClient {
         const data = await response.json();
         if (!response.ok || !data.success) {
             throw new Error(data.message || 'Connection failed');
+        }
+        return true;
+    }
+
+    static async testImageConnection(settings) {
+        const response = await fetch('http://localhost:3000/api/ai/test-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'Image Connection failed');
         }
         return true;
     }

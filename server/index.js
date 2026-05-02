@@ -294,6 +294,43 @@ app.post('/api/ai/chat', express.json(), async (req, res) => {
     }
 });
 
+app.post('/api/ai/refine-prompt', express.json(), async (req, res) => {
+    try {
+        const { settings, prompt } = req.body;
+        
+        const systemInstruction = `You are an expert AI image generation prompt engineer. Your job is to translate and rewrite the user's prompt (which may be in Vietnamese or simple English) into a highly detailed, descriptive, and optimal English prompt for image generation/editing AI models (like Midjourney, Magnific, Flux). Focus on visual details, lighting, camera angles, style, and atmosphere. DO NOT include conversational text. Return ONLY the rewritten prompt.`;
+
+        if (settings.provider === 'custom') {
+            const openai = new OpenAI({
+                apiKey: settings.customApiKey || 'dummy-key-for-local',
+                baseURL: settings.customBaseUrl
+            });
+            const stream = await openai.chat.completions.create({
+                model: settings.customModelId || 'local-model',
+                messages: [
+                    { role: 'system', content: systemInstruction },
+                    { role: 'user', content: prompt }
+                ]
+            });
+            return res.json({ success: true, prompt: stream.choices[0].message.content.trim() });
+        }
+
+        // DEFAULT TO GEMINI
+        const key = settings.geminiKey || process.env.GEMINI_API_KEY;
+        if (!key) return res.status(400).json({ error: "Gemini API Key is missing. Please set it in Global Settings." });
+
+        const genAI = new GoogleGenerativeAI(key);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction });
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        
+        res.json({ success: true, prompt: text.trim() });
+    } catch (err) {
+        console.error('Refine Prompt Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/ai/vision', express.json({limit: '50mb'}), async (req, res) => {
     try {
         const { imageBase64, prompt, settings } = req.body;
@@ -368,17 +405,279 @@ app.post('/api/ai/test', express.json(), async (req, res) => {
 
         // GEMINI
         const key = settings.geminiKey || process.env.GEMINI_API_KEY;
-        if (!key) return res.status(400).json({ success: false, message: "API Key is missing." });
+        if (!key) return res.json({ success: false, message: "API Key is missing." });
         const genAI = new GoogleGenerativeAI(key);
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         await model.generateContent("Say OK");
         return res.json({ success: true, message: "Connection OK" });
     } catch (err) {
-        return res.status(500).json({ success: false, message: err.message });
+        return res.json({ success: false, message: err.message });
     }
 });
 
 const PORT = 3000;
+
+app.post('/api/ai/test-image', express.json(), async (req, res) => {
+    try {
+        const { settings } = req.body;
+        const key = settings.imageKey;
+        if (!key) return res.json({ success: false, message: "Magnific API Key is missing." });
+        
+        // Simple test request to get the list of tasks (or just any endpoint to test auth)
+        const response = await fetch('https://api.magnific.com/v1/ai/image-to-prompt', {
+            method: 'GET',
+            headers: {
+                'x-magnific-api-key': key
+            }
+        });
+        
+        const data = await response.json();
+        if (!response.ok) {
+            // Magnific returns 404 "Task not found" if auth succeeds but no tasks exist
+            if (response.status === 404 && data.message === 'Task not found') {
+                return res.json({ success: true, message: "Connection OK" });
+            }
+            return res.json({ success: false, message: data.message || data.error || 'Invalid API Key' });
+        }
+        
+        return res.json({ success: true, message: "Connection OK" });
+    } catch (err) {
+        return res.json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/ai/generate-image', express.json(), async (req, res) => {
+    try {
+        const { settings, prompt, model = "mystic", resolution = "1k", aspect_ratio = "square_1_1" } = req.body;
+        const key = settings && settings.imageKey;
+        if (!key) return res.status(400).json({ error: "Magnific API Key is missing. Please configure it in Settings." });
+        if (!prompt) return res.status(400).json({ error: "Prompt is required." });
+        
+        // Map model to correct URL
+        let apiUrl = 'https://api.magnific.com/v1/ai/mystic';
+        let bodyPayload = { prompt, resolution, aspect_ratio, engine: "automatic" };
+        
+        if (model !== 'mystic') {
+            apiUrl = `https://api.magnific.com/v1/ai/text-to-image/${model}`;
+            bodyPayload = { prompt, aspect_ratio }; // Other models might not support resolution
+        } else {
+            // For mystic, we can keep the default fluid model
+            bodyPayload.model = "fluid";
+        }
+
+        // 1. Create Task
+        const createRes = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-magnific-api-key': key
+            },
+            body: JSON.stringify(bodyPayload)
+        });
+        
+        const createDataText = await createRes.text();
+        let createData;
+        try { createData = JSON.parse(createDataText); } catch(e) { throw new Error(`Magnific HTML Error: ${createRes.status} ${createDataText.substring(0, 100)}`); }
+        if (!createRes.ok) throw new Error(`Magnific API Error: ${createDataText}`);
+        
+        const taskId = createData.data.task_id;
+        
+        // 2. Poll Task
+        while (true) {
+            await new Promise(r => setTimeout(r, 3000));
+            const getRes = await fetch(`${apiUrl}/${taskId}`, {
+                headers: { 'x-magnific-api-key': key }
+            });
+            const getData = await getRes.json();
+            
+            if (getData.data.status === 'COMPLETED') {
+                const generatedImage = getData.data.generated && getData.data.generated[0] ? getData.data.generated[0].url || getData.data.generated[0] : null;
+                if (!generatedImage) throw new Error("Magnific returned COMPLETED but no image URL found.");
+                return res.json({ success: true, imageUrl: generatedImage });
+            } else if (getData.data.status === 'FAILED') {
+                throw new Error('Magnific Image Generation failed.');
+            }
+        }
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/ai/edit-image', express.json({ limit: '50mb' }), async (req, res) => {
+    try {
+        const { settings, prompt, image, model = "mystic", resolution = "1k" } = req.body;
+        const key = settings && settings.imageKey;
+        if (!key) return res.status(400).json({ error: "Magnific API Key is missing. Please configure it in Settings." });
+        if (!prompt) return res.status(400).json({ error: "Prompt is required." });
+        if (!image) return res.status(400).json({ error: "Image is required for editing." });
+        
+        let apiUrl = 'https://api.magnific.com/v1/ai/mystic';
+        // Base64 clean up if needed
+        const base64Image = image.replace(/^data:image\/\w+;base64,/, '');
+        
+        let bodyPayload = {};
+        let pollUrl = apiUrl;
+        
+        if (model === 'mystic') {
+            apiUrl = 'https://api.magnific.com/v1/ai/mystic';
+            pollUrl = apiUrl;
+            // For mystic, we CANNOT pass model (like fluid) if we pass structure_reference!
+            bodyPayload = { 
+                prompt: prompt, 
+                resolution: resolution,
+                structure_reference: base64Image,
+                structure_strength: 50,
+                engine: "automatic"
+            };
+        } else if (model === 'upscaler') {
+            apiUrl = 'https://api.magnific.com/v1/ai/image-upscaler-creative';
+            pollUrl = apiUrl;
+            bodyPayload = { prompt, image: base64Image };
+        } else if (model === 'relight') {
+            apiUrl = 'https://api.magnific.com/v1/ai/image-relight';
+            pollUrl = apiUrl;
+            bodyPayload = { prompt, image: base64Image };
+        } else if (model === 'style-transfer') {
+            apiUrl = 'https://api.magnific.com/v1/ai/image-styletransfer';
+            pollUrl = apiUrl;
+            bodyPayload = { prompt, image: base64Image };
+        } else if (model === 'remove-background') {
+            apiUrl = 'https://api.magnific.com/v1/ai/remove-background';
+            pollUrl = apiUrl;
+            bodyPayload = { image: base64Image };
+        } else if (model === 'super-resolution') {
+            apiUrl = 'https://api.magnific.com/v1/ai/image-upscaler-precision-v2';
+            pollUrl = apiUrl;
+            bodyPayload = { 
+                image: base64Image,
+                sharpen: 7,
+                smart_grain: 7,
+                ultra_detail: 30,
+                flavor: "sublime",
+                scale_factor: 9,
+                filter_nsfw: false
+            };
+        } else if (model === 'reimagine-flux') {
+            apiUrl = 'https://api.magnific.com/v1/ai/image-editing/reimagine-flux';
+            pollUrl = apiUrl;
+            bodyPayload = { prompt, image: base64Image };
+        } else if (model === 'image-expand') {
+            apiUrl = 'https://api.magnific.com/v1/ai/image-expand';
+            pollUrl = apiUrl;
+            bodyPayload = { prompt, image: base64Image };
+        } else if (model === 'inpainting') {
+            apiUrl = 'https://api.magnific.com/v1/ai/ideogram-image-edit';
+            pollUrl = apiUrl;
+            bodyPayload = { prompt, image: base64Image, magic_prompt: "AUTO", rendering_speed: "DEFAULT" };
+        } else {
+            // Fallback for others (Skin Enhancer, Change Camera)
+            apiUrl = `https://api.magnific.com/v1/ai/image-editing/${model}`;
+            pollUrl = apiUrl;
+            bodyPayload = { prompt, image: base64Image };
+        }
+
+        // 1. Create Task
+        const createRes = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-magnific-api-key': key
+            },
+            body: JSON.stringify(bodyPayload)
+        });
+        
+        const createDataText = await createRes.text();
+        let createData;
+        try { createData = JSON.parse(createDataText); } catch(e) { throw new Error(`Magnific HTML Error: ${createRes.status} ${createDataText.substring(0, 100)}`); }
+        if (!createRes.ok) throw new Error(`Magnific API Error: ${createDataText}`);
+        
+        const taskId = createData.data.task_id;
+        
+        // 2. Poll Task
+        while (true) {
+            await new Promise(r => setTimeout(r, 3000));
+            const getRes = await fetch(`${pollUrl}/${taskId}`, {
+                headers: { 'x-magnific-api-key': key }
+            });
+            const getData = await getRes.json();
+            
+            if (getData.data.status === 'COMPLETED') {
+                // Background removal might return different fields or the same generated array
+                const generatedImage = getData.data.generated && getData.data.generated[0] ? getData.data.generated[0].url || getData.data.generated[0] : (getData.data.output_image || null);
+                if (!generatedImage) throw new Error("Magnific returned COMPLETED but no image URL found.");
+                return res.json({ success: true, imageUrl: generatedImage });
+            } else if (getData.data.status === 'FAILED') {
+                throw new Error('Magnific Image Generation failed.');
+            }
+        }
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/ai/generate-fill', express.json({limit: '50mb'}), async (req, res) => {
+    try {
+        const { settings, prompt, image, mask } = req.body;
+        
+        // Fallback to imageKey or geminiKey as they might be stored in settings
+        const key = settings?.imageKey || settings?.geminiKey || process.env.MAGNIFIC_API_KEY || process.env.GEMINI_API_KEY;
+        
+        if (!key) return res.status(400).json({ success: false, message: "Magnific API Key is missing. Please set it in Settings." });
+        if (!image || !mask) return res.status(400).json({ success: false, message: "Image and mask are required." });
+
+        const base64Image = image.replace(/^data:image\/\w+;base64,/, '');
+        const base64Mask = mask.replace(/^data:image\/\w+;base64,/, '');
+
+        // Using Magnific Inpainting API
+        const apiUrl = 'https://api.magnific.com/v1/ai/ideogram-image-edit'; 
+
+        const bodyPayload = {
+            image: base64Image,
+            mask: base64Mask,
+            prompt: prompt || "", // If prompt is empty, it acts as object removal
+            magic_prompt: "AUTO",
+            rendering_speed: "DEFAULT"
+        };
+
+        const createRes = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-magnific-api-key': key
+            },
+            body: JSON.stringify(bodyPayload)
+        });
+        
+        const createDataText = await createRes.text();
+        let createData;
+        try { createData = JSON.parse(createDataText); } catch(e) { throw new Error(`Magnific HTML Error: ${createRes.status} ${createDataText.substring(0, 100)}`); }
+        if (!createRes.ok) throw new Error(`Magnific API Error: ${createDataText}`);
+        
+        const taskId = createData.data.task_id;
+        
+        // Poll Task
+        while (true) {
+            await new Promise(r => setTimeout(r, 3000));
+            const getRes = await fetch(`${apiUrl}/${taskId}`, {
+                headers: { 'x-magnific-api-key': key }
+            });
+            const getData = await getRes.json();
+            
+            if (getData.data.status === 'COMPLETED') {
+                const generatedImage = getData.data.generated && getData.data.generated[0] ? getData.data.generated[0].url || getData.data.generated[0] : (getData.data.output_image || null);
+                if (!generatedImage) throw new Error("Magnific returned COMPLETED but no image URL found.");
+                return res.json({ success: true, imageUrl: generatedImage });
+            } else if (getData.data.status === 'FAILED') {
+                const errDetail = getData.data.error || getData.data.error_message || getData.error || JSON.stringify(getData.data);
+                throw new Error("Magnific task failed: " + errDetail);
+            }
+        }
+    } catch (err) {
+        console.error('Magnific Inpainting Error:', err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`WorldTools Backend is running on http://localhost:${PORT}`);
 });
