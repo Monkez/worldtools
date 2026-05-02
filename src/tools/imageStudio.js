@@ -1625,6 +1625,8 @@ export function renderImageStudio(container) {
     let isPanning = false;
     let isSpaceDown = false;
     let isShiftDown = false;
+    let isCtrlDown = false;
+    let previousToolBeforeCtrl = null;
     let canvasSelected = false;
     let isResizingCanvas = false;
     let canvasResizeStartX = 0, canvasResizeStartY = 0;
@@ -1641,6 +1643,14 @@ export function renderImageStudio(container) {
             e.preventDefault();
         }
         if (e.key === 'Shift') isShiftDown = true;
+        if ((e.key === 'Control' || e.key === 'Meta') && !isCtrlDown) {
+            isCtrlDown = true;
+            if (currentTool !== 'select') {
+                previousToolBeforeCtrl = currentTool;
+                const selectBtn = Array.from(tools).find(btn => btn.getAttribute('data-tool') === 'select');
+                if (selectBtn) selectBtn.click();
+            }
+        }
         // Alt+Click to cycle select (see mousedown handler)
     });
 
@@ -1655,6 +1665,14 @@ export function renderImageStudio(container) {
             else canvas.style.cursor = 'none';
         }
         if (e.key === 'Shift') isShiftDown = false;
+        if (e.key === 'Control' || e.key === 'Meta') {
+            isCtrlDown = false;
+            if (previousToolBeforeCtrl && currentTool === 'select') {
+                const prevBtn = Array.from(tools).find(btn => btn.getAttribute('data-tool') === previousToolBeforeCtrl);
+                if (prevBtn) prevBtn.click();
+            }
+            previousToolBeforeCtrl = null;
+        }
     });
 
     canvasContainer.addEventListener('mousedown', (e) => {
