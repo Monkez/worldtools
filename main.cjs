@@ -21,7 +21,7 @@ function createWindow() {
   const serverPath = path.join(__dirname, 'server', 'index.js');
   if (fs.existsSync(serverPath)) {
       serverProcess = fork(serverPath, [], {
-          cwd: path.join(__dirname, 'server'),
+          cwd: app.getPath('userData'),
           env: process.env
       });
   } else {
