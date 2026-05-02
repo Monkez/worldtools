@@ -3,12 +3,33 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "electron .",
+    "package": "npm run build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.monkez.worldtools",
+    "productName": "WorldTools",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "dist/**/*",
+      "server/**/*",
+      "main.cjs",
+      "package.json"
+    ]
   },
   "devDependencies": {
+    "electron": "^41.5.0",
+    "electron-builder": "^26.8.1",
     "vite": "^8.0.10"
   },
   "dependencies": {
