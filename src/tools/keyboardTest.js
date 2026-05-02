@@ -236,16 +236,7 @@ export function renderKeyboardTest(container) {
                 transform: scale(0.95);
             }
 
-            /* Responsive scale */
-            @media (max-width: 1200px) {
-                #kt-keyboard-wrapper { transform: scale(0.8); }
-            }
-            @media (max-width: 900px) {
-                #kt-keyboard-wrapper { transform: scale(0.6); }
-            }
-            @media (max-width: 600px) {
-                #kt-keyboard-wrapper { transform: scale(0.4); }
-            }
+            /* Responsive scale handled by JS ResizeObserver */
         </style>
     `;
 
@@ -315,10 +306,43 @@ export function renderKeyboardTest(container) {
         keycodeVal.innerText = '-';
     });
 
+    const wrapper = container.querySelector('#kt-keyboard-wrapper');
+    const panel = container.querySelector('.panel');
+    
+    // Dynamically scale keyboard to fit container
+    const resizeObserver = new ResizeObserver(entries => {
+        if (!wrapper) return;
+        const panelWidth = panel.clientWidth - 40; // 40px for padding
+        const originalWidth = 960; // Approximate width of the keyboard
+        const originalHeight = 320; // Approximate height of the keyboard
+        
+        if (panelWidth < originalWidth) {
+            const scale = Math.max(0.3, panelWidth / originalWidth);
+            wrapper.style.zoom = scale;
+            
+            // Fallback for browsers that don't support zoom properly (though most do now)
+            // We'll clear the old transform logic
+            wrapper.style.transform = 'none';
+            wrapper.style.height = 'auto';
+            wrapper.style.marginBottom = '0';
+            wrapper.style.marginLeft = '0';
+            wrapper.style.marginRight = '0';
+        } else {
+            wrapper.style.zoom = 1;
+            wrapper.style.transform = 'none';
+            wrapper.style.height = 'auto';
+            wrapper.style.marginBottom = '0';
+            wrapper.style.marginLeft = '0';
+            wrapper.style.marginRight = '0';
+        }
+    });
+    resizeObserver.observe(panel);
+
     const observer = new MutationObserver((mutations) => {
         if (!document.body.contains(container)) {
             document.removeEventListener('keydown', handleKeyDown);
             document.removeEventListener('keyup', handleKeyUp);
+            resizeObserver.disconnect();
             observer.disconnect();
         }
     });

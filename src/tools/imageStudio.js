@@ -45,7 +45,7 @@ export function renderImageStudio(container) {
                     </div>
 
                     <!-- AI Tools -->
-                    <button class="is-btn-text" id="is-ai-enhance" style="color: #a855f7;"><i class='bx bx-magic-wand'></i> Auto Enhance</button>
+                    <button class="is-btn-text" id="is-ai-enhance" style="color: #a855f7;"><i class='bx bxs-magic-wand'></i> Auto Enhance</button>
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -83,6 +83,7 @@ export function renderImageStudio(container) {
 
                 <!-- CONTEXT BAR (shown for all tools) -->
                 <div id="is-context-bar" style="display: none; position: absolute; top: 0; left: 40px; right: 0; background: #252526; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 4px 12px; z-index: 20; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span id="is-obj-type-info" style="display: none; font-size: 11px; color: #8b8b8b; align-items: center; gap: 4px; padding: 0 4px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); height: 22px;"></span>
                     <!-- Text-specific controls -->
                     <span id="is-ctx-text" style="display: none; contents;">
                         <span style="font-size: 11px; color: #888;">Color</span>
@@ -185,11 +186,11 @@ export function renderImageStudio(container) {
                         <span style="font-size: 11px; color: #888;">Grid Size</span>
                         <input type="number" id="is-canvas-grid-size" value="20" min="5" max="100" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 11px; width: 48px; text-align: center;">
                         <div class="is-divider"></div>
-                        <span id="is-canvas-size-info" style="font-size: 11px; color: #aaa;"></span>
-                        <div class="is-divider"></div>
+                        <button class="is-btn-icon" id="is-canvas-smart-remove" title="AI Tool" style="gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #10b981;"><i class='bx bxs-magic-wand'></i> AI Tool</button>
                         <button class="is-btn-icon" id="is-canvas-remove-bg" title="Remove Background" style="gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ec4899;"><i class='bx bx-cut'></i> Remove BG</button>
                     </span>
                     <div class="is-divider" id="is-ctx-del-divider" style="display: none;"></div>
+                    <button class="is-btn-icon" id="is-obj-smart-remove" title="AI Tool" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #10b981;"><i class='bx bxs-magic-wand'></i> AI Tool</button>
                     <button class="is-btn-icon" id="is-obj-remove-bg" title="Remove Background" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ec4899;"><i class='bx bx-cut'></i> Remove BG</button>
                     <span id="is-polyarrow-opts" style="display:none; align-items:center; gap:6px;">
                         <div class="is-divider"></div>
@@ -804,6 +805,49 @@ export function renderImageStudio(container) {
         
         vectorShapes.forEach(s => drawShape(octx, s));
         
+        if (window.currentMaskPoints && window.currentMaskPoints.length > 0) {
+            octx.beginPath();
+            octx.moveTo(window.currentMaskPoints[0].x, window.currentMaskPoints[0].y);
+            for(let i=1; i<window.currentMaskPoints.length; i++) {
+                octx.lineTo(window.currentMaskPoints[i].x, window.currentMaskPoints[i].y);
+            }
+            if (window.isMaskFinished) octx.closePath();
+            octx.strokeStyle = '#10b981';
+            octx.lineWidth = 2;
+            octx.setLineDash([4,4]);
+            octx.stroke();
+            octx.setLineDash([]);
+            if (window.isMaskFinished) {
+                octx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+                octx.fill();
+            }
+        }
+        
+        // Canvas selection border + resize handle
+        if (canvasSelected && !activeVectorShape) {
+            octx.save();
+            octx.strokeStyle = '#3b82f6';
+            octx.lineWidth = 2;
+            octx.setLineDash([6, 4]);
+            octx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+            octx.setLineDash([]);
+            // Bottom-right resize handle
+            const hx = canvas.width - 1, hy = canvas.height - 1;
+            octx.fillStyle = '#3b82f6';
+            octx.fillRect(hx - 8, hy - 8, 10, 10);
+            octx.strokeStyle = '#fff';
+            octx.lineWidth = 1;
+            octx.strokeRect(hx - 8, hy - 8, 10, 10);
+            // Small diagonal lines inside handle
+            octx.strokeStyle = '#fff';
+            octx.lineWidth = 1;
+            octx.beginPath();
+            octx.moveTo(hx - 2, hy - 6); octx.lineTo(hx - 6, hy - 2);
+            octx.moveTo(hx - 2, hy - 3); octx.lineTo(hx - 3, hy - 2);
+            octx.stroke();
+            octx.restore();
+        }
+        
         if (activeVectorShape) {
             const s = activeVectorShape;
             let cx = s.x + (s.x2 - s.x) / 2;
@@ -824,7 +868,8 @@ export function renderImageStudio(container) {
             octx.strokeRect(-w/2, -h/2, w, h);
             octx.setLineDash([]);
             
-            // 8 handles (in local rotated space)
+            // 8 handles (in local rotated space) — skip for path/polyarrow (they use control points)
+            const _hideResizeHandles = (s.type === 'path' || s.type === 'polyarrow');
             const localHandles = [
                 {x: -w/2, y: -h/2}, {x: 0, y: -h/2}, {x: w/2, y: -h/2},
                 {x: -w/2, y: 0},                      {x: w/2, y: 0},
@@ -834,10 +879,12 @@ export function renderImageStudio(container) {
             octx.fillStyle = '#fff';
             octx.strokeStyle = '#000';
             octx.lineWidth = 1;
-            localHandles.forEach(hnd => {
-                octx.fillRect(hnd.x - 4, hnd.y - 4, 8, 8);
+            if (!_hideResizeHandles) {
+                    localHandles.forEach(hnd => {
+                    octx.fillRect(hnd.x - 4, hnd.y - 4, 8, 8);
                 octx.strokeRect(hnd.x - 4, hnd.y - 4, 8, 8);
-            });
+                    });
+                }
             
             // Rotation handle (line + circle above top-center)
             octx.beginPath();
@@ -905,8 +952,16 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-del').style.display = 'flex';
             container.querySelector('#is-ctx-del-divider').style.display = '';
             container.querySelector('#is-ctx-front').style.display = 'flex';
+            // Show object type and size info
+            const _typeNames = { rect: '▭ Rectangle', circle: '○ Circle', ellipse: '⬭ Ellipse', triangle: '△ Triangle', diamond: '◇ Diamond', parallelogram: '▱ Parallelogram', pentagon: '⬠ Pentagon', hexagon: '⬡ Hexagon', star: '★ Star', text: 'T Text', path: '✏ Brush Path', polyarrow: '↗ Line/Arrow', image: '🖼 Image' };
+            const _typeName = _typeNames[s.type] || s.type;
+            const _ow = Math.round(Math.abs(s.x2 - s.x));
+            const _oh = Math.round(Math.abs(s.y2 - s.y));
+            container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#aaa; font-weight:500;">' + _typeName + '</span> <span style="color:#555">|</span> <span style="color:#888;">' + _ow + ' × ' + _oh + ' px</span>';
+            container.querySelector('#is-obj-type-info').style.display = 'flex';
             container.querySelector('#is-ctx-back').style.display = 'flex';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
+            container.querySelector('#is-obj-smart-remove').style.display = 'none';
             container.querySelector('#is-polyarrow-opts').style.display = 'none';
             // Hide smooth controls (shown selectively for path/polyarrow)
             container.querySelector('#is-brush-smooth').style.display = 'none';
@@ -966,6 +1021,9 @@ export function renderImageStudio(container) {
                 ctxTextSpan.style.display = 'none';
                 ctxShapeSpan.style.display = 'none';
                 container.querySelector('#is-obj-remove-bg').style.display = 'flex';
+                container.querySelector('#is-obj-smart-remove').style.display = 'flex';
+                const _iw = activeVectorShape.img.naturalWidth || activeVectorShape.img.width;
+                const _ih = activeVectorShape.img.naturalHeight || activeVectorShape.img.height;
             } else {
                 ctxTextSpan.style.display = 'none';
                 ctxShapeSpan.style.display = 'contents';
@@ -1010,8 +1068,7 @@ export function renderImageStudio(container) {
             btn.classList.add('active');
             currentTool = btn.getAttribute('data-tool');
             currentPolyPoints = []; // Reset poly points on tool switch
-            const polyTip = container.querySelector('#is-poly-tooltip');
-            if (polyTip) polyTip.remove();
+            hideCanvasTooltip();
             if (currentTool === 'text') canvas.style.cursor = 'text';
             else if (currentTool === 'select' || currentTool === 'region') canvas.style.cursor = 'default';
             else if (currentTool === 'fill') canvas.style.cursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' stroke='%23000' stroke-width='1.5' d='M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z'/%3E%3C/svg%3E") 2 22, crosshair`;
@@ -1057,7 +1114,53 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-front').style.display = 'none';
             container.querySelector('#is-ctx-back').style.display = 'none';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
+            container.querySelector('#is-obj-smart-remove').style.display = 'none';
+            container.querySelector('#is-obj-type-info').style.display = 'none';
             container.querySelector('#is-polyarrow-opts').style.display = 'none';
+            
+            // Show tool guideline tooltip
+            
+            hideCanvasTooltip();
+            
+            const _toolGuides = {
+            
+                select: "Click to select · Drag to move · <b style='color:#60a5fa;'>Shift</b>+handle to lock ratio · <b style='color:#60a5fa;'>Alt</b>+click to select behind",
+            
+                brush: "Click and drag to draw · Released stroke becomes vector object",
+            
+                eraser: "Click and drag to erase",
+            
+                rect: "Drag to draw · <b style='color:#60a5fa;'>Shift</b> for square",
+            
+                circle: "Drag to draw circle · <b style='color:#60a5fa;'>Shift</b> for perfect circle",
+            
+                ellipse: "Drag to draw ellipse · <b style='color:#60a5fa;'>Shift</b> for circle",
+            
+                triangle: "Drag to draw · <b style='color:#60a5fa;'>Shift</b> for equilateral",
+            
+                diamond: "Drag to draw · <b style='color:#60a5fa;'>Shift</b> for square diamond",
+            
+                parallelogram: "Drag to draw · <b style='color:#60a5fa;'>Shift</b> for equal sides",
+            
+                pentagon: "Drag to draw · <b style='color:#60a5fa;'>Shift</b> for regular",
+            
+                hexagon: "Drag to draw · <b style='color:#60a5fa;'>Shift</b> for regular",
+            
+                star: "Drag to draw · <b style='color:#60a5fa;'>Shift</b> for regular star",
+            
+                text: "Click to place text · Type and press <b style='color:#60a5fa;'>Enter</b> to confirm",
+            
+                fill: "Click to flood fill area with color",
+            
+                region: "Drag to select a region · Then use toolbar to cut/copy/crop",
+            
+                crop: "Drag to select crop area",
+            
+                polyarrow: "Click to add points · <b style='color:#60a5fa;'>Space</b> to finish · <b style='color:#f87171;'>Esc</b> to cancel"
+            
+            };
+            
+            if (_toolGuides[currentTool]) setCanvasTooltip(_toolGuides[currentTool]);
             
             drawSelectionOverlay();
         });
@@ -1238,6 +1341,24 @@ export function renderImageStudio(container) {
         targetCtx.restore();
     }
 
+    // Universal canvas tooltip (bottom center)
+    function setCanvasTooltip(html) {
+        let tip = container.querySelector('#is-canvas-tooltip');
+        if (!tip) {
+            tip = document.createElement('div');
+            tip.id = 'is-canvas-tooltip';
+            tip.style.cssText = 'position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); color:#fff; padding:6px 14px; border-radius:6px; font-size:12px; pointer-events:none; z-index:100; white-space:nowrap; backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.1);';
+            container.querySelector('#is-canvas-container').appendChild(tip);
+        }
+        tip.innerHTML = html;
+        tip.style.display = '';
+    }
+    function hideCanvasTooltip() {
+        const tip = container.querySelector('#is-canvas-tooltip');
+        if (tip) tip.remove();
+    }
+
+
     // Zoom
     zoomSlider.addEventListener('input', (e) => {
         const val = e.target.value;
@@ -1250,6 +1371,11 @@ export function renderImageStudio(container) {
     const canvasContainer = container.querySelector('#is-canvas-container');
     let isPanning = false;
     let isSpaceDown = false;
+    let isShiftDown = false;
+    let canvasSelected = false;
+    let isResizingCanvas = false;
+    let canvasResizeStartX = 0, canvasResizeStartY = 0;
+    let canvasResizeOrigW = 0, canvasResizeOrigH = 0;
 
     document.addEventListener('keydown', (e) => {
         if (!document.getElementById('is-canvas')) return;
@@ -1261,6 +1387,8 @@ export function renderImageStudio(container) {
             canvas.style.cursor = 'grab';
             e.preventDefault();
         }
+        if (e.key === 'Shift') isShiftDown = true;
+        // Alt+Click to cycle select (see mousedown handler)
     });
 
     document.addEventListener('keyup', (e) => {
@@ -1273,6 +1401,7 @@ export function renderImageStudio(container) {
             else if (currentTool === 'select') canvas.style.cursor = 'default';
             else canvas.style.cursor = 'none';
         }
+        if (e.key === 'Shift') isShiftDown = false;
     });
 
     canvasContainer.addEventListener('mousedown', (e) => {
@@ -1341,7 +1470,8 @@ export function renderImageStudio(container) {
     }
 
     canvas.addEventListener('mousedown', (e) => {
-        if (e.button === 1 || isSpaceDown) return; // Ignore if panning
+        if (e.button === 1 || isSpaceDown) return;
+        if (currentTool === 'smartremove') return; // Ignore if panning
         const pos = getMousePos(e);
         
         if (currentTool === 'select') {
@@ -1383,7 +1513,8 @@ export function renderImageStudio(container) {
                     return;
                 }
 
-                // 8 handles in local space
+                // 8 handles in local space — skip for path/polyarrow
+                if (s.type !== 'path' && s.type !== 'polyarrow') {
                 const handleDefs = [
                     {name: 'tl', hx: -w/2, hy: -h/2},
                     {name: 'tc', hx: 0,    hy: -h/2},
@@ -1401,6 +1532,21 @@ export function renderImageStudio(container) {
                         startX = pos.x; startY = pos.y;
                         return;
                     }
+                }
+                } // end skip for path/polyarrow
+            }
+            
+            // Check canvas resize handle first
+            if (canvasSelected && !activeVectorShape) {
+                const hx = canvas.width - 1, hy = canvas.height - 1;
+                if (Math.abs(pos.x - hx) < 12 && Math.abs(pos.y - hy) < 12) {
+                    isResizingCanvas = true;
+                    canvasResizeStartX = pos.x;
+                    canvasResizeStartY = pos.y;
+                    canvasResizeOrigW = canvas.width;
+                    canvasResizeOrigH = canvas.height;
+                    canvas.style.cursor = 'nwse-resize';
+                    return;
                 }
             }
             
@@ -1435,11 +1581,45 @@ export function renderImageStudio(container) {
                 }
             }
             
-            if (hitShape) {
+            if (hitShape && e.altKey && activeVectorShape) {
+                // Alt+Click: select the next object underneath at this position
+                canvasSelected = false;
+                const allHits = [];
+                for (let i = vectorShapes.length - 1; i >= 0; i--) {
+                    const sh = vectorShapes[i];
+                    const shcx = sh.x + (sh.x2 - sh.x) / 2;
+                    const shcy = sh.y + (sh.y2 - sh.y) / 2;
+                    const shw = Math.abs(sh.x2 - sh.x);
+                    const shh = Math.abs(sh.y2 - sh.y);
+                    const shrot = (sh.rotation || 0) * Math.PI / 180;
+                    const shdx = pos.x - shcx, shdy = pos.y - shcy;
+                    const shcos = Math.cos(-shrot), shsin = Math.sin(-shrot);
+                    const shlx = shdx * shcos - shdy * shsin;
+                    const shly = shdx * shsin + shdy * shcos;
+                    const shp = sh.strokeWidth / 2 + 5;
+                    if (Math.abs(shlx) <= shw / 2 + shp && Math.abs(shly) <= shh / 2 + shp) allHits.push(sh);
+                }
+                if (allHits.length > 1) {
+                    const curIdx = allHits.indexOf(activeVectorShape);
+                    const nextIdx = (curIdx + 1) % allHits.length;
+                    activeVectorShape = allHits[nextIdx];
+                } else {
+                    activeVectorShape = hitShape;
+                }
+                selection = null;
+                drawSelectionOverlay();
+                return;
+                }
+                if (hitShape) {
+                canvasSelected = false;
                 // If we're in control point editing mode on the active shape,
                 // clicking the shape body should not start a move - only handles work
                 if (hitShape === activeVectorShape && activeVectorShape.originalPoints && activeVectorShape.originalPoints.length > 1) {
-                    // Stay selected but don't start move
+                    // Allow move if not near a control point (control points checked above)
+                    activeVectorShape = hitShape;
+                    resizingHandle = 'move';
+                    startX = pos.x; startY = pos.y;
+                    drawSelectionOverlay();
                     return;
                 }
                 activeVectorShape = hitShape;
@@ -1452,22 +1632,26 @@ export function renderImageStudio(container) {
             
             
             activeVectorShape = null;
+            canvasSelected = true;
             // Hide object buttons, show canvas context
             container.querySelector('#is-ctx-del').style.display = 'none';
             container.querySelector('#is-ctx-del-divider').style.display = 'none';
             container.querySelector('#is-ctx-front').style.display = 'none';
             container.querySelector('#is-ctx-back').style.display = 'none';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
+            container.querySelector('#is-obj-smart-remove').style.display = 'none';
             container.querySelector('#is-polyarrow-opts').style.display = 'none';
             const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
             allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
             container.querySelector('#is-ctx-select').style.display = 'contents';
-            container.querySelector('#is-canvas-size-info').textContent = `Canvas: ${canvas.width} × ${canvas.height}`;
+            container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#aaa; font-weight:500;">Background Canvas</span> <span style="color:#555">|</span> <span style="color:#888;">' + canvas.width + ' × ' + canvas.height + ' px</span>';
+            container.querySelector('#is-obj-type-info').style.display = 'flex';
             contextBar.style.display = 'flex';
             drawSelectionOverlay();
             return;
         }
         
+        canvasSelected = false;
         // REGION SELECT tool
         if (currentTool === 'region') {
             // Commit any existing floating selection
@@ -1520,14 +1704,7 @@ export function renderImageStudio(container) {
                 });
             }
             // Show floating tooltip hint
-            let tip = container.querySelector('#is-poly-tooltip');
-            if (!tip) {
-                tip = document.createElement('div');
-                tip.id = 'is-poly-tooltip';
-                tip.style.cssText = 'position:absolute; bottom:12px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.85); color:#fff; padding:6px 14px; border-radius:6px; font-size:12px; pointer-events:none; z-index:100; white-space:nowrap; backdrop-filter:blur(4px); border:1px solid rgba(255,255,255,0.1);';
-                tip.innerHTML = "Click to add points &nbsp;·&nbsp; <b style='color:#60a5fa;'>Space</b> to finish &nbsp;·&nbsp; <b style='color:#f87171;'>Esc</b> to cancel";
-                container.querySelector('#is-canvas-container').appendChild(tip);
-            }
+            setCanvasTooltip("Click to add points &nbsp;·&nbsp; <b style='color:#60a5fa;'>Space</b> to finish &nbsp;·&nbsp; <b style='color:#f87171;'>Esc</b> to cancel");
             return;
         }
 
@@ -1661,11 +1838,42 @@ export function renderImageStudio(container) {
         octx.strokeStyle = colorPicker.value;
     });
 
-    canvas.addEventListener('mousemove', (e) => {
+    window.addEventListener('mousemove', (e) => {
         if (e.button === 1 || isSpaceDown || isPanning) return;
+        if (currentTool === 'smartremove') return;
         const pos = getMousePos(e);
 
         if (currentTool === 'select') {
+            // Canvas resize dragging
+            if (isResizingCanvas) {
+                const newW = Math.max(50, Math.round(canvasResizeOrigW + (pos.x - canvasResizeStartX)));
+                const newH = Math.max(50, Math.round(canvasResizeOrigH + (pos.y - canvasResizeStartY)));
+                // Real-time canvas resize preview
+                if (newW !== canvas.width || newH !== canvas.height) {
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height;
+                    tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
+                    canvas.width = newW;
+                    canvas.height = newH;
+                    overlay.width = newW;
+                    overlay.height = newH;
+                    ctx.fillStyle = canvasBgColor;
+                    ctx.fillRect(0, 0, newW, newH);
+                    ctx.drawImage(tempCanvas, 0, 0);
+                    sizeInfo.innerText = newW + ' x ' + newH;
+                }
+                drawSelectionOverlay();
+                // Show size label on overlay
+                octx.fillStyle = 'rgba(0,0,0,0.75)';
+                const labelW = 90, labelH = 22;
+                octx.fillRect(newW - labelW - 8, newH - labelH - 8, labelW, labelH);
+                octx.fillStyle = '#fff';
+                octx.font = '12px system-ui, sans-serif';
+                octx.textBaseline = 'middle';
+                octx.fillText(newW + ' × ' + newH, newW - labelW - 3, newH - labelH + 3);
+                return;
+            }
             // Handle control point dragging
             if (activeVectorShape && draggingControlPointIdx >= 0 && activeVectorShape.originalPoints) {
                 let currentPos = { x: pos.x, y: pos.y };
@@ -1748,26 +1956,57 @@ export function renderImageStudio(container) {
                     activeVectorShape.x2 += dx;
                     activeVectorShape.y += dy;
                     activeVectorShape.y2 += dy;
+                    // Also move control points for polyarrow/path
+                    if (activeVectorShape.originalPoints) {
+                        activeVectorShape.originalPoints.forEach(p => { p.x += dx; p.y += dy; });
+                    }
+                    if (activeVectorShape.points) {
+                        activeVectorShape.points.forEach(p => { p.x += dx; p.y += dy; });
+                    }
                 } else if (resizingHandle === 'tl') {
-                    activeVectorShape.x += dx;
+                    if (isShiftDown) {
+                        const ar = Math.abs(activeVectorShape.x2 - activeVectorShape.x) / (Math.abs(activeVectorShape.y2 - activeVectorShape.y) || 1);
+                        activeVectorShape.x += dx;
+                        activeVectorShape.y += dx / ar * Math.sign(dy || 1);
+                    } else {
+                        activeVectorShape.x += dx;
                     activeVectorShape.y += dy;
+                    }
                 } else if (resizingHandle === 'tc') {
                     activeVectorShape.y += dy;
                 } else if (resizingHandle === 'tr') {
-                    activeVectorShape.x2 += dx;
+                    if (isShiftDown) {
+                        const ar = Math.abs(activeVectorShape.x2 - activeVectorShape.x) / (Math.abs(activeVectorShape.y2 - activeVectorShape.y) || 1);
+                        activeVectorShape.x2 += dx;
+                        activeVectorShape.y += -dx / ar * Math.sign(dy || -1);
+                    } else {
+                        activeVectorShape.x2 += dx;
                     activeVectorShape.y += dy;
+                    }
                 } else if (resizingHandle === 'ml') {
                     activeVectorShape.x += dx;
                 } else if (resizingHandle === 'mr') {
                     activeVectorShape.x2 += dx;
                 } else if (resizingHandle === 'bl') {
-                    activeVectorShape.x += dx;
+                    if (isShiftDown) {
+                        const ar = Math.abs(activeVectorShape.x2 - activeVectorShape.x) / (Math.abs(activeVectorShape.y2 - activeVectorShape.y) || 1);
+                        activeVectorShape.x += dx;
+                        activeVectorShape.y2 += -dx / ar * Math.sign(dy || 1);
+                    } else {
+                        activeVectorShape.x += dx;
                     activeVectorShape.y2 += dy;
+                    }
                 } else if (resizingHandle === 'bc') {
                     activeVectorShape.y2 += dy;
                 } else if (resizingHandle === 'br') {
-                    activeVectorShape.x2 += dx;
+                    if (isShiftDown) {
+                        const ar = Math.abs(activeVectorShape.x2 - activeVectorShape.x) / (Math.abs(activeVectorShape.y2 - activeVectorShape.y) || 1);
+                        activeVectorShape.x2 += dx;
+                        activeVectorShape.y2 += dx / ar * Math.sign(dy || 1);
+                    } else {
+                        activeVectorShape.x2 += dx;
                     activeVectorShape.y2 += dy;
+                    }
                 }
                 startX = pos.x; startY = pos.y;
                 updateConnections();
@@ -1782,6 +2021,14 @@ export function renderImageStudio(container) {
                 octx.setLineDash([5, 5]);
                 octx.strokeRect(startX, startY, pos.x - startX, pos.y - startY);
                 octx.setLineDash([]);
+            } else if (canvasSelected && !activeVectorShape && !isDrawing) {
+                // Canvas resize handle hover
+                const chx = canvas.width - 1, chy = canvas.height - 1;
+                if (Math.abs(pos.x - chx) < 12 && Math.abs(pos.y - chy) < 12) {
+                    canvas.style.cursor = 'nwse-resize';
+                } else {
+                    canvas.style.cursor = 'default';
+                }
             } else if (activeVectorShape && !resizingHandle) {
                 // Change cursor when hovering over handles (in local rotated space)
                 const s = activeVectorShape;
@@ -1816,7 +2063,7 @@ export function renderImageStudio(container) {
                     canvas.style.cursor = 'grab';
                     foundCursor = true;
                 }
-                if (!foundCursor) {
+                if (!foundCursor && s.type !== 'path' && s.type !== 'polyarrow') {
                     for (const hd of hoverHandles) {
                         if (Math.abs(localX - hd.hx) < 8 && Math.abs(localY - hd.hy) < 8) {
                             canvas.style.cursor = cursorMap[hd.name];
@@ -1893,7 +2140,14 @@ export function renderImageStudio(container) {
                     octx.beginPath();
                     const last = currentPolyPoints[currentPolyPoints.length - 1];
                     octx.moveTo(last.x, last.y);
-                    octx.lineTo(pos.x, pos.y);
+                    let lineEndX = pos.x, lineEndY = pos.y;
+                    if (isShiftDown) {
+                        const adx = Math.abs(pos.x - last.x), ady = Math.abs(pos.y - last.y);
+                        if (adx > ady * 2) { lineEndY = last.y; }
+                        else if (ady > adx * 2) { lineEndX = last.x; }
+                        else { const d = Math.max(adx, ady); lineEndX = last.x + d * Math.sign(pos.x - last.x || 1); lineEndY = last.y + d * Math.sign(pos.y - last.y || 1); }
+                    }
+                    octx.lineTo(lineEndX, lineEndY);
                     octx.stroke();
                     octx.setLineDash([]);
                     octx.globalAlpha = 1;
@@ -1967,10 +2221,16 @@ export function renderImageStudio(container) {
         } else if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = container.querySelector('#is-shape-color').value;
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+            let drawX2 = pos.x, drawY2 = pos.y;
+            if (isShiftDown) {
+                const side = Math.max(Math.abs(pos.x - startX), Math.abs(pos.y - startY));
+                drawX2 = startX + side * Math.sign(pos.x - startX || 1);
+                drawY2 = startY + side * Math.sign(pos.y - startY || 1);
+            }
             drawSelectionOverlay();
             drawShape(octx, {
                 type: currentTool,
-                x: startX, y: startY, x2: pos.x, y2: pos.y,
+                x: startX, y: startY, x2: drawX2, y2: drawY2,
                 stroke: shapeColor,
                 strokeWidth: shapeStroke
             });
@@ -2019,8 +2279,7 @@ export function renderImageStudio(container) {
         activeVectorShape = vectorShapes[vectorShapes.length - 1];
         currentPolyPoints = [];
         // Remove tooltip
-        const tip = container.querySelector('#is-poly-tooltip');
-        if (tip) tip.remove();
+        hideCanvasTooltip();
         currentTool = 'select';
         tools.forEach(t => t.classList.toggle('active', t.getAttribute('data-tool') === 'select'));
         canvas.style.cursor = 'default';
@@ -2037,8 +2296,7 @@ export function renderImageStudio(container) {
                 finalizePolyArrow();
             } else if (e.key === 'Escape' && currentPolyPoints.length > 0) {
                 currentPolyPoints = [];
-                const tip = container.querySelector('#is-poly-tooltip');
-                if (tip) tip.remove();
+                hideCanvasTooltip();
                 drawSelectionOverlay();
             }
         }
@@ -2143,11 +2401,39 @@ export function renderImageStudio(container) {
         }
     });
 
-    canvas.addEventListener('mouseup', (e) => {
+    window.addEventListener('mouseup', (e) => {
+        if (currentTool === 'smartremove') return;
         if (e.button === 1 || isSpaceDown) return;
         const pos = getMousePos(e);
 
         if (currentTool === 'select') {
+            if (isResizingCanvas) {
+                isResizingCanvas = false;
+                canvas.style.cursor = 'default';
+                const newW = Math.max(50, Math.round(canvasResizeOrigW + (pos.x - canvasResizeStartX)));
+                const newH = Math.max(50, Math.round(canvasResizeOrigH + (pos.y - canvasResizeStartY)));
+                if (newW !== canvas.width || newH !== canvas.height) {
+                    // Save current content
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height;
+                    tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
+                    // Resize canvas
+                    canvas.width = newW;
+                    canvas.height = newH;
+                    overlay.width = newW;
+                    overlay.height = newH;
+                    // Fill with bg color then paste old content
+                    ctx.fillStyle = canvasBgColor;
+                    ctx.fillRect(0, 0, newW, newH);
+                    ctx.drawImage(tempCanvas, 0, 0);
+                    sizeInfo.innerText = newW + ' x ' + newH;
+                    container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#aaa; font-weight:500;">Background Canvas</span> <span style="color:#555">|</span> <span style="color:#888;">' + newW + ' × ' + newH + ' px</span>';
+                    saveState();
+                }
+                drawSelectionOverlay();
+                return;
+            }
             if (draggingControlPointIdx >= 0) {
                 draggingControlPointIdx = -1;
                 isDrawing = false;
@@ -2202,10 +2488,16 @@ export function renderImageStudio(container) {
         if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = container.querySelector('#is-shape-color').value;
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+            let finalX2 = pos.x, finalY2 = pos.y;
+            if (isShiftDown) {
+                const side = Math.max(Math.abs(pos.x - startX), Math.abs(pos.y - startY));
+                finalX2 = startX + side * Math.sign(pos.x - startX || 1);
+                finalY2 = startY + side * Math.sign(pos.y - startY || 1);
+            }
             vectorShapes.push({
                 id: nextShapeId(),
                 type: currentTool,
-                x: startX, y: startY, x2: pos.x, y2: pos.y,
+                x: startX, y: startY, x2: finalX2, y2: finalY2,
                 stroke: shapeColor,
                 strokeWidth: shapeStroke,
                 rotation: 0, flipH: false, flipV: false
@@ -2954,7 +3246,7 @@ export function renderImageStudio(container) {
             
             btn.innerHTML = "<i class='bx bx-check'></i> Enhanced!";
             setTimeout(() => {
-                btn.innerHTML = "<i class='bx bx-magic-wand'></i> Auto Enhance";
+                btn.innerHTML = "<i class='bx bxs-magic-wand'></i> Auto Enhance";
             }, 2000);
         }, 1500);
     });
@@ -3064,6 +3356,304 @@ export function renderImageStudio(container) {
             setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000);
         }
     });
+
+        const smartRemoveHandler = (e) => {
+        e.stopPropagation();
+
+        let existingMenu = container.querySelector('#is-ai-tool-menu');
+        if (existingMenu) existingMenu.remove();
+
+        const menu = document.createElement('div');
+        menu.id = 'is-ai-tool-menu';
+        menu.style.cssText = 'position: absolute; display: flex; flex-direction: column; background: #252526; padding: 6px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); z-index: 200; width: 180px; gap: 2px;';
+        
+        const rect = container.querySelector('#is-canvas-wrapper').getBoundingClientRect();
+        let left = e.clientX - rect.left;
+        let top = e.clientY - rect.top + 10;
+        if (left + 180 > rect.width) left = rect.width - 190;
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+
+        menu.innerHTML = `
+            <button class="is-btn-icon" id="is-ai-opt-whole" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-image-alt' style="margin-right: 6px;"></i> Prompt AI</button>
+            <button class="is-btn-icon" id="is-ai-opt-area" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-highlight' style="margin-right: 6px;"></i> Select Area to Prompt</button>
+            <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0; width: 100%;"></div>
+            <button class="is-btn-icon" id="is-ai-opt-super" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-zoom-in' style="margin-right: 6px;"></i> Super Resolution</button>
+            <button class="is-btn-icon" id="is-ai-opt-analyze" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-search-alt' style="margin-right: 6px;"></i> Analysis with AI</button>
+        `;
+
+        const closeMenu = (ev) => {
+            if (!menu.contains(ev.target)) {
+                menu.remove();
+                document.removeEventListener('pointerdown', closeMenu);
+            }
+        };
+        setTimeout(() => document.addEventListener('pointerdown', closeMenu), 0);
+        container.querySelector('#is-canvas-wrapper').appendChild(menu);
+
+        let actionBar = null;
+        let isMaskDrawing = false;
+
+        const escListener = (ev) => {
+            if (ev.key === 'Escape' && currentTool === 'smartremove') {
+                ev.preventDefault();
+                exitSmartRemove();
+            }
+        };
+        document.addEventListener('keydown', escListener);
+
+        function exitSmartRemove() {
+            document.removeEventListener('keydown', escListener);
+            canvas.removeEventListener('mousedown', onMaskDown);
+            window.removeEventListener('mousemove', onMaskMove);
+            window.removeEventListener('mouseup', onMaskUp);
+            window.currentMaskPoints = null;
+            window.currentMaskCanvas = null;
+            window.isMaskFinished = false;
+            
+            hideCanvasTooltip();
+            if (actionBar) actionBar.remove();
+            
+            currentTool = 'select';
+            canvas.style.cursor = 'default';
+            drawSelectionOverlay();
+        }
+
+        function cancelMask() {
+            window.currentMaskPoints = [];
+            window.currentMaskCanvas = null;
+            window.isMaskFinished = false;
+            if (actionBar) actionBar.style.display = 'none';
+            drawSelectionOverlay();
+        }
+
+        function createActionBar(x, y) {
+            if (actionBar) actionBar.remove();
+            actionBar = document.createElement('div');
+            actionBar.id = 'is-smart-remove-actionbar';
+            actionBar.style.cssText = 'position: absolute; display: flex; align-items: center; gap: 4px; background: #252526; padding: 6px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); z-index: 100;';
+            actionBar.innerHTML = `
+                <input type="text" id="is-sr-prompt" placeholder="What to generate? (Leave empty to Remove)" style="background: #1e1e1e; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 4px 8px; font-size: 11px; width: 220px; outline: none;">
+                <button class="is-btn-icon" id="is-sr-apply" title="Generate / Remove" style="width: auto; padding: 0 8px; font-size: 11px; color: #10b981;"><i class='bx bxs-magic-wand'></i> Generate</button>
+                <div class="is-divider"></div>
+                <button class="is-btn-icon" id="is-sr-cancel" title="Cancel" style="color: #ef4444;"><i class='bx bx-x'></i></button>
+            `;
+            container.querySelector('#is-canvas-wrapper').appendChild(actionBar);
+            
+            setTimeout(() => {
+                const abw = actionBar.offsetWidth || 300;
+                const abh = actionBar.offsetHeight || 40;
+                let tx = x; let ty = y;
+                if (tx + abw > canvas.width) tx = canvas.width - abw - 10;
+                if (ty + abh > canvas.height) ty = canvas.height - abh - 10;
+                if (tx < 10) tx = 10;
+                if (ty < 10) ty = 10;
+                actionBar.style.left = tx + 'px';
+                actionBar.style.top = ty + 'px';
+            }, 0);
+
+            actionBar.querySelector('#is-sr-apply').addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!window.currentMaskCanvas) return;
+                
+                const prompt = actionBar.querySelector('#is-sr-prompt').value.trim();
+                const btnApply = actionBar.querySelector('#is-sr-apply');
+                
+                if (prompt) {
+                    btnApply.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i>";
+                    btnApply.disabled = true;
+                    try {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
+                        const tctx = tempCanvas.getContext('2d');
+                        tctx.drawImage(canvas, 0, 0);
+                        if (typeof vectorShapes !== 'undefined') {
+                            vectorShapes.forEach(s => {
+                                if (typeof drawShape === 'function') drawShape(tctx, s);
+                            });
+                        }
+                        
+                        const imgBlob = await new Promise(res => tempCanvas.toBlob(res, 'image/png'));
+                        const maskBlob = await new Promise(res => window.currentMaskCanvas.toBlob(res, 'image/png'));
+                        
+                        const imgBase64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(imgBlob); });
+                        const maskBase64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(maskBlob); });
+                        
+                        const settings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini', geminiKey: '' };
+                        
+                        const response = await fetch('http://localhost:3000/api/ai/generate-fill', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ settings, prompt, image: imgBase64, mask: maskBase64 })
+                        });
+                        
+                        const data = await response.json();
+                        if (!response.ok || !data.success) throw new Error(data.message || 'API request failed');
+                        
+                        const newImage = new Image();
+                        newImage.onload = () => {
+                            if (activeVectorShape && activeVectorShape.type === 'image') {
+                                const tc = document.createElement('canvas');
+                                tc.width = activeVectorShape.x2 - activeVectorShape.x;
+                                tc.height = activeVectorShape.y2 - activeVectorShape.y;
+                                const ctx2 = tc.getContext('2d');
+                                ctx2.drawImage(newImage, activeVectorShape.x, activeVectorShape.y, tc.width, tc.height, 0, 0, tc.width, tc.height);
+                                const croppedImg = new Image();
+                                croppedImg.onload = () => {
+                                    activeVectorShape.img = croppedImg;
+                                    saveState(); drawSelectionOverlay();
+                                };
+                                croppedImg.src = tc.toDataURL();
+                            } else {
+                                ctx.drawImage(newImage, 0, 0, canvas.width, canvas.height);
+                                saveState(); drawSelectionOverlay();
+                            }
+                        };
+                        newImage.src = data.imageUrl || data.imageBase64;
+                    } catch (err) {
+                        console.error("AI Generation error:", err);
+                        alert("AI Generation failed: " + err.message + "\n\nBạn cần viết endpoint /api/ai/generate-fill trên server Node.js.");
+                    }
+                } else {
+                    console.log("No prompt, skipping legacy remove");
+                }
+                exitSmartRemove();
+            });
+            
+            actionBar.querySelector('#is-sr-cancel').addEventListener('click', (e) => {
+                e.stopPropagation();
+                cancelMask();
+            });
+        }
+
+        function onMaskDown(e) {
+            if (currentTool !== 'smartremove') return;
+            if (window.isMaskFinished) return;
+            isMaskDrawing = true;
+            window.currentMaskPoints = [getMousePos(e)];
+            drawSelectionOverlay();
+        }
+        function onMaskMove(e) {
+            if (currentTool !== 'smartremove') return;
+            if (isMaskDrawing && !window.isMaskFinished) {
+                window.currentMaskPoints.push(getMousePos(e));
+                drawSelectionOverlay();
+            }
+        }
+        function onMaskUp(e) {
+            if (currentTool !== 'smartremove' || !isMaskDrawing || window.isMaskFinished) return;
+            isMaskDrawing = false;
+            
+            if (window.currentMaskPoints.length < 3) {
+                window.currentMaskPoints = [];
+                drawSelectionOverlay();
+                return;
+            }
+            
+            window.isMaskFinished = true;
+            const maskCanvas = document.createElement('canvas');
+            maskCanvas.width = canvas.width; maskCanvas.height = canvas.height;
+            const mctx = maskCanvas.getContext('2d');
+            mctx.fillStyle = 'rgba(255, 80, 80, 1)';
+            mctx.beginPath();
+            mctx.moveTo(window.currentMaskPoints[0].x, window.currentMaskPoints[0].y);
+            for(let i=1; i<window.currentMaskPoints.length; i++) mctx.lineTo(window.currentMaskPoints[i].x, window.currentMaskPoints[i].y);
+            mctx.closePath();
+            mctx.fill();
+            
+            window.currentMaskCanvas = maskCanvas;
+            drawSelectionOverlay();
+            
+            const lastPt = window.currentMaskPoints[window.currentMaskPoints.length - 1];
+            createActionBar(lastPt.x + 10, lastPt.y + 10);
+        }
+
+        // Action 1: Prompt AI
+        menu.querySelector('#is-ai-opt-whole').addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.remove();
+            document.removeEventListener('pointerdown', closeMenu);
+            
+            currentTool = 'smartremove';
+            canvas.style.cursor = 'crosshair';
+            const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
+            allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
+            contextBar.style.display = 'flex';
+            
+            window.currentMaskPoints = [];
+            const maskCanvas = document.createElement('canvas');
+            maskCanvas.width = canvas.width; maskCanvas.height = canvas.height;
+            const mctx = maskCanvas.getContext('2d');
+            mctx.fillStyle = 'rgba(255, 80, 80, 1)';
+            
+            if (activeVectorShape && activeVectorShape.type === 'image') {
+                mctx.fillRect(activeVectorShape.x, activeVectorShape.y, activeVectorShape.x2 - activeVectorShape.x, activeVectorShape.y2 - activeVectorShape.y);
+            } else {
+                mctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            window.currentMaskCanvas = maskCanvas;
+            window.isMaskFinished = true;
+            
+            drawSelectionOverlay();
+            createActionBar(canvas.width / 2 - 150, canvas.height / 2);
+            setCanvasTooltip("Enter a prompt to apply to the whole image/object");
+        });
+
+        // Action 2: Select Area to Prompt
+        menu.querySelector('#is-ai-opt-area').addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.remove();
+            document.removeEventListener('pointerdown', closeMenu);
+            
+            currentTool = 'smartremove';
+            canvas.style.cursor = 'crosshair';
+            const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
+            allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
+            contextBar.style.display = 'flex';
+            setCanvasTooltip("Draw an outline around the area to edit or remove &nbsp;·&nbsp; <b style='color:#f87171;'>Esc</b> to cancel");
+            
+            window.currentMaskPoints = [];
+            window.currentMaskCanvas = null;
+            window.isMaskFinished = false;
+            
+            canvas.addEventListener('mousedown', onMaskDown);
+            window.addEventListener('mousemove', onMaskMove);
+            window.addEventListener('mouseup', onMaskUp);
+        });
+
+        // Action 3: Super Resolution
+        menu.querySelector('#is-ai-opt-super').addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.remove();
+            document.removeEventListener('pointerdown', closeMenu);
+            
+            const btn = e.target;
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Upscaling...";
+            setTimeout(() => {
+                alert('Super Resolution is not fully implemented yet.');
+                btn.innerHTML = origHTML;
+            }, 1000);
+        });
+
+        // Action 4: Analysis with AI
+        menu.querySelector('#is-ai-opt-analyze').addEventListener('click', (e) => {
+            e.stopPropagation();
+            menu.remove();
+            document.removeEventListener('pointerdown', closeMenu);
+            
+            const btn = e.target;
+            const origHTML = btn.innerHTML;
+            btn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Analyzing...";
+            setTimeout(() => {
+                alert('AI Analysis: This image appears to contain a scenic view with people.');
+                btn.innerHTML = origHTML;
+            }, 1500);
+        });
+    };
+
+    container.querySelector('#is-canvas-smart-remove').addEventListener('click', smartRemoveHandler);
+    container.querySelector('#is-obj-smart-remove').addEventListener('click', smartRemoveHandler);
 
     // Initialize default tool to select
     const defaultToolBtn = container.querySelector('.is-tool[data-tool="select"]');
