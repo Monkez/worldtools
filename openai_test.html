@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAI Image API Test Sandbox</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #121212; color: #e5e5e5; }
+        h1 { color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #333; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        h3 { margin-top: 0; color: #10b981; }
+        input, textarea, button { width: 100%; box-sizing: border-box; padding: 12px; margin-bottom: 12px; border-radius: 6px; background: #2d2d2d; color: #fff; border: 1px solid #444; font-size: 14px; }
+        input:focus, textarea:focus { border-color: #3b82f6; outline: none; }
+        button { background: #3b82f6; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #2563eb; }
+        img { max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .loading { display: none; color: #3b82f6; font-weight: bold; padding: 10px 0; }
+        .error { color: #ef4444; margin-top: 10px; white-space: pre-wrap; font-family: monospace; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 4px; display: none; }
+        .hint { font-size: 12px; color: #888; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>OpenAI Image API Sandbox</h1>
+    
+    <div class="card">
+        <h3>1. Authentication</h3>
+        <p class="hint">Enter your OpenAI API Key (sk-...). Your key is only used locally in your browser to make requests to OpenAI.</p>
+        <input type="password" id="apiKey" placeholder="sk-proj-...">
+    </div>
+
+    <div class="card">
+        <h3>2. Generate Image (DALL-E 3)</h3>
+        <p class="hint">Generates a completely new image from a text description.</p>
+        <textarea id="genPrompt" placeholder="A futuristic cyberpunk city with flying cars, highly detailed, neon lights" rows="3"></textarea>
+        <button onclick="generateImage()">Generate Image</button>
+        <div id="genLoading" class="loading">Generating image... This may take 10-20 seconds...</div>
+        <div id="genError" class="error"></div>
+        <img id="genResult" style="display:none">
+    </div>
+
+    <div class="card">
+        <h3>3. Edit Image (DALL-E 2)</h3>
+        <p class="hint">Edits an existing image based on a prompt. <strong>Important:</strong> The base image must be a valid PNG, less than 4MB, and MUST be perfectly square. To use without a mask, the image itself must have transparent areas where the edit should happen.</p>
+        <label>Base Image (Square PNG with transparency where you want edits):</label>
+        <input type="file" id="editImage" accept="image/png">
+        <label>Mask Image (Optional - Square PNG where fully transparent areas indicate where to edit):</label>
+        <input type="file" id="editMask" accept="image/png">
+        <textarea id="editPrompt" placeholder="Add a cute puppy in the transparent area" rows="3"></textarea>
+        <button onclick="editImage()">Edit Image</button>
+        <div id="editLoading" class="loading">Editing image... Please wait...</div>
+        <div id="editError" class="error"></div>
+        <img id="editResult" style="display:none">
+    </div>
+
+    <script>
+        function getAuth() {
+            const key = document.getElementById('apiKey').value.trim();
+            if (!key) { alert('Please enter your OpenAI API key first!'); return null; }
+            return key;
+        }
+
+        function showError(id, msg) {
+            const el = document.getElementById(id);
+            el.innerText = msg;
+            el.style.display = 'block';
+        }
+        function hideError(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        async function generateImage() {
+            const apiKey = getAuth(); if (!apiKey) return;
+            const prompt = document.getElementById('genPrompt').value.trim();
+            if (!prompt) return alert('Please enter a prompt!');
+            
+            document.getElementById('genLoading').style.display = 'block';
+            document.getElementById('genResult').style.display = 'none';
+            hideError('genError');
+
+            try {
+                const res = await fetch('https://api.openai.com/v1/images/generations', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Authorization': `Bearer ${apiKey}` 
+                    },
+                    body: JSON.stringify({
+                        model: "dall-e-3",
+                        prompt: prompt,
+                        n: 1,
+                        size: "1024x1024"
+                    })
+                });
+                
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+                
+                document.getElementById('genResult').src = data.data[0].url;
+                document.getElementById('genResult').style.display = 'block';
+            } catch (err) {
+                showError('genError', 'Error: ' + err.message);
+            } finally {
+                document.getElementById('genLoading').style.display = 'none';
+            }
+        }
+
+        async function editImage() {
+            const apiKey = getAuth(); if (!apiKey) return;
+            const prompt = document.getElementById('editPrompt').value.trim();
+            const imageFile = document.getElementById('editImage').files[0];
+            const maskFile = document.getElementById('editMask').files[0];
+            
+            if (!prompt || !imageFile) return alert('Please enter a prompt and select a Base Image!');
+
+            document.getElementById('editLoading').style.display = 'block';
+            document.getElementById('editResult').style.display = 'none';
+            hideError('editError');
+
+            try {
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                if (maskFile) formData.append('mask', maskFile);
+                formData.append('prompt', prompt);
+                formData.append('n', 1);
+                formData.append('size', '1024x1024');
+
+                const res = await fetch('https://api.openai.com/v1/images/edits', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${apiKey}` },
+                    body: formData
+                });
+                
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+                
+                document.getElementById('editResult').src = data.data[0].url;
+                document.getElementById('editResult').style.display = 'block';
+            } catch (err) {
+                showError('editError', 'Error: ' + err.message);
+            } finally {
+                document.getElementById('editLoading').style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

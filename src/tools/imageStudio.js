@@ -1,6 +1,10 @@
 import { removeBackground } from '@imgly/background-removal';
 
 export function renderImageStudio(container) {
+    window._isGetCVal = function(id) {
+        const el = container.querySelector(id);
+        return (el && el.dataset.transparent === 'true') ? 'transparent' : (el ? el.value : '#000000');
+    };
     container.innerHTML = `
         <div style="display: flex; flex-direction: column; height: calc(100vh - 48px); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; background: #1e1e1e; margin-top: -10px;">
             <datalist id="is-color-swatches">
@@ -151,9 +155,7 @@ export function renderImageStudio(container) {
                         <input type="color" id="is-shape-color" list="is-color-swatches" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Stroke Color">
                         
                         <div class="is-divider"></div>
-                        <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; color: #888;">
-                            <input type="checkbox" id="is-shape-fill-enable" style="cursor: pointer;"> Fill
-                        </label>
+                        <span style="font-size: 11px; color: #888;">Fill</span>
                         <input type="color" id="is-shape-fill-color" list="is-color-swatches" value="#8b5cf6" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Fill Color">
 
                         <div class="is-divider"></div>
@@ -168,11 +170,14 @@ export function renderImageStudio(container) {
                         <span style="font-size: 11px; color: #888;">Size</span>
                         <input type="range" id="is-brush-size" min="1" max="50" value="5" style="width: 100px; accent-color: #3b82f6;">
                         <span id="is-brush-size-val" style="font-size: 11px; color: #aaa; min-width: 28px;">5px</span>
-                        <div class="is-divider"></div>
-                        <span style="font-size: 11px; color: #888;">Opacity</span>
-                        <input type="range" id="is-brush-opacity" min="10" max="100" value="100" style="width: 80px; accent-color: #3b82f6;">
-                        <span id="is-brush-opacity-val" style="font-size: 11px; color: #aaa; min-width: 32px;">100%</span>
+                        
                     </span>
+                    <!-- Global Opacity -->
+                    <div class="is-divider" id="is-global-opacity-divider" style="display: none;"></div>
+                    <span id="is-global-opacity-label" style="display: none; font-size: 11px; color: #888;">Opacity</span>
+                    <input type="range" id="is-global-opacity" min="1" max="100" value="100" style="display: none; width: 80px; accent-color: #3b82f6;">
+                    <span id="is-global-opacity-val" style="display: none; font-size: 11px; color: #aaa; min-width: 32px;">100%</span>
+                    
                     <!-- Smooth controls (shared by brush paths and polyarrow) -->
                     <div class="is-divider" id="is-brush-smooth-divider" style="display: none;"></div>
                     <span id="is-smooth-level-label" style="display: none; font-size: 11px; color: #888;">Smooth</span>
@@ -574,6 +579,7 @@ export function renderImageStudio(container) {
     
     function drawShape(targetCtx, s) {
         targetCtx.save();
+        targetCtx.globalAlpha = s.opacity ?? 1;
         
         let cx = s.x + (s.x2 - s.x) / 2;
         let cy = s.y + (s.y2 - s.y) / 2;
@@ -758,7 +764,7 @@ export function renderImageStudio(container) {
         } else if (s.type === 'path' && s.points && s.points.length > 1) {
             targetCtx.lineCap = 'round';
             targetCtx.lineJoin = 'round';
-            targetCtx.globalAlpha = s.opacity || 1;
+            
             targetCtx.beginPath();
             targetCtx.moveTo(s.points[0].x, s.points[0].y);
             for (let i = 1; i < s.points.length; i++) {
@@ -852,7 +858,7 @@ export function renderImageStudio(container) {
         }
         
         if (s.type !== 'image' && s.type !== 'text' && s.type !== 'path' && s.type !== 'polyarrow') {
-            if (s.fill) {
+            if (s.fill && s.fill !== 'transparent') {
                 targetCtx.fillStyle = s.fill;
                 targetCtx.fill();
             }
@@ -1051,11 +1057,16 @@ export function renderImageStudio(container) {
                 ctxTextSpan.style.display = 'none';
                 ctxShapeSpan.style.display = 'none';
                 container.querySelector('#is-ctx-brush').style.display = 'contents';
+                container.querySelector('#is-global-opacity-divider').style.display = '';
+                container.querySelector('#is-global-opacity-label').style.display = '';
+                container.querySelector('#is-global-opacity').style.display = '';
+                container.querySelector('#is-global-opacity-val').style.display = '';
+
                 container.querySelector('#is-brush-color').value = s.stroke || '#6366f1';
                 container.querySelector('#is-brush-size').value = s.strokeWidth || 5;
                 container.querySelector('#is-brush-size-val').textContent = (s.strokeWidth || 5) + 'px';
-                container.querySelector('#is-brush-opacity').value = Math.round((s.opacity || 1) * 100);
-                container.querySelector('#is-brush-opacity-val').textContent = Math.round((s.opacity || 1) * 100) + '%';
+                
+                
                 container.querySelector('#is-brush-smooth').style.display = 'flex';
                 container.querySelector('#is-brush-smooth-divider').style.display = '';
                 container.querySelector('#is-smooth-level').style.display = '';
@@ -1092,13 +1103,23 @@ export function renderImageStudio(container) {
                 const _iw = activeVectorShape.img.naturalWidth || activeVectorShape.img.width;
                 const _ih = activeVectorShape.img.naturalHeight || activeVectorShape.img.height;
             } else {
+
                 ctxTextSpan.style.display = 'none';
                 ctxShapeSpan.style.display = 'contents';
                 container.querySelector('#is-shape-color').value = s.stroke || '#6366f1';
                 container.querySelector('#is-shape-stroke').value = s.strokeWidth || 5;
-                container.querySelector('#is-shape-fill-enable').checked = !!s.fill;
-                if (s.fill) container.querySelector('#is-shape-fill-color').value = s.fill;
+                if (s.fill && s.fill !== 'transparent') {
+                    container.querySelector('#is-shape-fill-color').value = s.fill;
+                }
             }
+
+            // Show global opacity for all object types
+            container.querySelector('#is-global-opacity-divider').style.display = '';
+            container.querySelector('#is-global-opacity-label').style.display = '';
+            container.querySelector('#is-global-opacity').style.display = '';
+            container.querySelector('#is-global-opacity-val').style.display = '';
+            container.querySelector('#is-global-opacity').value = Math.round((s.opacity ?? 1) * 100);
+            container.querySelector('#is-global-opacity-val').textContent = Math.round((s.opacity ?? 1) * 100) + '%';
             return;
         }
         
@@ -1146,6 +1167,11 @@ export function renderImageStudio(container) {
             // Show/hide context bar based on tool
             const allCtxSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
             allCtxSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
+            container.querySelector('#is-global-opacity-divider').style.display = 'none';
+            container.querySelector('#is-global-opacity-label').style.display = 'none';
+            container.querySelector('#is-global-opacity').style.display = 'none';
+            container.querySelector('#is-global-opacity-val').style.display = 'none';
+
             contextBar.style.display = 'flex';
             
             const isShapeTool = ['polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool);
@@ -1155,8 +1181,29 @@ export function renderImageStudio(container) {
                 ctxShapeSpan.style.display = 'contents';
                 container.querySelector('#is-shape-color').value = colorPicker.value;
                 container.querySelector('#is-shape-stroke').value = lineWidthSlider.value;
+            if (currentTool === 'polyarrow') {
+                container.querySelector('#is-polyarrow-opts').style.display = 'flex';
+                container.querySelector('#is-brush-smooth-divider').style.display = '';
+                container.querySelector('#is-smooth-level-label').style.display = '';
+                container.querySelector('#is-smooth-level').style.display = '';
+                container.querySelector('#is-smooth-level-val').style.display = '';
+                container.querySelector('#is-brush-smooth').style.display = 'flex';
+            } else {
+                container.querySelector('#is-polyarrow-opts').style.display = 'none';
+                container.querySelector('#is-brush-smooth-divider').style.display = 'none';
+                container.querySelector('#is-smooth-level-label').style.display = 'none';
+                container.querySelector('#is-smooth-level').style.display = 'none';
+                container.querySelector('#is-smooth-level-val').style.display = 'none';
+                container.querySelector('#is-brush-smooth').style.display = 'none';
+            }
+
             } else if (currentTool === 'brush') {
                 container.querySelector('#is-ctx-brush').style.display = 'contents';
+                container.querySelector('#is-global-opacity-divider').style.display = '';
+                container.querySelector('#is-global-opacity-label').style.display = '';
+                container.querySelector('#is-global-opacity').style.display = '';
+                container.querySelector('#is-global-opacity-val').style.display = '';
+
                 container.querySelector('#is-brush-color').value = colorPicker.value;
                 container.querySelector('#is-brush-size').value = lineWidthSlider.value;
                 container.querySelector('#is-brush-size-val').textContent = lineWidthSlider.value + 'px';
@@ -1257,7 +1304,7 @@ export function renderImageStudio(container) {
     // Text color change
     container.querySelector('#is-text-color').addEventListener('input', () => {
         if (activeVectorShape && activeVectorShape.type === 'text') {
-            activeVectorShape.stroke = container.querySelector('#is-text-color').value;
+            activeVectorShape.stroke = window._isGetCVal('#is-text-color');
             drawSelectionOverlay();
         }
     });
@@ -1285,7 +1332,7 @@ export function renderImageStudio(container) {
     });
     container.querySelector('#is-text-bg-color').addEventListener('input', () => {
         if (activeVectorShape && activeVectorShape.type === 'text') {
-            activeVectorShape.textBgColor = container.querySelector('#is-text-bg-color').value;
+            activeVectorShape.textBgColor = window._isGetCVal('#is-text-bg-color');
             drawSelectionOverlay();
         }
     });
@@ -1318,14 +1365,16 @@ export function renderImageStudio(container) {
             drawSelectionOverlay();
         }
     });
-    container.querySelector('#is-brush-opacity').addEventListener('input', (e) => {
-        container.querySelector('#is-brush-opacity-val').textContent = e.target.value + '%';
-        if (activeVectorShape && activeVectorShape.type === 'path') {
+
+    // Global opacity slider for all objects
+    container.querySelector('#is-global-opacity').addEventListener('input', (e) => {
+        container.querySelector('#is-global-opacity-val').textContent = e.target.value + '%';
+        if (activeVectorShape) {
             activeVectorShape.opacity = parseInt(e.target.value) / 100;
             drawSelectionOverlay();
         }
     });
-    
+
     // Eraser context bar controls
     container.querySelector('#is-eraser-size').addEventListener('input', (e) => {
         lineWidthSlider.value = e.target.value;
@@ -1775,7 +1824,7 @@ export function renderImageStudio(container) {
             // Live preview
             drawSelectionOverlay();
             if (currentPolyPoints.length > 1) {
-                const shapeColor = container.querySelector('#is-shape-color').value;
+                const shapeColor = window._isGetCVal('#is-shape-color');
                 const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
                 drawShape(octx, {
                     type: currentTool,
@@ -1813,7 +1862,7 @@ export function renderImageStudio(container) {
             input.style.position = 'absolute';
             input.style.left = startX + 'px';
             input.style.top = startY + 'px';
-            input.style.color = container.querySelector('#is-text-color').value;
+            input.style.color = window._isGetCVal('#is-text-color');
             input.style.fontSize = fontSize + 'px';
             input.style.fontFamily = fontFamily;
             input.style.fontWeight = isBold ? 'bold' : 'normal';
@@ -1856,14 +1905,14 @@ export function renderImageStudio(container) {
                         x2: startX + w,
                         y2: startY + h,
                         strokeWidth: 0,
-                        stroke: container.querySelector('#is-text-color').value,
+                        stroke: window._isGetCVal('#is-text-color'),
                         fontSize: fontSize,
                         fontFamily: fontFamily,
                         fontBold: isBold,
                         fontItalic: isItalic,
                         fontUnderline: isUnderline,
                         textStyle: container.querySelector('#is-text-render-style').value,
-                        textBgColor: container.querySelector('#is-text-bg-color').value,
+                        textBgColor: window._isGetCVal('#is-text-bg-color'),
                         rotation: 0, flipH: false, flipV: false
                     });
                     activeVectorShape = vectorShapes[vectorShapes.length - 1];
@@ -1894,7 +1943,7 @@ export function renderImageStudio(container) {
         // Fill tool (paint bucket)
         if (currentTool === 'fill') {
             isDrawing = false;
-            const fillColor = container.querySelector('#is-fill-color').value;
+            const fillColor = window._isGetCVal('#is-fill-color');
             const tolerance = parseInt(container.querySelector('#is-fill-tolerance').value) || 32;
             floodFill(Math.round(pos.x), Math.round(pos.y), fillColor, tolerance);
             saveState();
@@ -1908,7 +1957,7 @@ export function renderImageStudio(container) {
         ctx.lineWidth = lineWidthSlider.value;
         ctx.strokeStyle = currentTool === 'eraser' ? '#ffffff' : colorPicker.value;
         if (currentTool === 'brush') {
-            ctx.globalAlpha = (parseInt(container.querySelector('#is-brush-opacity').value) || 100) / 100;
+            ctx.globalAlpha = (parseInt(container.querySelector('#is-global-opacity').value) || 100) / 100;
             currentPathPoints = [{x: startX, y: startY}];
         } else {
             ctx.globalAlpha = 1;
@@ -1994,7 +2043,9 @@ export function renderImageStudio(container) {
                 activeVectorShape.x2 = maxX + sw;
                 activeVectorShape.y2 = maxY + sw;
                 // Re-apply smooth
-                applySmoothToShape(activeVectorShape, activeVectorShape.smoothLevel || 5);
+                if (activeVectorShape.smoothLevel) {
+                    applySmoothToShape(activeVectorShape, activeVectorShape.smoothLevel);
+                }
                 drawSelectionOverlay();
 
                 // Draw visual snap indicators if snapping start/end points
@@ -2045,6 +2096,10 @@ export function renderImageStudio(container) {
                     }
                     if (activeVectorShape.points) {
                         activeVectorShape.points.forEach(p => { p.x += dx; p.y += dy; });
+                    }
+                    // Clear connections when moving the arrow itself (endpoints move with it)
+                    if (activeVectorShape.connections) {
+                        activeVectorShape.connections = {};
                     }
                 } else if (resizingHandle === 'tl') {
                     if (isShiftDown) {
@@ -2203,7 +2258,7 @@ export function renderImageStudio(container) {
                 octx.stroke();
                 // Live preview for polyarrow: show existing path + rubber-band to cursor
                 if (currentTool === 'polyarrow' && currentPolyPoints.length > 0) {
-                    const shapeColor = container.querySelector('#is-shape-color').value;
+                    const shapeColor = window._isGetCVal('#is-shape-color');
                     const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
                     // Draw existing segments
                     if (currentPolyPoints.length > 1) {
@@ -2302,10 +2357,9 @@ export function renderImageStudio(container) {
             octx.lineWidth = 1;
             octx.stroke();
         } else if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
-            const shapeColor = container.querySelector('#is-shape-color').value;
+            const shapeColor = window._isGetCVal('#is-shape-color');
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
-            const fillEnable = container.querySelector('#is-shape-fill-enable').checked;
-            const fillColor = container.querySelector('#is-shape-fill-color').value;
+            const fillColor = window._isGetCVal('#is-shape-fill-color');
             let drawX2 = pos.x, drawY2 = pos.y;
             if (isShiftDown) {
                 const side = Math.max(Math.abs(pos.x - startX), Math.abs(pos.y - startY));
@@ -2318,7 +2372,7 @@ export function renderImageStudio(container) {
                 x: startX, y: startY, x2: drawX2, y2: drawY2,
                 stroke: shapeColor,
                 strokeWidth: shapeStroke,
-                fill: fillEnable ? fillColor : null
+                fill: (fillColor && fillColor !== 'transparent') ? fillColor : null
             });
         }
     });
@@ -2326,7 +2380,7 @@ export function renderImageStudio(container) {
     // Finalize polyarrow shape (shared logic)
     function finalizePolyArrow() {
         if (currentTool !== 'polyarrow' || currentPolyPoints.length < 2) return;
-        const shapeColor = container.querySelector('#is-shape-color').value;
+        const shapeColor = window._isGetCVal('#is-shape-color');
         const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
         
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -2573,10 +2627,9 @@ export function renderImageStudio(container) {
         }
         
         if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
-            const shapeColor = container.querySelector('#is-shape-color').value;
+            const shapeColor = window._isGetCVal('#is-shape-color');
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
-            const fillEnable = container.querySelector('#is-shape-fill-enable').checked;
-            const fillColor = container.querySelector('#is-shape-fill-color').value;
+            const fillColor = window._isGetCVal('#is-shape-fill-color');
             let finalX2 = pos.x, finalY2 = pos.y;
             if (isShiftDown) {
                 const side = Math.max(Math.abs(pos.x - startX), Math.abs(pos.y - startY));
@@ -2589,7 +2642,7 @@ export function renderImageStudio(container) {
                 x: startX, y: startY, x2: finalX2, y2: finalY2,
                 stroke: shapeColor,
                 strokeWidth: shapeStroke,
-                fill: fillEnable ? fillColor : null,
+                fill: (fillColor && fillColor !== 'transparent') ? fillColor : null,
                 rotation: 0, flipH: false, flipV: false
             });
             activeVectorShape = vectorShapes[vectorShapes.length - 1];
@@ -2622,7 +2675,7 @@ export function renderImageStudio(container) {
                 if (p.y > maxY) maxY = p.y;
             });
             const lw = parseInt(lineWidthSlider.value);
-            const opacity = (parseInt(container.querySelector('#is-brush-opacity').value) || 100) / 100;
+            const opacity = (parseInt(container.querySelector('#is-global-opacity').value) || 100) / 100;
             
             vectorShapes.push({
                 type: 'path',
@@ -2641,6 +2694,11 @@ export function renderImageStudio(container) {
             const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
             allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
             container.querySelector('#is-ctx-brush').style.display = 'contents';
+                container.querySelector('#is-global-opacity-divider').style.display = '';
+                container.querySelector('#is-global-opacity-label').style.display = '';
+                container.querySelector('#is-global-opacity').style.display = '';
+                container.querySelector('#is-global-opacity-val').style.display = '';
+
             container.querySelector('#is-brush-smooth').style.display = 'flex';
             container.querySelector('#is-brush-smooth-divider').style.display = '';
             container.querySelector('#is-smooth-level').style.display = '';
@@ -3158,19 +3216,14 @@ export function renderImageStudio(container) {
     // Shape color/stroke live edit
     container.querySelector('#is-shape-color').addEventListener('input', () => {
         if (activeVectorShape && activeVectorShape.type !== 'text') {
-            activeVectorShape.stroke = container.querySelector('#is-shape-color').value;
+            activeVectorShape.stroke = window._isGetCVal('#is-shape-color');
             drawSelectionOverlay();
         }
     });
-    container.querySelector('#is-shape-fill-enable').addEventListener('change', () => {
-        if (activeVectorShape && activeVectorShape.type !== 'text') {
-            activeVectorShape.fill = container.querySelector('#is-shape-fill-enable').checked ? container.querySelector('#is-shape-fill-color').value : null;
-            drawSelectionOverlay();
-        }
-    });
+    
     container.querySelector('#is-shape-fill-color').addEventListener('input', () => {
-        if (activeVectorShape && activeVectorShape.type !== 'text' && container.querySelector('#is-shape-fill-enable').checked) {
-            activeVectorShape.fill = container.querySelector('#is-shape-fill-color').value;
+        if (activeVectorShape && activeVectorShape.type !== 'text') {
+            activeVectorShape.fill = window._isGetCVal('#is-shape-fill-color');
             drawSelectionOverlay();
         }
     });
@@ -3484,10 +3537,10 @@ export function renderImageStudio(container) {
         menu.id = 'is-ai-tool-menu';
         menu.style.cssText = 'position: absolute; display: flex; flex-direction: column; background: #252526; padding: 6px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); z-index: 200; width: 180px; gap: 2px;';
         
-        const rect = container.querySelector('#is-canvas-wrapper').getBoundingClientRect();
-        let left = e.clientX - rect.left;
-        let top = e.clientY - rect.top + 10;
-        if (left + 180 > rect.width) left = rect.width - 190;
+        const rect = e.target.getBoundingClientRect();
+        let left = rect.left + window.scrollX;
+        let top = rect.bottom + window.scrollY + 10;
+        if (left + 180 > window.innerWidth) left = window.innerWidth - 190;
         menu.style.left = left + 'px';
         menu.style.top = top + 'px';
 
@@ -3509,7 +3562,7 @@ export function renderImageStudio(container) {
             }
         };
         setTimeout(() => document.addEventListener('pointerdown', closeMenu), 0);
-        container.querySelector('#is-canvas-wrapper').appendChild(menu);
+        document.body.appendChild(menu);
 
         let actionBar = null;
         let isMaskDrawing = false;
@@ -3761,16 +3814,19 @@ export function renderImageStudio(container) {
                 <div class="is-divider"></div>
                 <button class="is-btn-icon" id="is-sr-cancel" title="Cancel" style="color: #ef4444;"><i class='bx bx-x'></i></button>
             `;
-            container.querySelector('#is-canvas-wrapper').appendChild(actionBar);
+            document.body.appendChild(actionBar);
             
             setTimeout(() => {
                 const abw = actionBar.offsetWidth || 300;
                 const abh = actionBar.offsetHeight || 40;
-                let tx = x; let ty = y;
-                if (tx + abw > canvas.width) tx = canvas.width - abw - 10;
-                if (ty + abh > canvas.height) ty = canvas.height - abh - 10;
-                if (tx < 10) tx = 10;
-                if (ty < 10) ty = 10;
+                const wrapperRect = container.querySelector('#is-canvas-wrapper').getBoundingClientRect();
+                const zoom = parseInt(container.querySelector('#is-zoom').value) / 100;
+                let tx = wrapperRect.left + (x * zoom) + window.scrollX;
+                let ty = wrapperRect.top + (y * zoom) + window.scrollY;
+                if (tx + abw > window.innerWidth) tx = window.innerWidth - abw - 10;
+                if (ty + abh > window.innerHeight) ty = window.innerHeight - abh - 10;
+                if (tx < window.scrollX + 10) tx = window.scrollX + 10;
+                if (ty < window.scrollY + 10) ty = window.scrollY + 10;
                 actionBar.style.left = tx + 'px';
                 actionBar.style.top = ty + 'px';
             }, 0);
@@ -4556,6 +4612,9 @@ export function renderImageStudio(container) {
     }, 50);
 
     // === CUSTOM PRO COLOR PICKER ===
+    const existingCp = document.getElementById('is-pro-color-picker');
+    if (existingCp) existingCp.remove();
+
     const cpContainer = document.createElement('div');
     cpContainer.innerHTML = `
         <div id="is-pro-color-picker" style="display: none; position: absolute; background: #252526; border: 1px solid #444; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.8); z-index: 9999; padding: 12px; width: 220px; flex-direction: column; gap: 12px; user-select: none; font-family: sans-serif;">
@@ -4648,7 +4707,8 @@ export function renderImageStudio(container) {
         if (cpTargetInput && cpFakeBtn) {
             cpFakeBtn.style.background = hex;
             cpTargetInput.value = hex;
-            cpTargetInput.dispatchEvent(new Event('input'));
+            cpTargetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            cpTargetInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
         renderSL();
     }
@@ -4678,7 +4738,7 @@ export function renderImageStudio(container) {
     });
     
     const proSwatches = [
-        '#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff',
+        'transparent', '#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff',
         '#ff0000', '#ff5722', '#ff9800', '#ffeb3b', '#cddc39', '#8bc34a',
         '#4caf50', '#009688', '#00bcd4', '#03a9f4', '#2196f3', '#3f51b5',
         '#673ab7', '#9c27b0', '#e91e63', '#f44336', '#795548', '#607d8b'
@@ -4689,6 +4749,20 @@ export function renderImageStudio(container) {
         sw.onmouseenter = () => sw.style.transform = 'scale(1.1)';
         sw.onmouseleave = () => sw.style.transform = 'scale(1)';
         sw.onclick = () => {
+            if (c === 'transparent') {
+                if (cpTargetInput && cpFakeBtn) {
+                    cpTargetInput.dataset.transparent = 'true';
+                    cpFakeBtn.style.background = 'repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 10px 10px';
+                    cpFakeBtn.style.backgroundColor = '#fff';
+                    cpPreview.style.background = 'repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 10px 10px';
+                    cpPreview.style.backgroundColor = '#fff';
+                    cpHex.value = 'NONE';
+                    cpTargetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    cpTargetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                return;
+            }
+            if (cpTargetInput) cpTargetInput.dataset.transparent = 'false';
             currentHSV = hexToHsv(c);
             cpHue.value = currentHSV.h;
             updateColorFromHSV();
