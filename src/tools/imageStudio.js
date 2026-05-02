@@ -2457,8 +2457,8 @@ export function renderImageStudio(container) {
         vectorShapes.push({
             id: nextShapeId(),
             type: currentTool,
-            points: currentPolyPoints.slice(),
-            originalPoints: currentPolyPoints.slice(),
+            points: currentPolyPoints.map(p => ({ x: p.x, y: p.y })),
+            originalPoints: currentPolyPoints.map(p => ({ x: p.x, y: p.y })),
             x: minX - shapeStroke, y: minY - shapeStroke,
             x2: maxX + shapeStroke, y2: maxY + shapeStroke,
             stroke: shapeColor,
