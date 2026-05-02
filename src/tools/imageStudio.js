@@ -2146,11 +2146,16 @@ export function renderImageStudio(container) {
                     activeVectorShape.x2 += dx;
                     activeVectorShape.y += dy;
                     activeVectorShape.y2 += dy;
-                    // Also move control points for polyarrow/path
+                    // For polyarrow/path with smooth: shift originalPoints then regenerate smooth
+                    // For polyarrow/path without smooth: shift both points arrays
                     if (activeVectorShape.originalPoints) {
                         activeVectorShape.originalPoints.forEach(p => { p.x += dx; p.y += dy; });
                     }
-                    if (activeVectorShape.points) {
+                    if (activeVectorShape.smoothLevel && activeVectorShape.originalPoints) {
+                        // Regenerate smooth points from shifted originalPoints
+                        // This guarantees curve always matches control points
+                        applySmoothToShape(activeVectorShape, activeVectorShape.smoothLevel);
+                    } else if (activeVectorShape.points) {
                         activeVectorShape.points.forEach(p => { p.x += dx; p.y += dy; });
                     }
                     // Clear connections when moving the arrow itself (endpoints move with it)
