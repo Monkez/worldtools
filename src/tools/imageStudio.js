@@ -739,7 +739,7 @@ export function renderImageStudio(container) {
             let fontStyle = '';
             if (s.fontItalic) fontStyle += 'italic ';
             if (s.fontBold) fontStyle += 'bold ';
-            targetCtx.font = `${fontStyle}${s.fontSize}px ${s.fontFamily || 'Arial'}`;
+            targetCtx.font = `${fontStyle}${s.fontSize}px "${s.fontFamily || 'Arial'}", sans-serif`;
             targetCtx.textBaseline = 'top';
             
             const metrics = targetCtx.measureText(s.text);
@@ -1354,9 +1354,14 @@ export function renderImageStudio(container) {
     // Font family / size changes update active text shape
     container.querySelector('#is-font-family').addEventListener('change', () => {
         if (activeVectorShape && activeVectorShape.type === 'text') {
-            activeVectorShape.fontFamily = container.querySelector('#is-font-family').value;
-            recalcTextBounds(activeVectorShape);
-            drawSelectionOverlay();
+            const newFont = container.querySelector('#is-font-family').value;
+            activeVectorShape.fontFamily = newFont;
+            // Ensure the font is loaded before measuring/rendering
+            const fontSize = activeVectorShape.fontSize || 48;
+            document.fonts.load(`${fontSize}px "${newFont}"`).then(() => {
+                recalcTextBounds(activeVectorShape);
+                drawSelectionOverlay();
+            });
         }
     });
     container.querySelector('#is-font-size').addEventListener('input', () => {
@@ -1384,7 +1389,7 @@ export function renderImageStudio(container) {
         let fontStr = '';
         if (s.fontItalic) fontStr += 'italic ';
         if (s.fontBold) fontStr += 'bold ';
-        ctx.font = `${fontStr}${s.fontSize}px ${s.fontFamily || 'Arial'}`;
+        ctx.font = `${fontStr}${s.fontSize}px "${s.fontFamily || 'Arial'}", sans-serif`;
         const metrics = ctx.measureText(s.text);
         s.x2 = s.x + metrics.width;
         s.y2 = s.y + s.fontSize;
@@ -1948,7 +1953,7 @@ export function renderImageStudio(container) {
                     let fontStr = '';
                     if (isItalic) fontStr += 'italic ';
                     if (isBold) fontStr += 'bold ';
-                    ctx.font = `${fontStr}${fontSize}px ${fontFamily}`;
+                    ctx.font = `${fontStr}${fontSize}px "${fontFamily}", sans-serif`;
                     const metrics = ctx.measureText(txt);
                     const w = metrics.width;
                     const h = fontSize;
