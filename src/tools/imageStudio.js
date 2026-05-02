@@ -42,12 +42,14 @@ export function renderImageStudio(container) {
                                 <label>Blur <span id="val-blur">0</span></label>
                                 <input type="range" class="is-filter" data-filter="blur" min="0" max="20" value="0">
                             </div>
-                            <button id="is-apply-filters" class="btn-primary" style="width: 100%; padding: 6px; font-size: 12px;">Apply</button>
+                            <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 6px 0; width: 100%;"></div>
+                            <button class="is-btn-text" id="is-ai-enhance" style="width: 100%; justify-content: flex-start; padding: 6px 4px; color: #a855f7;"><i class='bx bxs-magic-wand'></i> Auto Enhance</button>
+                            <button id="is-apply-filters" class="btn-primary" style="width: 100%; padding: 6px; font-size: 12px; margin-top: 4px;">Apply</button>
                         </div>
                     </div>
 
-                    <!-- AI Tools -->
-                    <button class="is-btn-text" id="is-ai-enhance" style="color: #a855f7;"><i class='bx bxs-magic-wand'></i> Auto Enhance</button>
+                    <!-- Layout Tools -->
+                    <button class="is-btn-text" id="is-flatten-all" style="color: #ef4444;"><i class='bx bx-layer-minus'></i> Merge All</button>
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -192,6 +194,8 @@ export function renderImageStudio(container) {
                         <button class="is-btn-icon" id="is-canvas-remove-bg" title="Remove Background" style="gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ec4899;"><i class='bx bx-cut'></i> Remove BG</button>
                     </span>
                     <div class="is-divider" id="is-ctx-del-divider" style="display: none;"></div>
+                    <button class="is-btn-icon" id="is-obj-copy" title="Copy Object" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px;"><i class='bx bx-copy'></i></button>
+                    <button class="is-btn-icon" id="is-obj-flatten" title="Merge Down" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ef4444;"><i class='bx bx-layer-minus'></i></button>
                     <button class="is-btn-icon" id="is-obj-smart-remove" title="AI Tool" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #10b981;"><i class='bx bxs-magic-wand'></i> AI Tool</button>
                     <button class="is-btn-icon" id="is-obj-remove-bg" title="Remove Background" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ec4899;"><i class='bx bx-cut'></i> Remove BG</button>
                     <span id="is-polyarrow-opts" style="display:none; align-items:center; gap:6px;">
@@ -954,6 +958,8 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-del').style.display = 'flex';
             container.querySelector('#is-ctx-del-divider').style.display = '';
             container.querySelector('#is-ctx-front').style.display = 'flex';
+            container.querySelector('#is-obj-copy').style.display = 'flex';
+            container.querySelector('#is-obj-flatten').style.display = 'flex';
             // Show object type and size info
             const _typeNames = { rect: '▭ Rectangle', circle: '○ Circle', ellipse: '⬭ Ellipse', triangle: '△ Triangle', diamond: '◇ Diamond', parallelogram: '▱ Parallelogram', pentagon: '⬠ Pentagon', hexagon: '⬡ Hexagon', star: '★ Star', text: 'T Text', path: '✏ Brush Path', polyarrow: '↗ Line/Arrow', image: '🖼 Image' };
             const _typeName = _typeNames[s.type] || s.type;
@@ -1114,6 +1120,8 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-del').style.display = 'none';
             container.querySelector('#is-ctx-del-divider').style.display = 'none';
             container.querySelector('#is-ctx-front').style.display = 'none';
+            container.querySelector('#is-obj-copy').style.display = 'none';
+            container.querySelector('#is-obj-flatten').style.display = 'none';
             container.querySelector('#is-ctx-back').style.display = 'none';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
             container.querySelector('#is-obj-smart-remove').style.display = 'none';
@@ -1639,6 +1647,8 @@ export function renderImageStudio(container) {
             container.querySelector('#is-ctx-del').style.display = 'none';
             container.querySelector('#is-ctx-del-divider').style.display = 'none';
             container.querySelector('#is-ctx-front').style.display = 'none';
+            container.querySelector('#is-obj-copy').style.display = 'none';
+            container.querySelector('#is-obj-flatten').style.display = 'none';
             container.querySelector('#is-ctx-back').style.display = 'none';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
             container.querySelector('#is-obj-smart-remove').style.display = 'none';
@@ -3255,6 +3265,19 @@ export function renderImageStudio(container) {
         }, 1500);
     });
 
+    container.querySelector('#is-flatten-all').addEventListener('click', () => {
+        if (!vectorShapes || vectorShapes.length === 0) return;
+        if (!confirm("Are you sure you want to merge all objects into the base image? This cannot be undone.")) return;
+        
+        vectorShapes.forEach(s => {
+            if (typeof drawShape === 'function') drawShape(ctx, s);
+        });
+        vectorShapes.splice(0, vectorShapes.length);
+        activeVectorShape = null;
+        saveState();
+        drawSelectionOverlay();
+    });
+
     // Helper: run removeBackground on a source and show progress on a button
     async function runRemoveBg(btn, sourceUrl) {
         const resultBlob = await removeBackground(sourceUrl, {
@@ -3905,11 +3928,22 @@ export function renderImageStudio(container) {
                 imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
             }
             
+            const scaleStr = prompt("Enter Upscale Level (e.g., 2 for 2x, 4 for 4x, 9 for 9x):", "4");
+            if (!scaleStr) {
+                document.addEventListener('pointerdown', closeMenu);
+                return;
+            }
+            const scaleFactor = parseInt(scaleStr);
+            if (isNaN(scaleFactor) || scaleFactor < 1) {
+                alert("Invalid scale factor.");
+                return;
+            }
+            
             const btn = e.target;
             const origHTML = btn.innerHTML;
             
             const toast = document.createElement('div');
-            toast.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Running Super Resolution (10-30s)...";
+            toast.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Running Super Resolution ${scaleFactor}x (10-30s)...`;
             toast.style.cssText = "position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#10b981;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;font-family:sans-serif;";
             container.appendChild(toast);
             
@@ -3923,7 +3957,7 @@ export function renderImageStudio(container) {
                 const response = await fetch('http://localhost:3000/api/ai/edit-image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ settings, image: imageDataUrl, model: 'super-resolution', prompt: 'upscale' })
+                    body: JSON.stringify({ settings, image: imageDataUrl, model: 'super-resolution', prompt: 'upscale', scale_factor: scaleFactor })
                 });
                 
                 const data = await response.json();
@@ -3936,7 +3970,29 @@ export function renderImageStudio(container) {
                     if (isObj && activeVectorShape) {
                         activeVectorShape.img = newImg;
                     } else {
-                        ctx.drawImage(newImg, 0, 0, canvas.width, canvas.height);
+                        const scaleX = newImg.width / canvas.width;
+                        const scaleY = newImg.height / canvas.height;
+                        
+                        canvas.width = newImg.width;
+                        canvas.height = newImg.height;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(newImg, 0, 0);
+                        
+                        if (typeof vectorShapes !== 'undefined') {
+                            vectorShapes.forEach(s => {
+                                if (s.x !== undefined) s.x *= scaleX;
+                                if (s.y !== undefined) s.y *= scaleY;
+                                if (s.x2 !== undefined) s.x2 *= scaleX;
+                                if (s.y2 !== undefined) s.y2 *= scaleY;
+                                if (s.fontSize) s.fontSize *= scaleY;
+                                if (s.strokeWidth) s.strokeWidth *= scaleX;
+                                if (s.points) s.points.forEach(p => { p.x *= scaleX; p.y *= scaleY; });
+                                if (s.originalPoints) s.originalPoints.forEach(p => { p.x *= scaleX; p.y *= scaleY; });
+                            });
+                        }
+                        
+                        const sizeInfo = document.getElementById('is-size-info');
+                        if (sizeInfo) sizeInfo.textContent = `${canvas.width} x ${canvas.height}`;
                     }
                     saveState(); drawSelectionOverlay();
                 };
@@ -4244,6 +4300,9 @@ export function renderImageStudio(container) {
                 showAiAnalysisPopup(loadingId);
             }
         });
+
+        
+        // Action 5: Flatten Object Down -> Removed from right click menu
     };
 
     function showAiAnalysisPopup(activeId = null) {
@@ -4339,6 +4398,56 @@ export function renderImageStudio(container) {
 
     container.querySelector('#is-canvas-smart-remove').addEventListener('click', smartRemoveHandler);
     container.querySelector('#is-obj-smart-remove').addEventListener('click', smartRemoveHandler);
+    
+    container.querySelector('#is-obj-flatten').addEventListener('click', (e) => {
+        if (!activeVectorShape) return;
+        if (typeof drawShape === 'function') drawShape(ctx, activeVectorShape);
+        const idx = vectorShapes.indexOf(activeVectorShape);
+        if (idx > -1) vectorShapes.splice(idx, 1);
+        activeVectorShape = null;
+        saveState();
+        drawSelectionOverlay();
+    });
+
+    container.querySelector('#is-obj-copy').addEventListener('click', async (e) => {
+        if (!activeVectorShape) return;
+        try {
+            const s = activeVectorShape;
+            const minX = Math.min(s.x, s.x2);
+            const maxX = Math.max(s.x, s.x2);
+            const minY = Math.min(s.y, s.y2);
+            const maxY = Math.max(s.y, s.y2);
+            
+            const pad = (s.strokeWidth || 0) + 10;
+            const targetW = Math.abs(maxX - minX) + pad*2;
+            const targetH = Math.abs(maxY - minY) + pad*2;
+            
+            const tempC = document.createElement('canvas');
+            tempC.width = targetW;
+            tempC.height = targetH;
+            const tCtx = tempC.getContext('2d');
+            
+            tCtx.translate(-minX + pad, -minY + pad);
+            if (typeof drawShape === 'function') drawShape(tCtx, s);
+            
+            tempC.toBlob(async (blob) => {
+                if (blob) {
+                    try {
+                        await navigator.clipboard.write([
+                            new window.ClipboardItem({ 'image/png': blob })
+                        ]);
+                        alert('Object copied to clipboard successfully!');
+                    } catch(clipboardErr) {
+                        console.error(clipboardErr);
+                        alert('Failed to copy. Your browser might not support clipboard API.');
+                    }
+                }
+            }, 'image/png');
+        } catch(err) {
+            console.error(err);
+            alert("Error copying object: " + err.message);
+        }
+    });
 
     // Initialize default tool to select
     const defaultToolBtn = container.querySelector('.is-tool[data-tool="select"]');

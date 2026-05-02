@@ -546,6 +546,7 @@ app.post('/api/ai/edit-image', express.json({ limit: '50mb' }), async (req, res)
             pollUrl = apiUrl;
             bodyPayload = { image: base64Image };
         } else if (model === 'super-resolution') {
+            const { scale_factor } = req.body;
             apiUrl = 'https://api.magnific.com/v1/ai/image-upscaler-precision-v2';
             pollUrl = apiUrl;
             bodyPayload = { 
@@ -554,7 +555,7 @@ app.post('/api/ai/edit-image', express.json({ limit: '50mb' }), async (req, res)
                 smart_grain: 7,
                 ultra_detail: 30,
                 flavor: "sublime",
-                scale_factor: 9,
+                scale_factor: scale_factor || 4,
                 filter_nsfw: false
             };
         } else if (model === 'reimagine-flux') {
