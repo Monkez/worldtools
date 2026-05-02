@@ -177,7 +177,6 @@ export function renderImageStudio(container) {
                         
                         <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Fill</span>
-                        <button class="is-btn-icon" id="is-shape-no-fill" title="No Fill" style="width: 24px; height: 24px; padding: 0;"><i class='bx bx-block' style="color: #fca5a5;"></i></button>
                         <input type="color" id="is-shape-fill-color" list="is-color-swatches" value="#8b5cf6" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Fill Color">
 
                         <div class="is-divider"></div>
@@ -1200,9 +1199,9 @@ export function renderImageStudio(container) {
                 container.querySelector('#is-shape-color').value = s.stroke || '#6366f1';
                 container.querySelector('#is-shape-stroke').value = s.strokeWidth || 5;
                 if (!s.fill || s.fill === 'transparent') {
-                    container.querySelector('#is-shape-no-fill').classList.add('active');
+                    container.querySelector('#is-shape-fill-color').setAttribute('data-transparent', 'true');
                 } else {
-                    container.querySelector('#is-shape-no-fill').classList.remove('active');
+                    container.querySelector('#is-shape-fill-color').setAttribute('data-transparent', 'false');
                     container.querySelector('#is-shape-fill-color').value = s.fill;
                 }
             }
@@ -2492,8 +2491,7 @@ export function renderImageStudio(container) {
         if (currentTool !== 'polyarrow' || currentPolyPoints.length < 2) return;
         const shapeColor = window._isGetCVal('#is-shape-color');
         const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
-        const noFill = container.querySelector('#is-shape-no-fill').classList.contains('active');
-        const fillColor = noFill ? 'transparent' : window._isGetCVal('#is-shape-fill-color');
+        const fillColor = window._isGetCVal('#is-shape-fill-color');
         
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         currentPolyPoints.forEach(p => {
@@ -2741,8 +2739,7 @@ export function renderImageStudio(container) {
         if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = window._isGetCVal('#is-shape-color');
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
-            const noFill = container.querySelector('#is-shape-no-fill').classList.contains('active');
-            const fillColor = noFill ? 'transparent' : window._isGetCVal('#is-shape-fill-color');
+            const fillColor = window._isGetCVal('#is-shape-fill-color');
             let finalX2 = pos.x, finalY2 = pos.y;
             if (isShiftDown) {
                 const side = Math.max(Math.abs(pos.x - startX), Math.abs(pos.y - startY));
@@ -3362,15 +3359,6 @@ export function renderImageStudio(container) {
     });
     
     // Shape color/stroke live edit
-    container.querySelector('#is-shape-no-fill').addEventListener('click', () => {
-        container.querySelector('#is-shape-no-fill').classList.toggle('active');
-        if (activeVectorShape && activeVectorShape.type !== 'text') {
-            const noFill = container.querySelector('#is-shape-no-fill').classList.contains('active');
-            activeVectorShape.fill = noFill ? 'transparent' : window._isGetCVal('#is-shape-fill-color');
-            drawSelectionOverlay();
-        }
-    });
-
     container.querySelector('#is-shape-color').addEventListener('input', () => {
         if (activeVectorShape && activeVectorShape.type !== 'text') {
             activeVectorShape.stroke = window._isGetCVal('#is-shape-color');
@@ -3379,7 +3367,6 @@ export function renderImageStudio(container) {
     });
     
     container.querySelector('#is-shape-fill-color').addEventListener('input', () => {
-        container.querySelector('#is-shape-no-fill').classList.remove('active');
         if (activeVectorShape && activeVectorShape.type !== 'text') {
             activeVectorShape.fill = window._isGetCVal('#is-shape-fill-color');
             drawSelectionOverlay();
@@ -4911,6 +4898,13 @@ export function renderImageStudio(container) {
     proSwatches.forEach(c => {
         const sw = document.createElement('div');
         sw.style.cssText = `width: 100%; aspect-ratio: 1; border-radius: 4px; background: ${c}; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: 0.1s;`;
+        if (c === 'transparent') {
+            sw.style.background = '#111';
+            sw.style.display = 'flex';
+            sw.style.alignItems = 'center';
+            sw.style.justifyContent = 'center';
+            sw.innerHTML = `<div style="width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ff4444; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; box-sizing: border-box;"><div style="width: 150%; height: 2px; background: #ff4444; transform: rotate(-45deg); position: absolute;"></div></div>`;
+        }
         sw.onmouseenter = () => sw.style.transform = 'scale(1.1)';
         sw.onmouseleave = () => sw.style.transform = 'scale(1)';
         sw.onclick = () => {
@@ -4947,9 +4941,14 @@ export function renderImageStudio(container) {
         parent.insertBefore(fakeBtn, inp);
         
         const observer = new MutationObserver(() => {
-            fakeBtn.style.background = inp.value;
+            if (inp.dataset.transparent === 'true') {
+                fakeBtn.style.background = 'repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 10px 10px';
+                fakeBtn.style.backgroundColor = '#fff';
+            } else {
+                fakeBtn.style.background = inp.value;
+            }
         });
-        observer.observe(inp, { attributes: true, attributeFilter: ['value'] });
+        observer.observe(inp, { attributes: true, attributeFilter: ['value', 'data-transparent'] });
 
         fakeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
