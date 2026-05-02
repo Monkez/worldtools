@@ -177,6 +177,7 @@ export function renderImageStudio(container) {
                         
                         <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Fill</span>
+                        <button class="is-btn-icon" id="is-shape-no-fill" title="No Fill" style="width: 24px; height: 24px; padding: 0;"><i class='bx bx-block' style="color: #fca5a5;"></i></button>
                         <input type="color" id="is-shape-fill-color" list="is-color-swatches" value="#8b5cf6" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Fill Color">
 
                         <div class="is-divider"></div>
@@ -1195,11 +1196,12 @@ export function renderImageStudio(container) {
                 const _ih = activeVectorShape.img.naturalHeight || activeVectorShape.img.height;
             } else {
 
-                ctxTextSpan.style.display = 'none';
-                ctxShapeSpan.style.display = 'contents';
                 container.querySelector('#is-shape-color').value = s.stroke || '#6366f1';
                 container.querySelector('#is-shape-stroke').value = s.strokeWidth || 5;
-                if (s.fill && s.fill !== 'transparent') {
+                if (!s.fill || s.fill === 'transparent') {
+                    container.querySelector('#is-shape-no-fill').classList.add('active');
+                } else {
+                    container.querySelector('#is-shape-no-fill').classList.remove('active');
                     container.querySelector('#is-shape-fill-color').value = s.fill;
                 }
             }
@@ -1270,8 +1272,6 @@ export function renderImageStudio(container) {
                 ctxTextSpan.style.display = 'contents';
             } else if (isShapeTool) {
                 ctxShapeSpan.style.display = 'contents';
-                container.querySelector('#is-shape-color').value = colorPicker.value;
-                container.querySelector('#is-shape-stroke').value = lineWidthSlider.value;
             if (currentTool === 'polyarrow') {
                 container.querySelector('#is-polyarrow-opts').style.display = 'flex';
                 container.querySelector('#is-brush-smooth-divider').style.display = '';
@@ -1295,9 +1295,6 @@ export function renderImageStudio(container) {
                 container.querySelector('#is-global-opacity').style.display = '';
                 container.querySelector('#is-global-opacity-val').style.display = '';
 
-                container.querySelector('#is-brush-color').value = colorPicker.value;
-                container.querySelector('#is-brush-size').value = lineWidthSlider.value;
-                container.querySelector('#is-brush-size-val').textContent = lineWidthSlider.value + 'px';
                 container.querySelector('#is-brush-smooth').style.display = 'none';
                 container.querySelector('#is-brush-smooth-divider').style.display = 'none';
                 container.querySelector('#is-smooth-level').style.display = 'none';
@@ -1305,11 +1302,8 @@ export function renderImageStudio(container) {
                 container.querySelector('#is-smooth-level-val').style.display = 'none';
             } else if (currentTool === 'eraser') {
                 container.querySelector('#is-ctx-eraser').style.display = 'contents';
-                container.querySelector('#is-eraser-size').value = lineWidthSlider.value;
-                container.querySelector('#is-eraser-size-val').textContent = lineWidthSlider.value + 'px';
             } else if (currentTool === 'fill') {
                 container.querySelector('#is-ctx-fill').style.display = 'contents';
-                container.querySelector('#is-fill-color').value = colorPicker.value;
             } else if (currentTool === 'crop' || currentTool === 'region') {
                 container.querySelector('#is-ctx-crop').style.display = 'contents';
             } else if (currentTool === 'select') {
@@ -2497,6 +2491,8 @@ export function renderImageStudio(container) {
         if (currentTool !== 'polyarrow' || currentPolyPoints.length < 2) return;
         const shapeColor = window._isGetCVal('#is-shape-color');
         const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+        const noFill = container.querySelector('#is-shape-no-fill').classList.contains('active');
+        const fillColor = noFill ? 'transparent' : window._isGetCVal('#is-shape-fill-color');
         
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         currentPolyPoints.forEach(p => {
@@ -2744,7 +2740,8 @@ export function renderImageStudio(container) {
         if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = window._isGetCVal('#is-shape-color');
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
-            const fillColor = window._isGetCVal('#is-shape-fill-color');
+            const noFill = container.querySelector('#is-shape-no-fill').classList.contains('active');
+            const fillColor = noFill ? 'transparent' : window._isGetCVal('#is-shape-fill-color');
             let finalX2 = pos.x, finalY2 = pos.y;
             if (isShiftDown) {
                 const side = Math.max(Math.abs(pos.x - startX), Math.abs(pos.y - startY));
@@ -3364,6 +3361,15 @@ export function renderImageStudio(container) {
     });
     
     // Shape color/stroke live edit
+    container.querySelector('#is-shape-no-fill').addEventListener('click', () => {
+        container.querySelector('#is-shape-no-fill').classList.toggle('active');
+        if (activeVectorShape && activeVectorShape.type !== 'text') {
+            const noFill = container.querySelector('#is-shape-no-fill').classList.contains('active');
+            activeVectorShape.fill = noFill ? 'transparent' : window._isGetCVal('#is-shape-fill-color');
+            drawSelectionOverlay();
+        }
+    });
+
     container.querySelector('#is-shape-color').addEventListener('input', () => {
         if (activeVectorShape && activeVectorShape.type !== 'text') {
             activeVectorShape.stroke = window._isGetCVal('#is-shape-color');
@@ -3372,6 +3378,7 @@ export function renderImageStudio(container) {
     });
     
     container.querySelector('#is-shape-fill-color').addEventListener('input', () => {
+        container.querySelector('#is-shape-no-fill').classList.remove('active');
         if (activeVectorShape && activeVectorShape.type !== 'text') {
             activeVectorShape.fill = window._isGetCVal('#is-shape-fill-color');
             drawSelectionOverlay();
