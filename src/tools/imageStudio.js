@@ -391,6 +391,8 @@ export function renderImageStudio(container) {
         for (const arrow of vectorShapes) {
             if (arrow.type !== 'polyarrow' || !arrow.connections) continue;
             const conn = arrow.connections;
+            // Skip if connections object is empty (was cleared during move)
+            if (!conn.start && !conn.end) continue;
             if (conn.start) {
                 const target = vectorShapes.find(s => s.id === conn.start.shapeId);
                 if (target) {
@@ -2153,7 +2155,7 @@ export function renderImageStudio(container) {
                     }
                     // Clear connections when moving the arrow itself (endpoints move with it)
                     if (activeVectorShape.connections) {
-                        activeVectorShape.connections = {};
+                        activeVectorShape.connections = null;
                     }
                 } else if (resizingHandle === 'tl') {
                     if (isShiftDown) {
@@ -3060,6 +3062,31 @@ export function renderImageStudio(container) {
         
         shape.points = result;
         shape.smoothLevel = level;
+        
+        // Recalculate bounding box from smoothed points to keep bbox consistent
+        if (result.length > 1) {
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            result.forEach(p => {
+                if (p.x < minX) minX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y > maxY) maxY = p.y;
+            });
+            // Also include originalPoints in bbox so control points are inside
+            if (shape.originalPoints) {
+                shape.originalPoints.forEach(p => {
+                    if (p.x < minX) minX = p.x;
+                    if (p.y < minY) minY = p.y;
+                    if (p.x > maxX) maxX = p.x;
+                    if (p.y > maxY) maxY = p.y;
+                });
+            }
+            const sw = shape.strokeWidth || 5;
+            shape.x = minX - sw;
+            shape.y = minY - sw;
+            shape.x2 = maxX + sw;
+            shape.y2 = maxY + sw;
+        }
     }
     
     // Smooth button for brush/polyarrow paths
