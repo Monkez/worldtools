@@ -17,31 +17,31 @@ function createWindow() {
     }
   });
 
-  // Start the backend server
-  const serverPath = path.join(__dirname, 'server', 'index.js');
-  if (fs.existsSync(serverPath)) {
-      serverProcess = fork(serverPath, [], {
-          cwd: app.getPath('userData'),
-          env: process.env
-      });
-  } else {
-      console.error('Server file not found at:', serverPath);
+  // Setup working directory for server dynamic files (uploads/outputs)
+  const userDataPath = app.getPath('userData');
+  try {
+      process.chdir(userDataPath);
+  } catch (err) {
+      console.error('Failed to change dir:', err);
+  }
+
+  // Start the backend server directly in the main process
+  // This allows it to read from app.asar transparently
+  try {
+      require('./server/index.js');
+  } catch (err) {
+      console.error('Failed to load server:', err);
   }
 
   // Load the frontend (which is now served by the server on port 3000)
   // Give the server a couple seconds to start up
   setTimeout(() => {
     mainWindow.loadURL('http://localhost:3000');
-  }, 1500);
+  }, 1000);
 }
 
 app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
-  if (serverProcess) serverProcess.kill();
   if (process.platform !== 'darwin') app.quit();
-});
-
-app.on('before-quit', () => {
-    if (serverProcess) serverProcess.kill();
 });
