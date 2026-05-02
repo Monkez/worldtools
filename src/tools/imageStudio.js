@@ -1195,7 +1195,8 @@ export function renderImageStudio(container) {
                 const _iw = activeVectorShape.img.naturalWidth || activeVectorShape.img.width;
                 const _ih = activeVectorShape.img.naturalHeight || activeVectorShape.img.height;
             } else {
-
+                ctxTextSpan.style.display = 'none';
+                ctxShapeSpan.style.display = 'contents';
                 container.querySelector('#is-shape-color').value = s.stroke || '#6366f1';
                 container.querySelector('#is-shape-stroke').value = s.strokeWidth || 5;
                 if (!s.fill || s.fill === 'transparent') {
