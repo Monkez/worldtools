@@ -121,19 +121,40 @@ export function renderImageStudio(container) {
                         <span style="font-size: 11px; color: #888;">Color</span>
                         <input type="color" id="is-text-color" list="is-color-swatches" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
                         <div class="is-divider"></div>
-                        <select id="is-font-family" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 140px; cursor: pointer;">
+                        <select id="is-font-family" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 160px; cursor: pointer;">
+                            <optgroup label="Vietnamese Fonts">
+                            <option value="Be Vietnam Pro" selected>Be Vietnam Pro</option>
+                            <option value="Montserrat">Montserrat</option>
+                            <option value="Open Sans">Open Sans</option>
+                            <option value="Roboto">Roboto</option>
+                            <option value="Nunito">Nunito</option>
+                            <option value="Quicksand">Quicksand</option>
+                            <option value="Josefin Sans">Josefin Sans</option>
+                            <option value="Lora">Lora</option>
+                            </optgroup>
+                            <optgroup label="Display / Decorative">
+                            <option value="Outfit">Outfit</option>
+                            <option value="Playfair Display">Playfair Display</option>
+                            <option value="Dancing Script">Dancing Script</option>
+                            <option value="Pacifico">Pacifico</option>
+                            <option value="Lobster">Lobster</option>
+                            </optgroup>
+                            <optgroup label="Monospace">
+                            <option value="Source Code Pro">Source Code Pro</option>
+                            <option value="Courier New">Courier New</option>
+                            </optgroup>
+                            <optgroup label="System Fonts">
                             <option value="Arial">Arial</option>
                             <option value="Helvetica">Helvetica</option>
-                            <option value="Times New Roman">Times New Roman</option>
-                            <option value="Georgia">Georgia</option>
-                            <option value="Courier New">Courier New</option>
                             <option value="Verdana">Verdana</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Times New Roman">Times New Roman</option>
                             <option value="Trebuchet MS">Trebuchet MS</option>
                             <option value="Impact">Impact</option>
                             <option value="Comic Sans MS">Comic Sans MS</option>
-                            <option value="Outfit">Outfit</option>
+                            </optgroup>
                         </select>
-                        <input type="number" id="is-font-size" value="24" min="8" max="200" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 52px; text-align: center;">
+                        <input type="number" id="is-font-size" value="48" min="8" max="200" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 52px; text-align: center;">
                         <div class="is-divider"></div>
                         <button class="is-btn-icon is-text-style" id="is-font-bold" title="Bold" style="font-weight: bold; font-size: 14px;">B</button>
                         <button class="is-btn-icon is-text-style" id="is-font-italic" title="Italic" style="font-style: italic; font-size: 14px;">I</button>
@@ -317,6 +338,16 @@ export function renderImageStudio(container) {
     
     function nextShapeId() { return 'shape_' + (++shapeIdCounter); }
     
+    // Deep clone a vector shape (for duplicate / Shift+drag)
+    function cloneShape(s) {
+        const clone = { ...s, id: nextShapeId() };
+        if (s.points) clone.points = s.points.map(p => ({ ...p }));
+        if (s.originalPoints) clone.originalPoints = s.originalPoints.map(p => ({ ...p }));
+        if (s.connections) clone.connections = JSON.parse(JSON.stringify(s.connections));
+        if (s.type === 'image' && s.img) clone.img = s.img;
+        return clone;
+    }
+    
     // Get snap/connection points for a shape (like PowerPoint anchor points)
     function getSnapPoints(s) {
         if (!s || s.type === 'polyarrow' || s.type === 'path') return [];
@@ -431,15 +462,17 @@ export function renderImageStudio(container) {
     const canvasWrapper = container.querySelector('#is-canvas-wrapper');
 
     // Save state for Undo/Redo
+    const MAX_HISTORY = 50;
     function saveState() {
         if (historyStep < history.length - 1) {
             history = history.slice(0, historyStep + 1);
         }
-        // Deep clone vectorShapes (handle Image objects in 'image' shapes)
+        // Deep clone vectorShapes (handle Image objects and nested objects)
         const shapesClone = vectorShapes.map(s => {
             const clone = { ...s };
             if (s.points) clone.points = s.points.map(p => ({ ...p }));
             if (s.originalPoints) clone.originalPoints = s.originalPoints.map(p => ({ ...p }));
+            if (s.connections) clone.connections = JSON.parse(JSON.stringify(s.connections));
             if (s.type === 'image' && s.img) {
                 clone.img = s.img; // keep same Image reference
             }
@@ -450,6 +483,13 @@ export function renderImageStudio(container) {
             shapes: shapesClone
         });
         historyStep++;
+        // Enforce history limit to prevent memory leaks
+        if (history.length > MAX_HISTORY) {
+            const excess = history.length - MAX_HISTORY;
+            history = history.slice(excess);
+            historyStep -= excess;
+            if (historyStep < 0) historyStep = 0;
+        }
     }
     
     // Initial save
@@ -1047,7 +1087,7 @@ export function renderImageStudio(container) {
                 ctxShapeSpan.style.display = 'none';
                 container.querySelector('#is-text-color').value = s.stroke || '#6366f1';
                 container.querySelector('#is-font-family').value = s.fontFamily || 'Arial';
-                container.querySelector('#is-font-size').value = s.fontSize || 24;
+                container.querySelector('#is-font-size').value = s.fontSize || 48;
                 container.querySelector('#is-font-bold').classList.toggle('active', !!s.fontBold);
                 container.querySelector('#is-font-italic').classList.toggle('active', !!s.fontItalic);
                 container.querySelector('#is-font-underline').classList.toggle('active', !!s.fontUnderline);
@@ -1319,7 +1359,7 @@ export function renderImageStudio(container) {
     });
     container.querySelector('#is-font-size').addEventListener('input', () => {
         if (activeVectorShape && activeVectorShape.type === 'text') {
-            activeVectorShape.fontSize = parseInt(container.querySelector('#is-font-size').value) || 24;
+            activeVectorShape.fontSize = parseInt(container.querySelector('#is-font-size').value) || 48;
             recalcTextBounds(activeVectorShape);
             drawSelectionOverlay();
         }
@@ -1745,13 +1785,27 @@ export function renderImageStudio(container) {
                 // clicking the shape body should not start a move - only handles work
                 if (hitShape === activeVectorShape && activeVectorShape.originalPoints && activeVectorShape.originalPoints.length > 1) {
                     // Allow move if not near a control point (control points checked above)
-                    activeVectorShape = hitShape;
+                    // Shift+drag = duplicate the object and drag the clone
+                    if (isShiftDown) {
+                        const dupe = cloneShape(hitShape);
+                        vectorShapes.push(dupe);
+                        activeVectorShape = dupe;
+                    } else {
+                        activeVectorShape = hitShape;
+                    }
                     resizingHandle = 'move';
                     startX = pos.x; startY = pos.y;
                     drawSelectionOverlay();
                     return;
                 }
-                activeVectorShape = hitShape;
+                // Shift+drag = duplicate the object and drag the clone
+                if (isShiftDown) {
+                    const dupe = cloneShape(hitShape);
+                    vectorShapes.push(dupe);
+                    activeVectorShape = dupe;
+                } else {
+                    activeVectorShape = hitShape;
+                }
                 resizingHandle = 'move';
                 startX = pos.x; startY = pos.y;
                 selection = null; // drop raster selection
@@ -1851,7 +1905,7 @@ export function renderImageStudio(container) {
             
             // Read text format toolbar values
             const fontFamily = container.querySelector('#is-font-family').value;
-            const fontSize = parseInt(container.querySelector('#is-font-size').value) || 24;
+            const fontSize = parseInt(container.querySelector('#is-font-size').value) || 48;
             const isBold = container.querySelector('#is-font-bold').classList.contains('active');
             const isItalic = container.querySelector('#is-font-italic').classList.contains('active');
             const isUnderline = container.querySelector('#is-font-underline').classList.contains('active');
@@ -2656,14 +2710,24 @@ export function renderImageStudio(container) {
         
         if (currentTool === 'brush' && currentPathPoints.length > 1) {
             ctx.globalAlpha = 1;
-            // Undo the raster drawing - restore from last saved state
-            if (historyStep >= 0) {
-                const img = new Image();
-                img.onload = () => {
+            // Undo the raster drawing - restore from last saved state SYNCHRONOUSLY
+            // so that saveState() below captures the correct canvas
+            if (historyStep >= 0 && history[historyStep]) {
+                const restoreImg = new Image();
+                restoreImg.src = history[historyStep].dataURL;
+                // dataURL images from the same canvas load synchronously in most browsers,
+                // but we must still handle the async case safely.
+                if (restoreImg.complete) {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
-                };
-                img.src = history[historyStep].dataURL;
+                    ctx.drawImage(restoreImg, 0, 0);
+                } else {
+                    // Fallback: schedule the save after the image loads
+                    restoreImg.onload = () => {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(restoreImg, 0, 0);
+                        saveState();
+                    };
+                }
             }
             
             // Calculate bounding box from points
@@ -3235,20 +3299,26 @@ export function renderImageStudio(container) {
     });
 
     // Undo / Redo
+    let _restorePending = false;
     const restoreState = (step) => {
         const entry = history[step];
         if (!entry) return;
+        _restorePending = true;
         const img = new Image();
         img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
+            _restorePending = false;
+            // Redraw overlay AFTER canvas is ready to avoid visual desync
+            drawSelectionOverlay();
         };
         img.src = entry.dataURL;
-        // Restore vector shapes
+        // Restore vector shapes (deep clone including nested objects)
         vectorShapes = entry.shapes.map(s => {
             const clone = { ...s };
             if (s.points) clone.points = s.points.map(p => ({ ...p }));
             if (s.originalPoints) clone.originalPoints = s.originalPoints.map(p => ({ ...p }));
+            if (s.connections) clone.connections = JSON.parse(JSON.stringify(s.connections));
             if (s.type === 'image' && s.img) {
                 clone.img = s.img;
             }
@@ -3256,10 +3326,10 @@ export function renderImageStudio(container) {
         });
         activeVectorShape = null;
         selection = null;
-        drawSelectionOverlay();
     };
 
     container.querySelector('#is-undo').addEventListener('click', () => {
+        if (_restorePending) return; // prevent rapid clicks from causing race conditions
         if (historyStep > 0) {
             historyStep--;
             restoreState(historyStep);
@@ -3267,6 +3337,7 @@ export function renderImageStudio(container) {
     });
 
     container.querySelector('#is-redo').addEventListener('click', () => {
+        if (_restorePending) return; // prevent rapid clicks from causing race conditions
         if (historyStep < history.length - 1) {
             historyStep++;
             restoreState(historyStep);
