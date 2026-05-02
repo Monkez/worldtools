@@ -1614,8 +1614,8 @@ export function renderImageStudio(container) {
     container.querySelector('#is-zoom-fit').addEventListener('click', () => {
         const cw = canvasContainer.clientWidth;
         const ch = canvasContainer.clientHeight;
-        const scaleX = (cw - 40) / canvas.width;
-        const scaleY = (ch - 40) / canvas.height;
+        const scaleX = Math.max(cw - 120, 50) / canvas.width;
+        const scaleY = Math.max(ch - 120, 50) / canvas.height;
         updateZoom(Math.min(scaleX, scaleY, 4) * 100);
     });
 
