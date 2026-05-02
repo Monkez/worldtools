@@ -3,6 +3,32 @@ import { removeBackground } from '@imgly/background-removal';
 export function renderImageStudio(container) {
     container.innerHTML = `
         <div style="display: flex; flex-direction: column; height: calc(100vh - 48px); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; background: #1e1e1e; margin-top: -10px;">
+            <datalist id="is-color-swatches">
+                <option value="#000000"></option>
+                <option value="#333333"></option>
+                <option value="#666666"></option>
+                <option value="#999999"></option>
+                <option value="#cccccc"></option>
+                <option value="#ffffff"></option>
+                <option value="#ff0000"></option>
+                <option value="#ff5722"></option>
+                <option value="#ff9800"></option>
+                <option value="#ffeb3b"></option>
+                <option value="#cddc39"></option>
+                <option value="#8bc34a"></option>
+                <option value="#4caf50"></option>
+                <option value="#009688"></option>
+                <option value="#00bcd4"></option>
+                <option value="#03a9f4"></option>
+                <option value="#2196f3"></option>
+                <option value="#3f51b5"></option>
+                <option value="#673ab7"></option>
+                <option value="#9c27b0"></option>
+                <option value="#e91e63"></option>
+                <option value="#f44336"></option>
+                <option value="#795548"></option>
+                <option value="#607d8b"></option>
+            </datalist>
             <!-- ULTRA COMPACT TOP BAR -->
             <div style="display: flex; justify-content: space-between; align-items: center; background: #252526; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <div style="display: flex; gap: 4px; align-items: center;">
@@ -53,8 +79,6 @@ export function renderImageStudio(container) {
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 11px; color: #888;" id="is-size-info">800 x 600</span>
-                    <div class="is-divider"></div>
                     <button class="is-btn-icon" onclick="document.getElementById('is-zoom').value = Math.max(10, parseInt(document.getElementById('is-zoom').value) - 10); document.getElementById('is-zoom').dispatchEvent(new Event('input'));"><i class='bx bx-minus'></i></button>
                     <input type="range" id="is-zoom" min="10" max="400" value="100" style="width: 80px; height: 2px;">
                     <button class="is-btn-icon" onclick="document.getElementById('is-zoom').value = Math.min(400, parseInt(document.getElementById('is-zoom').value) + 10); document.getElementById('is-zoom').dispatchEvent(new Event('input'));"><i class='bx bx-plus'></i></button>
@@ -91,7 +115,7 @@ export function renderImageStudio(container) {
                     <!-- Text-specific controls -->
                     <span id="is-ctx-text" style="display: none; contents;">
                         <span style="font-size: 11px; color: #888;">Color</span>
-                        <input type="color" id="is-text-color" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
+                        <input type="color" id="is-text-color" list="is-color-swatches" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
                         <div class="is-divider"></div>
                         <select id="is-font-family" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 140px; cursor: pointer;">
                             <option value="Arial">Arial</option>
@@ -119,12 +143,19 @@ export function renderImageStudio(container) {
                             <option value="glow">Glow</option>
                             <option value="shadow">Shadow</option>
                         </select>
-                        <input type="color" id="is-text-bg-color" value="#000000" title="Background/Effect Color" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none; margin-left: 4px;">
+                        <input type="color" id="is-text-bg-color" list="is-color-swatches" value="#000000" title="Background/Effect Color" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none; margin-left: 4px;">
                     </span>
                     <!-- Shape-specific controls -->
                     <span id="is-ctx-shape" style="display: none; contents;">
                         <span style="font-size: 11px; color: #888;">Color</span>
-                        <input type="color" id="is-shape-color" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
+                        <input type="color" id="is-shape-color" list="is-color-swatches" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Stroke Color">
+                        
+                        <div class="is-divider"></div>
+                        <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 11px; color: #888;">
+                            <input type="checkbox" id="is-shape-fill-enable" style="cursor: pointer;"> Fill
+                        </label>
+                        <input type="color" id="is-shape-fill-color" list="is-color-swatches" value="#8b5cf6" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Fill Color">
+
                         <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Stroke</span>
                         <input type="number" id="is-shape-stroke" value="5" min="1" max="50" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 48px; text-align: center;">
@@ -132,7 +163,7 @@ export function renderImageStudio(container) {
                     <!-- Brush controls -->
                     <span id="is-ctx-brush" style="display: none; contents;">
                         <span style="font-size: 11px; color: #888;">Color</span>
-                        <input type="color" id="is-brush-color" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
+                        <input type="color" id="is-brush-color" list="is-color-swatches" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
                         <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Size</span>
                         <input type="range" id="is-brush-size" min="1" max="50" value="5" style="width: 100px; accent-color: #3b82f6;">
@@ -157,7 +188,7 @@ export function renderImageStudio(container) {
                     <!-- Fill controls -->
                     <span id="is-ctx-fill" style="display: none; contents;">
                         <span style="font-size: 11px; color: #888;">Color</span>
-                        <input type="color" id="is-fill-color" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
+                        <input type="color" id="is-fill-color" list="is-color-swatches" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
                         <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Tolerance</span>
                         <input type="range" id="is-fill-tolerance" min="0" max="128" value="32" style="width: 100px; accent-color: #3b82f6;">
@@ -177,7 +208,7 @@ export function renderImageStudio(container) {
                     <!-- Canvas background context (shown when clicking empty area in select mode) -->
                     <span id="is-ctx-select" style="display: none; contents;">
                         <span style="font-size: 11px; color: #888;">Background</span>
-                        <input type="color" id="is-canvas-bg-color" value="#ffffff" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
+                        <input type="color" id="is-canvas-bg-color" list="is-color-swatches" value="#ffffff" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
                         <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Grid</span>
                         <select id="is-canvas-grid" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 11px; cursor: pointer;">
@@ -230,8 +261,8 @@ export function renderImageStudio(container) {
                 <!-- MAIN CANVAS AREA -->
                 <div id="is-canvas-container" style="flex: 1; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative;">
                     <div id="is-canvas-wrapper" style="position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.8); background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/ENF5gNqGoB4TjxrAwDAJg4MGAgB/xwgfV7oJlwAAAABJRU5ErkJggg==') repeat; transition: transform 0.1s;">
-                        <canvas id="is-canvas" width="800" height="600" style="display: block;"></canvas>
-                        <canvas id="is-overlay" width="800" height="600" style="display: block; position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+                        <canvas id="is-canvas" width="1600" height="1200" style="display: block;"></canvas>
+                        <canvas id="is-overlay" width="1600" height="1200" style="display: block; position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
                     </div>
                 </div>
             </div>
@@ -393,7 +424,6 @@ export function renderImageStudio(container) {
     const zoomSlider = container.querySelector('#is-zoom');
     const zoomVal = container.querySelector('#is-zoom-val');
     const canvasWrapper = container.querySelector('#is-canvas-wrapper');
-    const sizeInfo = container.querySelector('#is-size-info');
 
     // Save state for Undo/Redo
     function saveState() {
@@ -426,15 +456,24 @@ export function renderImageStudio(container) {
         const h = canvas.height;
         if (startX < 0 || startX >= w || startY < 0 || startY >= h) return;
         
-        const imageData = ctx.getImageData(0, 0, w, h);
-        const data = imageData.data;
+        // 1. Create a flattened canvas state to respect all objects
+        const tempC = document.createElement('canvas');
+        tempC.width = w; tempC.height = h;
+        const tCtx = tempC.getContext('2d');
+        tCtx.drawImage(canvas, 0, 0);
+        if (typeof vectorShapes !== 'undefined' && typeof drawShape === 'function') {
+            vectorShapes.forEach(s => drawShape(tCtx, s));
+        }
         
-        // Parse hex color to RGB
+        const flatImageData = tCtx.getImageData(0, 0, w, h);
+        const data = flatImageData.data;
+        
+        // 2. Parse hex color to RGB
         const fr = parseInt(hexColor.slice(1,3), 16);
         const fg = parseInt(hexColor.slice(3,5), 16);
         const fb = parseInt(hexColor.slice(5,7), 16);
         
-        // Get target color at click position
+        // Get target color at click position from the flattened image
         const idx = (startY * w + startX) * 4;
         const tr = data[idx], tg = data[idx+1], tb = data[idx+2], ta = data[idx+3];
         
@@ -448,9 +487,13 @@ export function renderImageStudio(container) {
                    Math.abs(data[i+3] - ta) <= tolerance;
         }
         
-        // Scanline flood fill
         const visited = new Uint8Array(w * h);
         const stack = [[startX, startY]];
+        
+        // Create an overlay to draw ONLY the new fill color onto the original ctx
+        const fillImgData = ctx.createImageData(w, h);
+        const fillData = fillImgData.data;
+        let hasFilled = false;
         
         while (stack.length > 0) {
             let [x, y] = stack.pop();
@@ -479,18 +522,30 @@ export function renderImageStudio(container) {
             // Fill the scanline and check neighbors
             for (let fx = left; fx <= right; fx++) {
                 let fi = (y * w + fx) * 4;
-                data[fi] = fr;
-                data[fi+1] = fg;
-                data[fi+2] = fb;
-                data[fi+3] = 255;
+                
+                // Mark as visited so we don't process again
                 visited[y * w + fx] = 1;
                 
+                // Set pixel on the overlay image
+                fillData[fi] = fr;
+                fillData[fi+1] = fg;
+                fillData[fi+2] = fb;
+                fillData[fi+3] = 255;
+                hasFilled = true;
+                
+                // Add neighbors to stack
                 if (y > 0 && !visited[(y-1) * w + fx]) stack.push([fx, y - 1]);
                 if (y < h - 1 && !visited[(y+1) * w + fx]) stack.push([fx, y + 1]);
             }
         }
         
-        ctx.putImageData(imageData, 0, 0);
+        if (hasFilled) {
+            // Draw the isolated fill onto the base canvas
+            const tempFillCanvas = document.createElement('canvas');
+            tempFillCanvas.width = w; tempFillCanvas.height = h;
+            tempFillCanvas.getContext('2d').putImageData(fillImgData, 0, 0);
+            ctx.drawImage(tempFillCanvas, 0, 0);
+        }
     }
     
     // Chaikin's corner-cutting smoothing
@@ -797,6 +852,10 @@ export function renderImageStudio(container) {
         }
         
         if (s.type !== 'image' && s.type !== 'text' && s.type !== 'path' && s.type !== 'polyarrow') {
+            if (s.fill) {
+                targetCtx.fillStyle = s.fill;
+                targetCtx.fill();
+            }
             targetCtx.stroke();
         }
         
@@ -1037,6 +1096,8 @@ export function renderImageStudio(container) {
                 ctxShapeSpan.style.display = 'contents';
                 container.querySelector('#is-shape-color').value = s.stroke || '#6366f1';
                 container.querySelector('#is-shape-stroke').value = s.strokeWidth || 5;
+                container.querySelector('#is-shape-fill-enable').checked = !!s.fill;
+                if (s.fill) container.querySelector('#is-shape-fill-color').value = s.fill;
             }
             return;
         }
@@ -1479,6 +1540,15 @@ export function renderImageStudio(container) {
         };
     }
 
+    function getContrastBackground(hexColor) {
+        if(!hexColor || hexColor.length < 7) return 'rgba(255,255,255,0.2)';
+        const r = parseInt(hexColor.slice(1,3), 16);
+        const g = parseInt(hexColor.slice(3,5), 16);
+        const b = parseInt(hexColor.slice(5,7), 16);
+        const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+        return luma > 150 ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)';
+    }
+
     canvas.addEventListener('mousedown', (e) => {
         if (e.button === 1 || isSpaceDown) return;
         if (currentTool === 'smartremove') return; // Ignore if panning
@@ -1750,12 +1820,13 @@ export function renderImageStudio(container) {
             input.style.fontStyle = isItalic ? 'italic' : 'normal';
             input.style.textDecoration = isUnderline ? 'underline' : 'none';
             input.style.lineHeight = '1';
+            input.style.background = getContrastBackground(input.style.color);
             input.style.outline = '2px dashed rgba(0,0,0,0.5)';
             input.style.outlineOffset = '2px';
             input.style.minWidth = '20px';
             input.style.minHeight = '1em';
-            input.style.padding = '0';
-            input.style.margin = '0';
+            input.style.padding = '2px 4px';
+            input.style.margin = '-2px -4px'; // offset padding
             input.style.whiteSpace = 'pre';
             input.style.zIndex = '1000';
             input.style.cursor = 'text';
@@ -2233,6 +2304,8 @@ export function renderImageStudio(container) {
         } else if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = container.querySelector('#is-shape-color').value;
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+            const fillEnable = container.querySelector('#is-shape-fill-enable').checked;
+            const fillColor = container.querySelector('#is-shape-fill-color').value;
             let drawX2 = pos.x, drawY2 = pos.y;
             if (isShiftDown) {
                 const side = Math.max(Math.abs(pos.x - startX), Math.abs(pos.y - startY));
@@ -2244,7 +2317,8 @@ export function renderImageStudio(container) {
                 type: currentTool,
                 x: startX, y: startY, x2: drawX2, y2: drawY2,
                 stroke: shapeColor,
-                strokeWidth: shapeStroke
+                strokeWidth: shapeStroke,
+                fill: fillEnable ? fillColor : null
             });
         }
     });
@@ -2354,12 +2428,13 @@ export function renderImageStudio(container) {
                 input.style.fontStyle = s.fontItalic ? 'italic' : 'normal';
                 input.style.textDecoration = s.fontUnderline ? 'underline' : 'none';
                 input.style.lineHeight = '1';
+                input.style.background = getContrastBackground(input.style.color);
                 input.style.outline = '2px dashed rgba(0,0,0,0.5)';
                 input.style.outlineOffset = '2px';
                 input.style.minWidth = '20px';
                 input.style.minHeight = '1em';
-                input.style.padding = '0';
-                input.style.margin = '0';
+                input.style.padding = '2px 4px';
+                input.style.margin = '-2px -4px';
                 input.style.whiteSpace = 'pre';
                 input.style.zIndex = '1000';
                 input.style.cursor = 'text';
@@ -2500,6 +2575,8 @@ export function renderImageStudio(container) {
         if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = container.querySelector('#is-shape-color').value;
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+            const fillEnable = container.querySelector('#is-shape-fill-enable').checked;
+            const fillColor = container.querySelector('#is-shape-fill-color').value;
             let finalX2 = pos.x, finalY2 = pos.y;
             if (isShiftDown) {
                 const side = Math.max(Math.abs(pos.x - startX), Math.abs(pos.y - startY));
@@ -2512,6 +2589,7 @@ export function renderImageStudio(container) {
                 x: startX, y: startY, x2: finalX2, y2: finalY2,
                 stroke: shapeColor,
                 strokeWidth: shapeStroke,
+                fill: fillEnable ? fillColor : null,
                 rotation: 0, flipH: false, flipV: false
             });
             activeVectorShape = vectorShapes[vectorShapes.length - 1];
@@ -3081,6 +3159,18 @@ export function renderImageStudio(container) {
     container.querySelector('#is-shape-color').addEventListener('input', () => {
         if (activeVectorShape && activeVectorShape.type !== 'text') {
             activeVectorShape.stroke = container.querySelector('#is-shape-color').value;
+            drawSelectionOverlay();
+        }
+    });
+    container.querySelector('#is-shape-fill-enable').addEventListener('change', () => {
+        if (activeVectorShape && activeVectorShape.type !== 'text') {
+            activeVectorShape.fill = container.querySelector('#is-shape-fill-enable').checked ? container.querySelector('#is-shape-fill-color').value : null;
+            drawSelectionOverlay();
+        }
+    });
+    container.querySelector('#is-shape-fill-color').addEventListener('input', () => {
+        if (activeVectorShape && activeVectorShape.type !== 'text' && container.querySelector('#is-shape-fill-enable').checked) {
+            activeVectorShape.fill = container.querySelector('#is-shape-fill-color').value;
             drawSelectionOverlay();
         }
     });
@@ -3990,9 +4080,6 @@ export function renderImageStudio(container) {
                                 if (s.originalPoints) s.originalPoints.forEach(p => { p.x *= scaleX; p.y *= scaleY; });
                             });
                         }
-                        
-                        const sizeInfo = document.getElementById('is-size-info');
-                        if (sizeInfo) sizeInfo.textContent = `${canvas.width} x ${canvas.height}`;
                     }
                     saveState(); drawSelectionOverlay();
                 };
@@ -4452,4 +4539,205 @@ export function renderImageStudio(container) {
     // Initialize default tool to select
     const defaultToolBtn = container.querySelector('.is-tool[data-tool="select"]');
     if (defaultToolBtn) defaultToolBtn.click();
+    
+    // Set initial zoom to fit canvas nicely
+    setTimeout(() => {
+        const cContainer = container.querySelector('#is-canvas-container');
+        if (cContainer) {
+            const rect = cContainer.getBoundingClientRect();
+            const pad = 80;
+            const scaleX = (rect.width - pad) / canvas.width;
+            const scaleY = (rect.height - pad) / canvas.height;
+            const scale = Math.min(scaleX, scaleY, 1);
+            const initialZoom = Math.max(10, Math.floor(scale * 100));
+            zoomSlider.value = initialZoom;
+            zoomSlider.dispatchEvent(new Event('input'));
+        }
+    }, 50);
+
+    // === CUSTOM PRO COLOR PICKER ===
+    const cpContainer = document.createElement('div');
+    cpContainer.innerHTML = `
+        <div id="is-pro-color-picker" style="display: none; position: absolute; background: #252526; border: 1px solid #444; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.8); z-index: 9999; padding: 12px; width: 220px; flex-direction: column; gap: 12px; user-select: none; font-family: sans-serif;">
+            <canvas id="is-cp-sl" width="196" height="150" style="border-radius: 4px; cursor: crosshair; display: block; border: 1px solid rgba(255,255,255,0.1);"></canvas>
+            <input type="range" id="is-cp-hue" min="0" max="360" value="0" style="width: 100%; height: 12px; appearance: none; border-radius: 6px; outline: none; background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%); cursor: pointer;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div id="is-cp-preview" style="width: 28px; height: 28px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.2); background: #ff0000; box-shadow: inset 0 0 4px rgba(0,0,0,0.5);"></div>
+                <input type="text" id="is-cp-hex" value="#FF0000" style="width: 80px; background: #111; color: #fff; border: 1px solid #444; border-radius: 4px; padding: 6px; text-align: center; font-family: monospace; font-size: 13px; outline: none; font-weight: bold; text-transform: uppercase;">
+            </div>
+            <div style="width: 100%; height: 1px; background: rgba(255,255,255,0.1);"></div>
+            <div id="is-cp-swatches" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;"></div>
+        </div>
+    `;
+    document.body.appendChild(cpContainer.firstElementChild);
+
+    const cpPopup = document.getElementById('is-pro-color-picker');
+    const cpSL = cpPopup.querySelector('#is-cp-sl');
+    const cpSLContext = cpSL.getContext('2d');
+    const cpHue = cpPopup.querySelector('#is-cp-hue');
+    const cpHex = cpPopup.querySelector('#is-cp-hex');
+    const cpPreview = cpPopup.querySelector('#is-cp-preview');
+    const cpSwatches = cpPopup.querySelector('#is-cp-swatches');
+
+    let currentHSV = { h: 0, s: 1, v: 1 };
+    let cpTargetInput = null;
+    let cpFakeBtn = null;
+
+    function hsvToRgb(h, s, v) {
+        let r, g, b, i, f, p, q, t;
+        i = Math.floor(h * 6);
+        f = h * 6 - i;
+        p = v * (1 - s);
+        q = v * (1 - f * s);
+        t = v * (1 - (1 - f) * s);
+        switch (i % 6) {
+            case 0: r = v, g = t, b = p; break;
+            case 1: r = q, g = v, b = p; break;
+            case 2: r = p, g = v, b = t; break;
+            case 3: r = p, g = q, b = v; break;
+            case 4: r = t, g = p, b = v; break;
+            case 5: r = v, g = p, b = q; break;
+        }
+        return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+    }
+    function rgbToHex(r, g, b) {
+        return "#" + (1 << 24 | r << 16 | g << 8 | b).toString(16).slice(1).toUpperCase();
+    }
+    function hexToHsv(hex) {
+        if (!hex) return {h:0, s:1, v:1};
+        let r = parseInt(hex.slice(1, 3), 16) / 255;
+        let g = parseInt(hex.slice(3, 5), 16) / 255;
+        let b = parseInt(hex.slice(5, 7), 16) / 255;
+        let max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h = 0, s = 0, v = max;
+        let d = max - min;
+        s = max === 0 ? 0 : d / max;
+        if (max !== min) {
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return { h: h * 360, s: s, v: v };
+    }
+    function renderSL() {
+        cpSLContext.fillStyle = `hsl(${currentHSV.h}, 100%, 50%)`;
+        cpSLContext.fillRect(0, 0, cpSL.width, cpSL.height);
+        let wg = cpSLContext.createLinearGradient(0, 0, cpSL.width, 0);
+        wg.addColorStop(0, 'rgba(255,255,255,1)'); wg.addColorStop(1, 'rgba(255,255,255,0)');
+        cpSLContext.fillStyle = wg; cpSLContext.fillRect(0, 0, cpSL.width, cpSL.height);
+        let bg = cpSLContext.createLinearGradient(0, 0, 0, cpSL.height);
+        bg.addColorStop(0, 'rgba(0,0,0,0)'); bg.addColorStop(1, 'rgba(0,0,0,1)');
+        cpSLContext.fillStyle = bg; cpSLContext.fillRect(0, 0, cpSL.width, cpSL.height);
+        
+        let cx = currentHSV.s * cpSL.width;
+        let cy = (1 - currentHSV.v) * cpSL.height;
+        cpSLContext.beginPath();
+        cpSLContext.arc(cx, cy, 6, 0, Math.PI*2);
+        cpSLContext.strokeStyle = currentHSV.v > 0.5 && currentHSV.s < 0.5 ? '#000' : '#fff';
+        cpSLContext.lineWidth = 2;
+        cpSLContext.stroke();
+    }
+    function updateColorFromHSV() {
+        const rgb = hsvToRgb(currentHSV.h / 360, currentHSV.s, currentHSV.v);
+        const hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+        cpPreview.style.background = hex;
+        cpHex.value = hex;
+        if (cpTargetInput && cpFakeBtn) {
+            cpFakeBtn.style.background = hex;
+            cpTargetInput.value = hex;
+            cpTargetInput.dispatchEvent(new Event('input'));
+        }
+        renderSL();
+    }
+    
+    let isDraggingSL = false;
+    function handleSLMove(e) {
+        if (!isDraggingSL) return;
+        const rect = cpSL.getBoundingClientRect();
+        let x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+        let y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+        currentHSV.s = x / rect.width;
+        currentHSV.v = 1 - (y / rect.height);
+        updateColorFromHSV();
+    }
+    cpSL.addEventListener('mousedown', (e) => { isDraggingSL = true; handleSLMove(e); });
+    window.addEventListener('mousemove', handleSLMove);
+    window.addEventListener('mouseup', () => isDraggingSL = false);
+    cpHue.addEventListener('input', (e) => { currentHSV.h = parseFloat(e.target.value); updateColorFromHSV(); });
+    cpHex.addEventListener('change', (e) => {
+        let val = e.target.value.trim();
+        if (!val.startsWith('#')) val = '#' + val;
+        if (/^#[0-9A-Fa-f]{6}$/i.test(val)) {
+            currentHSV = hexToHsv(val);
+            cpHue.value = currentHSV.h;
+            updateColorFromHSV();
+        }
+    });
+    
+    const proSwatches = [
+        '#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff',
+        '#ff0000', '#ff5722', '#ff9800', '#ffeb3b', '#cddc39', '#8bc34a',
+        '#4caf50', '#009688', '#00bcd4', '#03a9f4', '#2196f3', '#3f51b5',
+        '#673ab7', '#9c27b0', '#e91e63', '#f44336', '#795548', '#607d8b'
+    ];
+    proSwatches.forEach(c => {
+        const sw = document.createElement('div');
+        sw.style.cssText = `width: 100%; aspect-ratio: 1; border-radius: 4px; background: ${c}; cursor: pointer; border: 1px solid rgba(255,255,255,0.2); transition: 0.1s;`;
+        sw.onmouseenter = () => sw.style.transform = 'scale(1.1)';
+        sw.onmouseleave = () => sw.style.transform = 'scale(1)';
+        sw.onclick = () => {
+            currentHSV = hexToHsv(c);
+            cpHue.value = currentHSV.h;
+            updateColorFromHSV();
+        };
+        cpSwatches.appendChild(sw);
+    });
+
+    container.querySelectorAll('input[type="color"]').forEach(inp => {
+        const parent = inp.parentNode;
+        inp.style.display = 'none';
+        
+        const fakeBtn = document.createElement('div');
+        fakeBtn.className = 'is-pro-color-btn';
+        fakeBtn.style.cssText = `width: ${inp.style.width || '24px'}; height: ${inp.style.height || '24px'}; border-radius: 4px; cursor: pointer; background: ${inp.value}; border: 1px solid rgba(255,255,255,0.2); display: inline-block; vertical-align: middle;`;
+        if (inp.style.marginLeft) fakeBtn.style.marginLeft = inp.style.marginLeft;
+        
+        parent.insertBefore(fakeBtn, inp);
+        
+        const observer = new MutationObserver(() => {
+            fakeBtn.style.background = inp.value;
+        });
+        observer.observe(inp, { attributes: true, attributeFilter: ['value'] });
+
+        fakeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            cpTargetInput = inp;
+            cpFakeBtn = fakeBtn;
+            currentHSV = hexToHsv(inp.value);
+            cpHue.value = currentHSV.h;
+            renderSL();
+            cpPreview.style.background = inp.value;
+            cpHex.value = inp.value.toUpperCase();
+            
+            const rect = fakeBtn.getBoundingClientRect();
+            
+            cpPopup.style.display = 'flex';
+            cpPopup.style.top = (rect.bottom + window.scrollY + 8) + 'px';
+            cpPopup.style.left = (rect.left + window.scrollX) + 'px';
+            
+            const pRect = cpPopup.getBoundingClientRect();
+            if (pRect.right > window.innerWidth) {
+                cpPopup.style.left = (window.innerWidth - pRect.width - 16 + window.scrollX) + 'px';
+            }
+        });
+    });
+
+    document.addEventListener('mousedown', (e) => {
+        if (cpPopup.style.display === 'flex' && !cpPopup.contains(e.target) && !e.target.classList.contains('is-pro-color-btn')) {
+            cpPopup.style.display = 'none';
+        }
+    });
 }
