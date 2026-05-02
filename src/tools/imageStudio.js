@@ -4940,15 +4940,27 @@ export function renderImageStudio(container) {
         
         parent.insertBefore(fakeBtn, inp);
         
-        const observer = new MutationObserver(() => {
+        const update = () => {
             if (inp.dataset.transparent === 'true') {
                 fakeBtn.style.background = 'repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 10px 10px';
                 fakeBtn.style.backgroundColor = '#fff';
             } else {
                 fakeBtn.style.background = inp.value;
             }
-        });
+        };
+
+        const observer = new MutationObserver(update);
         observer.observe(inp, { attributes: true, attributeFilter: ['value', 'data-transparent'] });
+
+        // Intercept programmatic value changes
+        const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+        Object.defineProperty(inp, 'value', {
+            get: function() { return descriptor.get.call(this); },
+            set: function(val) {
+                descriptor.set.call(this, val);
+                update();
+            }
+        });
 
         fakeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
