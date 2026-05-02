@@ -82,11 +82,17 @@ export function renderImageStudio(container) {
                     <button class="is-btn-text" id="is-flatten-all" style="color: #ef4444;"><i class='bx bx-layer-minus'></i> Merge All</button>
                 </div>
                 
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <button class="is-btn-icon" onclick="document.getElementById('is-zoom').value = Math.max(10, parseInt(document.getElementById('is-zoom').value) - 10); document.getElementById('is-zoom').dispatchEvent(new Event('input'));"><i class='bx bx-minus'></i></button>
-                    <input type="range" id="is-zoom" min="10" max="400" value="100" style="width: 80px; height: 2px;">
-                    <button class="is-btn-icon" onclick="document.getElementById('is-zoom').value = Math.min(400, parseInt(document.getElementById('is-zoom').value) + 10); document.getElementById('is-zoom').dispatchEvent(new Event('input'));"><i class='bx bx-plus'></i></button>
-                    <span style="font-size: 11px; color: #aaa; width: 32px; text-align: right;" id="is-zoom-val">100%</span>
+                <div style="display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 6px;">
+                    <button class="is-btn-icon" id="is-zoom-fit" title="Fit to window" style="width: 24px; height: 24px; font-size: 14px;"><i class='bx bx-expand'></i></button>
+                    <button class="is-btn-icon" id="is-zoom-reset" title="Actual Size (100%)" style="width: 24px; height: 24px; font-size: 14px;"><i class='bx bx-target-lock'></i></button>
+                    <div class="is-divider"></div>
+                    <button class="is-btn-icon" onclick="document.getElementById('is-zoom').value = Math.max(10, parseInt(document.getElementById('is-zoom').value) - 10); document.getElementById('is-zoom').dispatchEvent(new Event('input'));" style="width: 24px; height: 24px;"><i class='bx bx-minus'></i></button>
+                    <input type="range" id="is-zoom" min="10" max="400" value="100" style="width: 60px;">
+                    <button class="is-btn-icon" onclick="document.getElementById('is-zoom').value = Math.min(400, parseInt(document.getElementById('is-zoom').value) + 10); document.getElementById('is-zoom').dispatchEvent(new Event('input'));" style="width: 24px; height: 24px;"><i class='bx bx-plus'></i></button>
+                    <div style="display: flex; align-items: center; position: relative; margin-left: 2px;">
+                        <input type="number" id="is-zoom-val-input" value="100" min="10" max="400" title="Zoom %" style="background: rgba(0,0,0,0.2); color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 14px 2px 4px; font-size: 11px; width: 44px; text-align: center; outline: none; -moz-appearance: textfield;">
+                        <span style="font-size: 11px; color: #888; position: absolute; right: 4px; pointer-events: none;">%</span>
+                    </div>
                 </div>
             </div>
 
@@ -304,6 +310,11 @@ export function renderImageStudio(container) {
             .is-slider-group { margin-bottom: 12px; font-size: 12px; color: #ccc; }
             .is-slider-group label { display: flex; justify-content: space-between; margin-bottom: 4px; }
             #is-zoom, #is-linewidth, .is-filter { accent-color: #3b82f6; }
+            input[type="number"]::-webkit-outer-spin-button,
+            input[type="number"]::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
             input[type="range"] {
                 -webkit-appearance: none;
                 width: 100%;
@@ -520,7 +531,7 @@ export function renderImageStudio(container) {
     const lineWidthVal = { innerText: '5px' };
     
     const zoomSlider = container.querySelector('#is-zoom');
-    const zoomVal = container.querySelector('#is-zoom-val');
+    const zoomValInput = container.querySelector('#is-zoom-val-input');
     const canvasWrapper = container.querySelector('#is-canvas-wrapper');
 
     // Save state for Undo/Redo
@@ -1580,16 +1591,37 @@ export function renderImageStudio(container) {
     }
 
 
-    // Zoom
-    zoomSlider.addEventListener('input', (e) => {
-        const val = e.target.value;
-        zoomVal.innerText = val + '%';
+    const canvasContainer = container.querySelector('#is-canvas-container');
+
+    const updateZoom = (val) => {
+        val = Math.max(10, Math.min(400, Math.round(val)));
+        zoomSlider.value = val;
+        zoomValInput.value = val;
         canvasWrapper.style.transform = `scale(${val / 100})`;
         canvasWrapper.style.transformOrigin = 'center center';
+    };
+
+    zoomSlider.addEventListener('input', (e) => updateZoom(e.target.value));
+    
+    zoomValInput.addEventListener('change', (e) => updateZoom(e.target.value));
+    zoomValInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            updateZoom(e.target.value);
+            e.target.blur();
+        }
     });
 
+    container.querySelector('#is-zoom-fit').addEventListener('click', () => {
+        const cw = canvasContainer.clientWidth;
+        const ch = canvasContainer.clientHeight;
+        const scaleX = (cw - 40) / canvas.width;
+        const scaleY = (ch - 40) / canvas.height;
+        updateZoom(Math.min(scaleX, scaleY, 4) * 100);
+    });
+
+    container.querySelector('#is-zoom-reset').addEventListener('click', () => updateZoom(100));
+
     // Panning & Zoom with Mouse
-    const canvasContainer = container.querySelector('#is-canvas-container');
     let isPanning = false;
     let isSpaceDown = false;
     let isShiftDown = false;
