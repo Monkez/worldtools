@@ -304,7 +304,30 @@ export function renderImageStudio(container) {
             .is-slider-group { margin-bottom: 12px; font-size: 12px; color: #ccc; }
             .is-slider-group label { display: flex; justify-content: space-between; margin-bottom: 4px; }
             #is-zoom, #is-linewidth, .is-filter { accent-color: #3b82f6; }
-            input[type="range"] { width: 100%; }
+            input[type="range"] {
+                -webkit-appearance: none;
+                width: 100%;
+                background: transparent;
+                height: 14px;
+            }
+            input[type="range"]::-webkit-slider-runnable-track {
+                width: 100%;
+                height: 3px;
+                cursor: pointer;
+                background: linear-gradient(to right, #3b82f6 var(--val, 50%), #444 var(--val, 50%));
+                border-radius: 2px;
+                margin-top: 5.5px;
+            }
+            input[type="range"]::-webkit-slider-thumb {
+                height: 14px;
+                width: 14px;
+                border-radius: 50%;
+                background: #3b82f6;
+                cursor: pointer;
+                -webkit-appearance: none;
+                margin-top: -5.5px;
+            }
+            input[type="range"]:focus { outline: none; }
         </style>
     `;
 
@@ -316,6 +339,32 @@ export function renderImageStudio(container) {
     // Fill white background initially
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Setup custom range slider fill styling
+    function setupRangeInput(input) {
+        const update = () => {
+            const min = parseFloat(input.min) || 0;
+            const max = parseFloat(input.max) || 100;
+            const val = parseFloat(input.value) || 0;
+            let percent = ((val - min) / (max - min)) * 100;
+            if (isNaN(percent) || !isFinite(percent)) percent = 50;
+            input.style.setProperty('--val', `${percent}%`);
+        };
+        input.addEventListener('input', update);
+        
+        // Intercept programmatic value changes
+        const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+        Object.defineProperty(input, 'value', {
+            get: function() { return descriptor.get.call(this); },
+            set: function(val) {
+                descriptor.set.call(this, val);
+                update();
+            }
+        });
+        update();
+    }
+    container.querySelectorAll('input[type="range"]').forEach(setupRangeInput);
+
 
     // State
     let currentTool = 'select';
