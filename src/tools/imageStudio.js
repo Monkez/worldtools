@@ -2288,9 +2288,12 @@ export function renderImageStudio(container) {
                 activeVectorShape.y = minY - sw;
                 activeVectorShape.x2 = maxX + sw;
                 activeVectorShape.y2 = maxY + sw;
-                // Re-apply smooth
+                // Re-apply smooth or update points directly
                 if (activeVectorShape.smoothLevel) {
                     applySmoothToShape(activeVectorShape, activeVectorShape.smoothLevel);
+                } else if (activeVectorShape.points && activeVectorShape.points[draggingControlPointIdx]) {
+                    activeVectorShape.points[draggingControlPointIdx].x = currentPos.x;
+                    activeVectorShape.points[draggingControlPointIdx].y = currentPos.y;
                 }
                 drawSelectionOverlay();
 
