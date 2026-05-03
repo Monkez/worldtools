@@ -202,47 +202,59 @@ export function renderYoutubeDownloader(container) {
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.7';
 
-        const dlUrl = `http://127.0.0.1:3000/api/yt/download?url=${encodeURIComponent(url)}&itag=${encodeURIComponent(itag)}&t=${Date.now()}`;
+        const dlUrl = `http://127.0.0.1:3000/api/yt/download-stream?url=${encodeURIComponent(url)}&itag=${encodeURIComponent(itag)}&t=${Date.now()}`;
         
         try {
-            const response = await fetch(dlUrl);
-            if (!response.ok) {
-                const errorTextStr = await response.text();
-                throw new Error(errorTextStr || "Failed to download video");
-            }
-            
-            // Get filename from Content-Disposition if available
-            let filename = 'download.mp4';
-            const disposition = response.headers.get('content-disposition');
-            if (disposition && disposition.indexOf('attachment') !== -1) {
-                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                const matches = filenameRegex.exec(disposition);
-                if (matches != null && matches[1]) { 
-                    filename = matches[1].replace(/['"]/g, '');
-                    // Handle URI encoded filenames
-                    try { filename = decodeURIComponent(filename); } catch(e) {}
-                }
-            }
+            const progressText = downloadingState.querySelector('p');
+            const originalTitle = progressText.innerHTML;
+            progressText.innerHTML = "Initializing download...";
 
-            const blob = await response.blob();
-            const blobUrl = window.URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = blobUrl;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            
-            setTimeout(() => {
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(blobUrl);
-            }, 100);
+            const eventSource = new EventSource(dlUrl);
 
-            downloadingState.style.display = 'none';
-            btn.innerHTML = originalHtml;
-            btn.style.pointerEvents = 'auto';
-            btn.style.opacity = '1';
+            eventSource.addEventListener('progress', (e) => {
+                progressText.innerHTML = `Downloading: <span style="color: var(--accent-color); font-weight: bold;">${e.data}</span>`;
+            });
+
+            eventSource.addEventListener('done', (e) => {
+                eventSource.close();
+                const data = JSON.parse(e.data);
+                
+                const fileUrl = `http://127.0.0.1:3000/api/yt/get-file?filename=${encodeURIComponent(data.filename)}&title=${encodeURIComponent(data.title)}`;
+                
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = fileUrl;
+                a.download = data.title;
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                }, 100);
+
+                downloadingState.style.display = 'none';
+                progressText.innerHTML = originalTitle;
+                btn.innerHTML = originalHtml;
+                btn.style.pointerEvents = 'auto';
+                btn.style.opacity = '1';
+            });
+
+            eventSource.addEventListener('error', (e) => {
+                eventSource.close();
+                downloadingState.style.display = 'none';
+                progressText.innerHTML = originalTitle;
+                btn.innerHTML = originalHtml;
+                btn.style.pointerEvents = 'auto';
+                btn.style.opacity = '1';
+                
+                let errorMsg = "An error occurred during download.";
+                if (e.data) errorMsg = e.data;
+                
+                errorText.innerText = errorMsg;
+                errorState.style.display = 'block';
+                errorState.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+
         } catch (err) {
             downloadingState.style.display = 'none';
             btn.innerHTML = originalHtml;

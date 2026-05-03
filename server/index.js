@@ -151,7 +151,7 @@ app.get('/api/yt/info', async (req, res) => {
             return res.status(400).send('Invalid YouTube URL');
         }
         
-        const info = await youtubedl(url, { dumpJson: true });
+        const info = await youtubedl(url, { dumpJson: true, jsRuntimes: 'node' });
         
         // Find all available video heights
         const availableHeights = [...new Set(info.formats.map(f => f.height).filter(h => h))].sort((a,b) => b - a);
@@ -186,36 +186,98 @@ app.get('/api/yt/info', async (req, res) => {
     }
 });
 
-app.get('/api/yt/download', async (req, res) => {
+app.get('/api/yt/download-stream', async (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
     try {
         const { url, itag } = req.query;
         if (!url || !itag) {
-            return res.status(400).send('Missing URL or Format ID');
+            res.write(`event: error\ndata: Missing URL or Format ID\n\n`);
+            return res.end();
         }
         
-        const info = await youtubedl(url, { dumpJson: true });
+        res.write(`event: progress\ndata: Fetching video information...\n\n`);
+        const info = await youtubedl(url, { dumpJson: true, jsRuntimes: 'node' });
         const safeTitle = info.title.replace(/[^\w\s\u00C0-\u1FFF\u2C00-\uD7FF.-]/g, '').trim();
         const isAudio = itag.includes('bestaudio') && !itag.includes('bestvideo');
         const ext = isAudio ? 'm4a' : 'mkv';
         const filename = `${Date.now()}.${ext}`;
         const outputPath = path.join(__dirname, 'outputs', filename);
-        
-        // We must download to disk first to allow yt-dlp to merge video and audio with ffmpeg
-        await youtubedl(url, {
+
+        const subprocess = youtubedl.exec(url, {
             format: itag,
             output: outputPath,
             mergeOutputFormat: ext,
-            ffmpegLocation: ffmpegInstaller.path
+            ffmpegLocation: ffmpegInstaller.path,
+            jsRuntimes: 'node'
         });
-        
-        res.download(outputPath, `${safeTitle}.${ext}`, (err) => {
-            if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+        subprocess.catch(() => {}); // Prevent unhandled promise rejection crash on WinError 32
+
+        let aborted = false;
+        req.on('close', () => {
+            aborted = true;
+            try { subprocess.kill('SIGINT'); } catch(e) {}
         });
-        
+
+        subprocess.stdout.on('data', (data) => {
+            if (aborted) return;
+            const line = data.toString();
+            if (line.includes('[download]') && line.includes('%')) {
+                const match = line.match(/\[download\]\s+(.*)/);
+                if (match && match[1]) {
+                    res.write(`event: progress\ndata: ${match[1].trim()}\n\n`);
+                }
+            } else if (line.includes('[Merger]')) {
+                res.write(`event: progress\ndata: Merging audio and video...\n\n`);
+            }
+        });
+
+        subprocess.on('close', async (code) => {
+            if (aborted) return;
+            
+            const tempPath = outputPath.replace(`.${ext}`, `.temp.${ext}`);
+            let finalDownloadPath = outputPath;
+            
+            if (!fs.existsSync(outputPath) && fs.existsSync(tempPath)) {
+                res.write(`event: progress\ndata: Finalizing file (handling lock)...\n\n`);
+                await new Promise(r => setTimeout(r, 1000));
+                try {
+                    fs.renameSync(tempPath, outputPath);
+                } catch (e) {
+                    finalDownloadPath = tempPath; // serve temp file directly
+                }
+            } else if (!fs.existsSync(outputPath)) {
+                res.write(`event: error\ndata: Download failed. File not found.\n\n`);
+                return res.end();
+            }
+
+            res.write(`event: done\ndata: ${JSON.stringify({ filename: path.basename(finalDownloadPath), title: safeTitle + '.' + ext })}\n\n`);
+            res.end();
+        });
+
+        subprocess.on('error', (err) => {
+            if (aborted) return;
+            res.write(`event: error\ndata: ${err.message}\n\n`);
+            res.end();
+        });
+
     } catch (err) {
-        console.error(err);
-        res.status(500).send(err.message);
+        res.write(`event: error\ndata: ${err.message}\n\n`);
+        res.end();
     }
+});
+
+app.get('/api/yt/get-file', (req, res) => {
+    const { filename, title } = req.query;
+    if (!filename) return res.status(400).send('Filename missing');
+    const outputPath = path.join(__dirname, 'outputs', filename);
+    if (!fs.existsSync(outputPath)) return res.status(404).send('File not found');
+    
+    res.download(outputPath, title || filename, (err) => {
+        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+    });
 });
 
 // =====================================
