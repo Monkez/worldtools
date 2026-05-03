@@ -246,12 +246,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Toggle sidebar
     closeBtn.addEventListener('click', () => {
         sidebar.classList.add('collapsed');
-        floatingActions.style.display = 'flex';
     });
     
     openBtn.addEventListener('click', () => {
         sidebar.classList.remove('collapsed');
-        floatingActions.style.display = 'none';
     });
 
     quickDashboardBtn.addEventListener('click', () => {
