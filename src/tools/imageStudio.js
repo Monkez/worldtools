@@ -235,6 +235,9 @@ export function renderImageStudio(container) {
                         <button class="is-btn-icon" id="is-region-copy" title="Copy Region" style="gap: 4px; width: auto; padding: 0 8px; font-size: 11px;"><i class='bx bx-copy'></i> Copy</button>
                         <button class="is-btn-icon" id="is-region-crop" title="Crop to Region" style="gap: 4px; width: auto; padding: 0 8px; font-size: 11px;"><i class='bx bx-crop'></i> Crop</button>
                         <div class="is-divider"></div>
+                        <button class="is-btn-icon" id="is-region-select-inside" title="Select objects completely inside" style="gap: 4px; width: auto; padding: 0 8px; font-size: 11px;"><i class='bx bx-border-inner'></i> Inside</button>
+                        <button class="is-btn-icon" id="is-region-select-intersect" title="Select objects partially inside" style="gap: 4px; width: auto; padding: 0 8px; font-size: 11px;"><i class='bx bx-intersect'></i> Intersect</button>
+                        <div class="is-divider"></div>
                         <span id="is-region-info" style="font-size: 11px; color: #aaa;"></span>
                     </span>
                     <!-- Canvas background context (shown when clicking empty area in select mode) -->
@@ -287,6 +290,8 @@ export function renderImageStudio(container) {
                     </span>
                     <button class="is-btn-icon" id="is-ctx-front" title="Bring to Front" style="display: none; font-size: 14px;"><i class='bx bx-arrow-to-top'></i></button>
                     <button class="is-btn-icon" id="is-ctx-back" title="Send to Back" style="display: none; font-size: 14px;"><i class='bx bx-arrow-to-bottom'></i></button>
+                    <button class="is-btn-icon" id="is-ctx-group" title="Group (Ctrl+G)" style="display: none; font-size: 12px; gap:3px; width:auto; padding:0 8px; color:#22d3ee;"><i class='bx bx-group'></i></button>
+                    <button class="is-btn-icon" id="is-ctx-ungroup" title="Ungroup" style="display: none; font-size: 12px; gap:3px; width:auto; padding:0 8px; color:#fb923c;"><i class='bx bx-unlink'></i></button>
                     <button class="is-btn-icon" id="is-ctx-del" title="Delete (Del)" style="color: #fca5a5; display: none;"><i class='bx bx-trash'></i></button>
                 </div>
 
@@ -533,6 +538,7 @@ export function renderImageStudio(container) {
     const zoomSlider = container.querySelector('#is-zoom');
     const zoomValInput = container.querySelector('#is-zoom-val-input');
     const canvasWrapper = container.querySelector('#is-canvas-wrapper');
+    const sizeInfo = container.querySelector('#is-obj-type-info');
 
     // Save state for Undo/Redo
     const MAX_HISTORY = 50;
@@ -693,6 +699,13 @@ export function renderImageStudio(container) {
     function drawShape(targetCtx, s) {
         targetCtx.save();
         targetCtx.globalAlpha = s.opacity ?? 1;
+        
+        // Group: draw all children
+        if (s.type === 'group' && s.children) {
+            s.children.forEach(child => drawShape(targetCtx, child));
+            targetCtx.restore();
+            return;
+        }
         
         let cx = s.x + (s.x2 - s.x) / 2;
         let cy = s.y + (s.y2 - s.y) / 2;
@@ -987,7 +1000,36 @@ export function renderImageStudio(container) {
         // Draw grid pattern on overlay (non-destructive)
         drawGrid(octx);
         
-        vectorShapes.forEach(s => drawShape(octx, s));
+        // When resizing canvas, dim objects instead of hiding them
+        if (isResizingCanvas) {
+            octx.save();
+            octx.globalAlpha = 0.3;
+            vectorShapes.forEach(s => drawShape(octx, s));
+            octx.restore();
+        } else {
+            vectorShapes.forEach(s => drawShape(octx, s));
+        }
+        
+        // Draw multi-selected outlines
+        if (multiSelected.size > 0) {
+            multiSelected.forEach(s => {
+                if (s === activeVectorShape) return;
+                const ms_cx = s.x + (s.x2 - s.x) / 2;
+                const ms_cy = s.y + (s.y2 - s.y) / 2;
+                const ms_w = Math.abs(s.x2 - s.x);
+                const ms_h = Math.abs(s.y2 - s.y);
+                const ms_rot = (s.rotation || 0) * Math.PI / 180;
+                octx.save();
+                octx.translate(ms_cx, ms_cy);
+                octx.rotate(ms_rot);
+                octx.strokeStyle = '#22d3ee';
+                octx.lineWidth = 1.5;
+                octx.setLineDash([4, 4]);
+                octx.strokeRect(-ms_w/2 - 3, -ms_h/2 - 3, ms_w + 6, ms_h + 6);
+                octx.setLineDash([]);
+                octx.restore();
+            });
+        }
         
         if (window.currentMaskPoints && window.currentMaskPoints.length > 0) {
             octx.beginPath();
@@ -1139,16 +1181,22 @@ export function renderImageStudio(container) {
             container.querySelector('#is-obj-copy').style.display = 'flex';
             container.querySelector('#is-obj-flatten').style.display = 'flex';
             // Show object type and size info
-            const _typeNames = { rect: '▭ Rectangle', circle: '○ Circle', ellipse: '⬭ Ellipse', triangle: '△ Triangle', diamond: '◇ Diamond', parallelogram: '▱ Parallelogram', pentagon: '⬠ Pentagon', hexagon: '⬡ Hexagon', star: '★ Star', text: 'T Text', path: '✏ Brush Path', polyarrow: '↗ Line/Arrow', image: '🖼 Image' };
+            const _typeNames = { rect: '▭ Rectangle', circle: '○ Circle', ellipse: '⬭ Ellipse', triangle: '△ Triangle', diamond: '◇ Diamond', parallelogram: '▱ Parallelogram', pentagon: '⬠ Pentagon', hexagon: '⬡ Hexagon', star: '★ Star', text: 'T Text', path: '✏ Brush Path', polyarrow: '↗ Line/Arrow', image: '🖼 Image', group: '⊞ Group' };
             const _typeName = _typeNames[s.type] || s.type;
             const _ow = Math.round(Math.abs(s.x2 - s.x));
             const _oh = Math.round(Math.abs(s.y2 - s.y));
-            container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#aaa; font-weight:500;">' + _typeName + '</span> <span style="color:#555">|</span> <span style="color:#888;">' + _ow + ' × ' + _oh + ' px</span>';
+            if (multiSelected.size >= 2) {
+                container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#22d3ee; font-weight:500;">' + multiSelected.size + ' objects selected</span>';
+            } else {
+                container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#aaa; font-weight:500;">' + _typeName + (s.type === 'group' ? ' (' + s.children.length + ')' : '') + '</span> <span style="color:#555">|</span> <span style="color:#888;">' + _ow + ' × ' + _oh + ' px</span>';
+            }
             container.querySelector('#is-obj-type-info').style.display = 'flex';
             container.querySelector('#is-ctx-back').style.display = 'flex';
             container.querySelector('#is-obj-remove-bg').style.display = 'none';
             container.querySelector('#is-obj-smart-remove').style.display = 'none';
             container.querySelector('#is-polyarrow-opts').style.display = 'none';
+            container.querySelector('#is-ctx-group').style.display = multiSelected.size >= 2 ? 'flex' : 'none';
+            container.querySelector('#is-ctx-ungroup').style.display = (s.type === 'group' && multiSelected.size < 2) ? 'flex' : 'none';
             // Hide smooth controls (shown selectively for path/polyarrow)
             container.querySelector('#is-brush-smooth').style.display = 'none';
             container.querySelector('#is-brush-smooth-divider').style.display = 'none';
@@ -1349,7 +1397,7 @@ export function renderImageStudio(container) {
             
             const _toolGuides = {
             
-                select: "Click to select · Drag to move · <b style='color:#60a5fa;'>Shift</b>+handle to lock ratio · <b style='color:#60a5fa;'>Alt</b>+click to select behind",
+                select: "Click to select · Drag to move · <b style='color:#60a5fa;'>Ctrl</b>+click multi-select · <b style='color:#60a5fa;'>Ctrl+G</b> group · <b style='color:#60a5fa;'>Shift</b>+handle lock ratio · <b style='color:#f0883e;'>Esc</b> select canvas",
             
                 brush: "Click and drag to draw · Released stroke becomes vector object",
             
@@ -1628,6 +1676,29 @@ export function renderImageStudio(container) {
     let isCtrlDown = false;
     let previousToolBeforeCtrl = null;
     let canvasSelected = false;
+
+    // Helper: select the background canvas (deselect any object)
+    function selectCanvasBackground() {
+        activeVectorShape = null;
+        canvasSelected = true;
+        container.querySelector('#is-ctx-del').style.display = 'none';
+        container.querySelector('#is-ctx-del-divider').style.display = 'none';
+        container.querySelector('#is-ctx-front').style.display = 'none';
+        container.querySelector('#is-obj-copy').style.display = 'none';
+        container.querySelector('#is-obj-flatten').style.display = 'none';
+        container.querySelector('#is-ctx-back').style.display = 'none';
+        container.querySelector('#is-obj-remove-bg').style.display = 'none';
+        container.querySelector('#is-obj-smart-remove').style.display = 'none';
+        container.querySelector('#is-polyarrow-opts').style.display = 'none';
+        const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
+        allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
+        container.querySelector('#is-ctx-select').style.display = 'contents';
+        container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#aaa; font-weight:500;">Background Canvas</span> <span style="color:#555">|</span> <span style="color:#888;">' + canvas.width + ' × ' + canvas.height + ' px</span>';
+        container.querySelector('#is-obj-type-info').style.display = 'flex';
+        contextBar.style.display = 'flex';
+        drawSelectionOverlay();
+    }
+    let multiSelected = new Set(); // for Ctrl+Click multi-select
     let isResizingCanvas = false;
     let canvasResizeStartX = 0, canvasResizeStartY = 0;
     let canvasResizeOrigW = 0, canvasResizeOrigH = 0;
@@ -1892,6 +1963,34 @@ export function renderImageStudio(container) {
                 }
                 if (hitShape) {
                 canvasSelected = false;
+                // Ctrl+Click: toggle multi-select
+                if (isCtrlDown) {
+                    if (multiSelected.has(hitShape)) {
+                        multiSelected.delete(hitShape);
+                        if (hitShape === activeVectorShape) {
+                            activeVectorShape = multiSelected.size > 0 ? [...multiSelected][0] : null;
+                        }
+                    } else {
+                        if (activeVectorShape && !multiSelected.has(activeVectorShape)) {
+                            multiSelected.add(activeVectorShape);
+                        }
+                        multiSelected.add(hitShape);
+                        activeVectorShape = hitShape;
+                    }
+                    // Show group button if 2+ selected
+                    if (multiSelected.size >= 2) {
+                        container.querySelector('#is-ctx-group').style.display = 'flex';
+                        container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#22d3ee; font-weight:500;">' + multiSelected.size + ' objects selected</span>';
+                        container.querySelector('#is-obj-type-info').style.display = 'flex';
+                    } else {
+                        container.querySelector('#is-ctx-group').style.display = 'none';
+                    }
+                    drawSelectionOverlay();
+                    return;
+                }
+                // Normal click: clear multi-select
+                multiSelected.clear();
+                container.querySelector('#is-ctx-group').style.display = 'none';
                 // If we're in control point editing mode on the active shape,
                 // clicking the shape body should not start a move - only handles work
                 if (hitShape === activeVectorShape && activeVectorShape.originalPoints && activeVectorShape.originalPoints.length > 1) {
@@ -1925,25 +2024,7 @@ export function renderImageStudio(container) {
             }
             
             
-            activeVectorShape = null;
-            canvasSelected = true;
-            // Hide object buttons, show canvas context
-            container.querySelector('#is-ctx-del').style.display = 'none';
-            container.querySelector('#is-ctx-del-divider').style.display = 'none';
-            container.querySelector('#is-ctx-front').style.display = 'none';
-            container.querySelector('#is-obj-copy').style.display = 'none';
-            container.querySelector('#is-obj-flatten').style.display = 'none';
-            container.querySelector('#is-ctx-back').style.display = 'none';
-            container.querySelector('#is-obj-remove-bg').style.display = 'none';
-            container.querySelector('#is-obj-smart-remove').style.display = 'none';
-            container.querySelector('#is-polyarrow-opts').style.display = 'none';
-            const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
-            allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
-            container.querySelector('#is-ctx-select').style.display = 'contents';
-            container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#aaa; font-weight:500;">Background Canvas</span> <span style="color:#555">|</span> <span style="color:#888;">' + canvas.width + ' × ' + canvas.height + ' px</span>';
-            container.querySelector('#is-obj-type-info').style.display = 'flex';
-            contextBar.style.display = 'flex';
-            drawSelectionOverlay();
+            selectCanvasBackground();
             return;
         }
         
@@ -2251,26 +2332,21 @@ export function renderImageStudio(container) {
                     drawSelectionOverlay();
                     return;
                 } else if (resizingHandle === 'move') {
-                    activeVectorShape.x += dx;
-                    activeVectorShape.x2 += dx;
-                    activeVectorShape.y += dy;
-                    activeVectorShape.y2 += dy;
-                    // For polyarrow/path with smooth: shift originalPoints then regenerate smooth
-                    // For polyarrow/path without smooth: shift both points arrays
-                    if (activeVectorShape.originalPoints) {
-                        activeVectorShape.originalPoints.forEach(p => { p.x += dx; p.y += dy; });
-                    }
-                    if (activeVectorShape.smoothLevel && activeVectorShape.originalPoints) {
-                        // Regenerate smooth points from shifted originalPoints
-                        // This guarantees curve always matches control points
-                        applySmoothToShape(activeVectorShape, activeVectorShape.smoothLevel);
-                    } else if (activeVectorShape.points) {
-                        activeVectorShape.points.forEach(p => { p.x += dx; p.y += dy; });
-                    }
-                    // Clear connections when moving the arrow itself (endpoints move with it)
-                    if (activeVectorShape.connections) {
-                        activeVectorShape.connections = null;
-                    }
+                    const _shiftShape = (sh, ddx, ddy) => {
+                        sh.x += ddx; sh.x2 += ddx;
+                        sh.y += ddy; sh.y2 += ddy;
+                        if (sh.originalPoints) sh.originalPoints.forEach(p => { p.x += ddx; p.y += ddy; });
+                        if (sh.smoothLevel && sh.originalPoints) applySmoothToShape(sh, sh.smoothLevel);
+                        else if (sh.points) sh.points.forEach(p => { p.x += ddx; p.y += ddy; });
+                        if (sh.connections) sh.connections = null;
+                        if (sh.type === 'group' && sh.children) sh.children.forEach(c => _shiftShape(c, ddx, ddy));
+                    };
+                    _shiftShape(activeVectorShape, dx, dy);
+                    // Move all multi-selected shapes together
+                    multiSelected.forEach(ms => {
+                        if (ms === activeVectorShape) return;
+                        _shiftShape(ms, dx, dy);
+                    });
                 } else if (resizingHandle === 'tl') {
                     if (isShiftDown) {
                         const ar = Math.abs(activeVectorShape.x2 - activeVectorShape.x) / (Math.abs(activeVectorShape.y2 - activeVectorShape.y) || 1);
@@ -2488,14 +2564,14 @@ export function renderImageStudio(container) {
         if (currentTool === 'region') {
             octx.clearRect(0, 0, overlay.width, overlay.height);
             vectorShapes.forEach(s => drawShape(octx, s));
-            octx.fillStyle = 'rgba(0,0,0,0.4)';
-            octx.fillRect(0, 0, overlay.width, overlay.height);
             const rx = Math.min(startX, pos.x);
             const ry = Math.min(startY, pos.y);
             const rw = Math.abs(pos.x - startX);
             const rh = Math.abs(pos.y - startY);
-            octx.clearRect(rx, ry, rw, rh);
-            octx.strokeStyle = '#fff';
+            octx.fillStyle = 'rgba(96, 165, 250, 0.1)';
+            octx.fillRect(rx, ry, rw, rh);
+            octx.strokeStyle = '#60a5fa';
+            octx.lineWidth = 1;
             octx.setLineDash([5, 5]);
             octx.strokeRect(rx, ry, rw, rh);
             octx.setLineDash([]);
@@ -2598,9 +2674,10 @@ export function renderImageStudio(container) {
         saveState();
     }
     
-    // Space to finish polyarrow, Escape to cancel
+    // Space to finish polyarrow, Escape to cancel / select canvas
     document.addEventListener('keydown', (e) => {
         if (!container.querySelector('#is-canvas')) return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
         if (currentTool === 'polyarrow') {
             if (e.key === ' ' || e.code === 'Space') {
                 e.preventDefault();
@@ -2608,6 +2685,31 @@ export function renderImageStudio(container) {
             } else if (e.key === 'Escape' && currentPolyPoints.length > 0) {
                 currentPolyPoints = [];
                 hideCanvasTooltip();
+                drawSelectionOverlay();
+            }
+            return;
+        }
+        // Ctrl+G: Group selected objects
+        if ((e.ctrlKey || e.metaKey) && e.key === 'g' && currentTool === 'select') {
+            e.preventDefault();
+            if (multiSelected.size >= 2) {
+                container.querySelector('#is-ctx-group').click();
+            } else if (activeVectorShape && activeVectorShape.type === 'group') {
+                container.querySelector('#is-ctx-ungroup').click();
+            }
+            return;
+        }
+        // Escape: deselect object → select canvas background
+        if (e.key === 'Escape' && currentTool === 'select') {
+            if (multiSelected.size > 0) {
+                multiSelected.clear();
+                container.querySelector('#is-ctx-group').style.display = 'none';
+                drawSelectionOverlay();
+            } else if (activeVectorShape) {
+                selectCanvasBackground();
+                e.preventDefault();
+            } else if (canvasSelected) {
+                canvasSelected = false;
                 drawSelectionOverlay();
             }
         }
@@ -2722,27 +2824,12 @@ export function renderImageStudio(container) {
             if (isResizingCanvas) {
                 isResizingCanvas = false;
                 canvas.style.cursor = 'default';
-                const newW = Math.max(50, Math.round(canvasResizeOrigW + (pos.x - canvasResizeStartX)));
-                const newH = Math.max(50, Math.round(canvasResizeOrigH + (pos.y - canvasResizeStartY)));
-                if (newW !== canvas.width || newH !== canvas.height) {
-                    // Save current content
-                    const tempCanvas = document.createElement('canvas');
-                    tempCanvas.width = canvas.width;
-                    tempCanvas.height = canvas.height;
-                    tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
-                    // Resize canvas
-                    canvas.width = newW;
-                    canvas.height = newH;
-                    overlay.width = newW;
-                    overlay.height = newH;
-                    // Fill with bg color then paste old content
-                    ctx.fillStyle = canvasBgColor;
-                    ctx.fillRect(0, 0, newW, newH);
-                    ctx.drawImage(tempCanvas, 0, 0);
-                    sizeInfo.innerText = newW + ' x ' + newH;
-                    container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#aaa; font-weight:500;">Background Canvas</span> <span style="color:#555">|</span> <span style="color:#888;">' + newW + ' × ' + newH + ' px</span>';
-                    saveState();
-                }
+                // Canvas was already resized in real-time during mousemove,
+                // just update info and save state immediately
+                const finalW = canvas.width, finalH = canvas.height;
+                sizeInfo.innerText = finalW + ' x ' + finalH;
+                container.querySelector('#is-obj-type-info').innerHTML = '<span style="color:#aaa; font-weight:500;">Background Canvas</span> <span style="color:#555">|</span> <span style="color:#888;">' + finalW + ' × ' + finalH + ' px</span>';
+                saveState();
                 drawSelectionOverlay();
                 return;
             }
@@ -3368,7 +3455,7 @@ export function renderImageStudio(container) {
         overlay.width = selection.w;
         overlay.height = selection.h;
         ctx.putImageData(imgData, 0, 0);
-        sizeInfo.innerText = `${Math.round(selection.w)} x ${Math.round(selection.h)}`;
+        sizeInfo.innerText = `${Math.round(selection.w)} × ${Math.round(selection.h)}`;
         selection = null;
         
         // Reset context bar
@@ -3379,10 +3466,57 @@ export function renderImageStudio(container) {
         drawSelectionOverlay();
         saveState();
     });
+
+    const handleRegionSelect = (mode) => {
+        if (!selection) return;
+        const rx1 = selection.x;
+        const ry1 = selection.y;
+        const rx2 = selection.x + selection.w;
+        const ry2 = selection.y + selection.h;
+        
+        multiSelected.clear();
+        vectorShapes.forEach(s => {
+            const bx1 = Math.min(s.x, s.x2);
+            const by1 = Math.min(s.y, s.y2);
+            const bx2 = Math.max(s.x, s.x2);
+            const by2 = Math.max(s.y, s.y2);
+            
+            let match = false;
+            if (mode === 'inside') {
+                match = (bx1 >= rx1 && bx2 <= rx2 && by1 >= ry1 && by2 <= ry2);
+            } else if (mode === 'intersect') {
+                match = (bx1 <= rx2 && bx2 >= rx1 && by1 <= ry2 && by2 >= ry1);
+            }
+            if (match) multiSelected.add(s);
+        });
+        
+        if (multiSelected.size > 0) {
+            selection = null;
+            container.querySelector('[data-tool="select"]').click();
+            if (multiSelected.size === 1) {
+                activeVectorShape = [...multiSelected][0];
+                multiSelected.clear();
+            } else {
+                activeVectorShape = [...multiSelected][0];
+            }
+            drawSelectionOverlay();
+        } else {
+            // Nothing selected, just clear selection
+            selection = null;
+            container.querySelector('[data-tool="select"]').click();
+        }
+    };
+
+    container.querySelector('#is-region-select-inside').addEventListener('click', () => handleRegionSelect('inside'));
+    container.querySelector('#is-region-select-intersect').addEventListener('click', () => handleRegionSelect('intersect'));
     
     // Context bar delete
     container.querySelector('#is-ctx-del').addEventListener('click', () => {
-        if (activeVectorShape) {
+        if (multiSelected.size > 0) {
+            vectorShapes = vectorShapes.filter(s => !multiSelected.has(s));
+            multiSelected.clear();
+            activeVectorShape = null;
+        } else if (activeVectorShape) {
             vectorShapes = vectorShapes.filter(s => s !== activeVectorShape);
             activeVectorShape = null;
         } else if (selection) {
@@ -3392,6 +3526,7 @@ export function renderImageStudio(container) {
             }
             selection = null;
         }
+        container.querySelector('#is-ctx-group').style.display = 'none';
         contextBar.style.display = 'none';
         drawSelectionOverlay();
         saveState();
@@ -3417,6 +3552,52 @@ export function renderImageStudio(container) {
             vectorShapes.unshift(activeVectorShape);
             drawSelectionOverlay();
         }
+    });
+
+    // Group selected objects
+    container.querySelector('#is-ctx-group').addEventListener('click', () => {
+        if (multiSelected.size < 2) return;
+        const children = [...multiSelected];
+        // Calculate bounding box of all children
+        let gx1 = Infinity, gy1 = Infinity, gx2 = -Infinity, gy2 = -Infinity;
+        children.forEach(s => {
+            gx1 = Math.min(gx1, Math.min(s.x, s.x2));
+            gy1 = Math.min(gy1, Math.min(s.y, s.y2));
+            gx2 = Math.max(gx2, Math.max(s.x, s.x2));
+            gy2 = Math.max(gy2, Math.max(s.y, s.y2));
+        });
+        // Remove children from main array
+        vectorShapes = vectorShapes.filter(s => !multiSelected.has(s));
+        // Create group shape
+        const group = {
+            type: 'group',
+            id: 'g_' + Date.now(),
+            x: gx1, y: gy1, x2: gx2, y2: gy2,
+            rotation: 0,
+            children: children,
+            stroke: 'transparent', strokeWidth: 0
+        };
+        vectorShapes.push(group);
+        multiSelected.clear();
+        activeVectorShape = group;
+        container.querySelector('#is-ctx-group').style.display = 'none';
+        container.querySelector('#is-ctx-ungroup').style.display = 'flex';
+        drawSelectionOverlay();
+        saveState();
+    });
+
+    // Ungroup
+    container.querySelector('#is-ctx-ungroup').addEventListener('click', () => {
+        if (!activeVectorShape || activeVectorShape.type !== 'group') return;
+        const group = activeVectorShape;
+        const idx = vectorShapes.indexOf(group);
+        // Restore children to main array at the same position
+        vectorShapes.splice(idx, 1, ...group.children);
+        activeVectorShape = null;
+        multiSelected.clear();
+        container.querySelector('#is-ctx-ungroup').style.display = 'none';
+        drawSelectionOverlay();
+        saveState();
     });
     
     // Shape color/stroke live edit
@@ -3492,7 +3673,14 @@ export function renderImageStudio(container) {
         if (!document.getElementById('is-canvas')) return;
         
         if (e.key === 'Delete' && currentTool === 'select') {
-            if (activeVectorShape) {
+            if (multiSelected.size > 0) {
+                vectorShapes = vectorShapes.filter(s => !multiSelected.has(s));
+                multiSelected.clear();
+                activeVectorShape = null;
+                container.querySelector('#is-ctx-group').style.display = 'none';
+                drawSelectionOverlay();
+                saveState();
+            } else if (activeVectorShape) {
                 vectorShapes = vectorShapes.filter(s => s !== activeVectorShape);
                 activeVectorShape = null;
                 drawSelectionOverlay();
