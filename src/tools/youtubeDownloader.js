@@ -141,7 +141,7 @@ export function renderYoutubeDownloader(container) {
         btnFetch.disabled = true;
 
         try {
-            const res = await fetch(`http://localhost:3000/api/yt/info?url=${encodeURIComponent(url)}`);
+            const res = await fetch(`http://127.0.0.1:3000/api/yt/info?url=${encodeURIComponent(url)}`);
             if(!res.ok) throw new Error(await res.text());
             
             const data = await res.json();
@@ -191,7 +191,7 @@ export function renderYoutubeDownloader(container) {
         btnFetch.disabled = false;
     });
 
-    const triggerDownload = (url, itag, btn) => {
+    const triggerDownload = async (url, itag, btn) => {
         downloadingState.style.display = 'block';
         // Smooth scroll to the downloading message
         downloadingState.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -202,17 +202,56 @@ export function renderYoutubeDownloader(container) {
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.7';
 
-        // Use browser window to trigger the file download from the backend API directly
-        // Add timestamp to bypass aggressive browser caching of GET requests
-        const dlUrl = `http://localhost:3000/api/yt/download?url=${encodeURIComponent(url)}&itag=${encodeURIComponent(itag)}&t=${Date.now()}`;
-        window.location.href = dlUrl;
+        const dlUrl = `http://127.0.0.1:3000/api/yt/download?url=${encodeURIComponent(url)}&itag=${encodeURIComponent(itag)}&t=${Date.now()}`;
         
-        // Revert UI after a delay
-        setTimeout(() => {
+        try {
+            const response = await fetch(dlUrl);
+            if (!response.ok) {
+                const errorTextStr = await response.text();
+                throw new Error(errorTextStr || "Failed to download video");
+            }
+            
+            // Get filename from Content-Disposition if available
+            let filename = 'download.mp4';
+            const disposition = response.headers.get('content-disposition');
+            if (disposition && disposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) { 
+                    filename = matches[1].replace(/['"]/g, '');
+                    // Handle URI encoded filenames
+                    try { filename = decodeURIComponent(filename); } catch(e) {}
+                }
+            }
+
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+            }, 100);
+
             downloadingState.style.display = 'none';
             btn.innerHTML = originalHtml;
             btn.style.pointerEvents = 'auto';
             btn.style.opacity = '1';
-        }, 6000);
+        } catch (err) {
+            downloadingState.style.display = 'none';
+            btn.innerHTML = originalHtml;
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+            
+            errorText.innerText = err.message || "An error occurred during download.";
+            errorState.style.display = 'block';
+            errorState.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     };
 }

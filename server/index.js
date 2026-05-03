@@ -688,7 +688,7 @@ app.use((req, res) => {
         res.status(404).json({ error: 'API endpoint not found' });
     }
 });
-app.listen(PORT, () => {
+app.listen(PORT, '127.0.0.1', () => {
     console.log(`WorldTools Backend is running on http://localhost:${PORT}`);
     if (process.send) process.send('server-ready'); // Notify Electron main process
 });

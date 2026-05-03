@@ -4087,7 +4087,7 @@ export function renderImageStudio(container) {
                         customModelId: localStorage.getItem('worldtools_custom_model') || '',
                         customApiKey: localStorage.getItem('worldtools_custom_key') || ''
                     };
-                    const res = await fetch('http://localhost:3000/api/ai/refine-prompt', {
+                    const res = await fetch('http://127.0.0.1:3000/api/ai/refine-prompt', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ prompt: currentVal, settings })
@@ -4137,7 +4137,7 @@ export function renderImageStudio(container) {
 
                     let res, data;
                     if (maskDataUrl) {
-                        res = await fetch('http://localhost:3000/api/ai/generate-fill', {
+                        res = await fetch('http://127.0.0.1:3000/api/ai/generate-fill', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
@@ -4151,7 +4151,7 @@ export function renderImageStudio(container) {
                         if (!res.ok || !data.success) throw new Error(data.message || data.error || "Failed to generate fill");
                     } else {
                         const modelVal = modalContent.querySelector('#is-ai-edit-model-select').value;
-                        res = await fetch('http://localhost:3000/api/ai/edit-image', {
+                        res = await fetch('http://127.0.0.1:3000/api/ai/edit-image', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
@@ -4265,7 +4265,7 @@ export function renderImageStudio(container) {
                             imageKey: localStorage.getItem('worldtools_image_key') || ''
                         };
                         
-                        const response = await fetch('http://localhost:3000/api/ai/generate-fill', {
+                        const response = await fetch('http://127.0.0.1:3000/api/ai/generate-fill', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ settings, prompt, image: imgBase64, mask: maskBase64 })
@@ -4501,7 +4501,7 @@ export function renderImageStudio(container) {
                     imageKey: localStorage.getItem('worldtools_image_key') || ''
                 };
                 
-                const response = await fetch('http://localhost:3000/api/ai/edit-image', {
+                const response = await fetch('http://127.0.0.1:3000/api/ai/edit-image', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ settings, image: imageDataUrl, model: 'super-resolution', prompt: 'upscale', scale_factor: scaleFactor })
@@ -4646,7 +4646,7 @@ export function renderImageStudio(container) {
                         customModelId: localStorage.getItem('worldtools_custom_model') || '',
                         customApiKey: localStorage.getItem('worldtools_custom_key') || ''
                     };
-                    const res = await fetch('http://localhost:3000/api/ai/refine-prompt', {
+                    const res = await fetch('http://127.0.0.1:3000/api/ai/refine-prompt', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ prompt: currentVal, settings })
@@ -4694,7 +4694,7 @@ export function renderImageStudio(container) {
                 try {
                     const settings = { imageKey: localStorage.getItem('worldtools_image_key') || '' };
 
-                    const res = await fetch('http://localhost:3000/api/ai/generate-image', {
+                    const res = await fetch('http://127.0.0.1:3000/api/ai/generate-image', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
@@ -4815,7 +4815,7 @@ export function renderImageStudio(container) {
                     customApiKey: localStorage.getItem('worldtools_custom_key') || ''
                 };
 
-                const res = await fetch('http://localhost:3000/api/ai/vision', {
+                const res = await fetch('http://127.0.0.1:3000/api/ai/vision', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
