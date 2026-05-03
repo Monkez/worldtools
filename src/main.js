@@ -24,6 +24,7 @@ import { renderAudioTest } from './tools/audioTest.js'
 import { renderKeyboardTest } from './tools/keyboardTest.js'
 import { renderMouseTest } from './tools/mouseTest.js'
 import { renderDeviceInfo } from './tools/deviceInfo.js'
+import { renderSerialTerminal } from './tools/serialTerminal.js'
 import { AIClient } from './utils/aiClient.js'
 
 // List of all tools
@@ -220,6 +221,14 @@ export const tools = [
         description: 'Cut and merge Audio and Video files professionally.',
         category: 'Design & Media',
         render: renderMediaEditor
+    },
+    {
+        id: 'serial-terminal',
+        name: 'Serial Terminal',
+        icon: 'bx-terminal',
+        description: 'Professional serial port monitor like Hercules.',
+        category: 'Developer Tools',
+        render: renderSerialTerminal
     }
 ];
 
@@ -229,18 +238,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const closeBtn = document.getElementById('close-sidebar');
     const openBtn = document.getElementById('open-sidebar');
+    const floatingActions = document.getElementById('floating-actions');
+    const quickDashboardBtn = document.getElementById('quick-dashboard');
     const toolList = document.getElementById('tool-list');
     const searchInput = document.getElementById('tool-search');
 
     // Toggle sidebar
     closeBtn.addEventListener('click', () => {
         sidebar.classList.add('collapsed');
-        openBtn.style.display = 'block';
+        floatingActions.style.display = 'flex';
     });
     
     openBtn.addEventListener('click', () => {
         sidebar.classList.remove('collapsed');
-        openBtn.style.display = 'none';
+        floatingActions.style.display = 'none';
+    });
+
+    quickDashboardBtn.addEventListener('click', () => {
+        loadTool('dashboard');
     });
 
     // Render tool list in sidebar

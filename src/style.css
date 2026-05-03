@@ -193,11 +193,17 @@ body {
               radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.05), transparent 400px);
 }
 
-.floating-toggle {
+.floating-actions {
   position: absolute;
   top: 12px;
   left: 12px;
   z-index: 1000;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.floating-btn {
   background: rgba(11, 15, 25, 0.8);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -467,4 +473,60 @@ select.input-field option {
     border: 1px solid rgba(255,255,255,0.05);
     padding: 16px;
     border-radius: 8px;
+}
+
+/* Dashboard Drag and Drop Styles */
+.dashboard-card {
+  position: relative;
+}
+
+.dashboard-card.draggable {
+  cursor: grab;
+}
+
+.dashboard-card.draggable:active {
+  cursor: grabbing;
+}
+
+.dashboard-card.dragging {
+  opacity: 0.4;
+}
+
+.dashboard-card.over {
+  border: 2px dashed var(--accent-color);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.action-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: var(--transition);
+  z-index: 10;
+  color: white;
+}
+
+.action-btn.remove-btn {
+  background-color: #ef4444;
+}
+.action-btn.remove-btn:hover {
+  background-color: #dc2626;
+  transform: scale(1.1);
+}
+
+.action-btn.add-btn {
+  background-color: #10b981;
+}
+.action-btn.add-btn:hover {
+  background-color: #059669;
+  transform: scale(1.1);
 }
