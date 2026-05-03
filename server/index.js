@@ -294,6 +294,17 @@ app.get('/api/yt/get-file', (req, res) => {
     });
 });
 
+app.get('/api/tools/color-picker', async (req, res) => {
+    try {
+        const { getColorHexRGB } = require('electron-color-picker');
+        const color = await getColorHexRGB();
+        res.json({ color });
+    } catch (err) {
+        console.error('Color picker error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // =====================================
 // AI LLM PROXY ENDPOINTS (GEMINI)
 // =====================================

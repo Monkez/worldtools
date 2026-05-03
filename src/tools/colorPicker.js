@@ -107,6 +107,21 @@ export function renderColorPicker(container) {
     });
 
     const triggerEyeDropper = async () => {
+        try {
+            // Attempt to use the powerful Electron native color picker if backend is available
+            const res = await fetch('http://127.0.0.1:3000/api/tools/color-picker');
+            if (res.ok) {
+                const data = await res.json();
+                if (data.color) {
+                    colorInput.value = data.color;
+                    updateColors(data.color);
+                    return; // Success using native desktop picker!
+                }
+            }
+        } catch (e) {
+            // Backend not available or endpoint failed (e.g. deployed web version), fallback to Web EyeDropper
+        }
+
         if (!window.EyeDropper) {
             alert('Your browser does not support the EyeDropper API. Try using Chrome or Edge.');
             return;
@@ -130,7 +145,7 @@ export function renderColorPicker(container) {
     }
     window.cpKeydownListener = (e) => {
         // Only trigger if we are actively viewing the color picker
-        if (document.getElementById('cp-eyedropper') && e.altKey && e.key.toLowerCase() === 'c') {
+        if (document.getElementById('cp-eyedropper') && e.altKey && e.code === 'KeyC') {
             e.preventDefault();
             triggerEyeDropper();
         }
