@@ -20,9 +20,14 @@
     "win": {
       "target": "nsis"
     },
+    "asarUnpack": [
+      "**/*.{node,exe,dll}"
+    ],
     "files": [
       "dist/**/*",
       "server/**/*",
+      "!server/outputs/*",
+      "!server/uploads/*",
       "main.cjs",
       "package.json"
     ]

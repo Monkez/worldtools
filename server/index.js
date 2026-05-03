@@ -10,15 +10,25 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const youtubedl = require('youtube-dl-exec');
 
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
+let ffmpegPath = ffmpegInstaller.path;
+if (ffmpegPath.includes('app.asar')) {
+    ffmpegPath = ffmpegPath.replace('app.asar', 'app.asar.unpacked');
+}
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
 app.use(cors());
 
-const upload = multer({ dest: 'uploads/' });
+const os = require('os');
+const isPackaged = __dirname.includes('app.asar');
+const BASE_DIR = isPackaged ? os.tmpdir() : __dirname;
+const UPLOAD_DIR = path.join(BASE_DIR, 'worldtools-uploads');
+const OUTPUT_DIR = path.join(BASE_DIR, 'worldtools-outputs');
 
-if (!fs.existsSync('uploads')) fs.mkdirSync('uploads');
-if (!fs.existsSync('outputs')) fs.mkdirSync('outputs');
+const upload = multer({ dest: UPLOAD_DIR });
+
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
 app.post('/api/convert', upload.single('file'), (req, res) => {
     if (!req.file) {
@@ -34,7 +44,7 @@ app.post('/api/convert', upload.single('file'), (req, res) => {
     const originalName = req.file.originalname;
     const baseName = path.parse(originalName).name;
     const outputFileName = `${baseName}-converted.${targetFormat}`;
-    const outputPath = path.join(__dirname, 'outputs', outputFileName);
+    const outputPath = path.join(OUTPUT_DIR, outputFileName);
 
     console.log(`Starting conversion: ${originalName} -> ${targetFormat}`);
 
@@ -67,7 +77,7 @@ app.post('/api/trim', upload.single('file'), (req, res) => {
     const ext = path.extname(originalName);
     const baseName = path.basename(originalName, ext);
     const outputFileName = `${baseName}-trimmed${ext}`;
-    const outputPath = path.join(__dirname, 'outputs', outputFileName);
+    const outputPath = path.join(OUTPUT_DIR, outputFileName);
 
     console.log(`Starting trim: ${originalName} from ${startTime} to ${endTime}`);
 
@@ -99,8 +109,8 @@ app.post('/api/merge', upload.array('files', 10), (req, res) => {
 
     const ext = path.extname(req.files[0].originalname);
     const outputFileName = `merged-media${ext}`;
-    const outputPath = path.join(__dirname, 'outputs', outputFileName);
-    const listFilePath = path.join(__dirname, 'outputs', `list-${Date.now()}.txt`);
+    const outputPath = path.join(OUTPUT_DIR, outputFileName);
+    const listFilePath = path.join(OUTPUT_DIR, `list-${Date.now()}.txt`);
 
     // Create a concat demuxer file
     // file 'path/to/file1'
@@ -151,7 +161,7 @@ app.get('/api/yt/info', async (req, res) => {
             return res.status(400).send('Invalid YouTube URL');
         }
         
-        const info = await youtubedl(url, { dumpJson: true, jsRuntimes: 'node' });
+        const info = await youtubedl(url, { dumpJson: true });
         
         // Find all available video heights
         const availableHeights = [...new Set(info.formats.map(f => f.height).filter(h => h))].sort((a,b) => b - a);
@@ -182,7 +192,7 @@ app.get('/api/yt/info', async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).send("Failed to extract video info.");
+        res.status(500).send(err.message || "Failed to extract video info.");
     }
 });
 
@@ -199,19 +209,18 @@ app.get('/api/yt/download-stream', async (req, res) => {
         }
         
         res.write(`event: progress\ndata: Fetching video information...\n\n`);
-        const info = await youtubedl(url, { dumpJson: true, jsRuntimes: 'node' });
+        const info = await youtubedl(url, { dumpJson: true });
         const safeTitle = info.title.replace(/[^\w\s\u00C0-\u1FFF\u2C00-\uD7FF.-]/g, '').trim();
         const isAudio = itag.includes('bestaudio') && !itag.includes('bestvideo');
         const ext = isAudio ? 'm4a' : 'mkv';
         const filename = `${Date.now()}.${ext}`;
-        const outputPath = path.join(__dirname, 'outputs', filename);
+        const outputPath = path.join(OUTPUT_DIR, filename);
 
         const subprocess = youtubedl.exec(url, {
             format: itag,
             output: outputPath,
             mergeOutputFormat: ext,
-            ffmpegLocation: ffmpegInstaller.path,
-            jsRuntimes: 'node'
+            ffmpegLocation: ffmpegPath
         });
         subprocess.catch(() => {}); // Prevent unhandled promise rejection crash on WinError 32
 
@@ -272,7 +281,7 @@ app.get('/api/yt/download-stream', async (req, res) => {
 app.get('/api/yt/get-file', (req, res) => {
     const { filename, title } = req.query;
     if (!filename) return res.status(400).send('Filename missing');
-    const outputPath = path.join(__dirname, 'outputs', filename);
+    const outputPath = path.join(OUTPUT_DIR, filename);
     if (!fs.existsSync(outputPath)) return res.status(404).send('File not found');
     
     res.download(outputPath, title || filename, (err) => {
