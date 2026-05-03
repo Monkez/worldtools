@@ -443,6 +443,9 @@ select.input-field option {
     border-radius: var(--border-radius-lg);
     width: 90%;
     max-width: 500px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 20px 40px rgba(0,0,0,0.4);
     animation: modal-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -470,6 +473,15 @@ select.input-field option {
 
 .modal-body {
     padding: 24px;
+    overflow-y: auto;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
 }
 
 .settings-group {

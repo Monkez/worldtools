@@ -1,4 +1,5 @@
 import { removeBackground } from '@imgly/background-removal';
+import { AIClient } from '../utils/aiClient.js';
 
 export function renderImageStudio(container) {
     window._isGetCVal = function(id) {
@@ -4005,6 +4006,8 @@ export function renderImageStudio(container) {
         }
 
         function showAiEditModal(imageDataUrl, isObj, maskDataUrl = null, targetW = 1, targetH = 1) {
+            // Capture the active object reference now — it may be deselected during async operations
+            const capturedShape = activeVectorShape;
             const modalOverlay = document.createElement('div');
             modalOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(3px);';
             
@@ -4027,15 +4030,24 @@ export function renderImageStudio(container) {
                             <button id="is-ai-edit-revert-btn" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;font-size:11px;display:none;text-decoration:underline;">Revert</button>
                         </div>
                     </div>
-                    ${!maskDataUrl ? `
                     <div style="display:flex;gap:12px;">
                         <div style="flex:1;">
-                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Image Editing API</label>
-                            <select id="is-ai-edit-model-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
-                                <option value="nano-banana-pro" selected>Google Banana Pro</option>
+                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Provider</label>
+                            <select id="is-ai-edit-provider-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
+                                <option value="pollinations" selected>Pollinations AI</option>
+                                <option value="magnific">Magnific</option>
+                                ${!maskDataUrl ? '<option value="puter">Puter AI</option>' : ''}
                             </select>
                         </div>
-                    </div>` : ''}
+                        <div style="flex:1;">
+                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Model</label>
+                            <select id="is-ai-edit-model-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
+                                <option value="gptimage" selected>GPT Image ★</option>
+                                <option value="flux">Flux ★</option>
+                                <option value="kontext">Kontext</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 <div style="padding:16px 20px;background:rgba(255,255,255,0.02);border-top:1px solid rgba(255,255,255,0.05);display:flex;justify-content:flex-end;gap:10px;">
                     <button id="is-ai-modal-edit-cancel" style="background:transparent;color:#d1d5db;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;transition:all 0.2s;">Cancel</button>
@@ -4058,6 +4070,55 @@ export function renderImageStudio(container) {
             const promptInput = modalContent.querySelector('#is-ai-edit-prompt-input');
             promptInput.focus();
             
+            const providerSelect = modalContent.querySelector('#is-ai-edit-provider-select');
+            const modelSelect = modalContent.querySelector('#is-ai-edit-model-select');
+            
+            if (providerSelect && modelSelect) {
+                const updateEditModels = async () => {
+                    const provider = providerSelect.value;
+                    modelSelect.innerHTML = '';
+                    if (provider === 'magnific') {
+                        modelSelect.innerHTML = `
+                            <option value="nano-banana-pro" selected>Google Banana Pro</option>
+                            <option value="mystic">Mystic</option>
+                            <option value="reimagine-flux">Reimagine Flux</option>
+                        `;
+                    } else if (provider === 'puter') {
+                        modelSelect.innerHTML = `
+                            <option value="gemini-2.5-flash-image-preview" selected>Gemini 2.5 Flash</option>
+                            <option value="dall-e-3">DALL-E 3</option>
+                            <option value="gpt-image-2">GPT Image 2</option>
+                            <option value="black-forest-labs/flux-schnell">Flux.1 Schnell</option>
+                            <option value="stabilityai/stable-diffusion-3-medium">Stable Diffusion 3</option>
+                        `;
+                    } else if (provider === 'pollinations') {
+                        modelSelect.innerHTML = `<option value="gptimage" selected>GPT Image (Loading...)</option>`;
+                        try {
+                            const res = await fetch('https://gen.pollinations.ai/image/models');
+                            const models = await res.json();
+                            // Edit priority: gptimage first, then flux, then other edit-capable
+                            const editFirst = ['gptimage', 'gptimage-large', 'gpt-image-2', 'flux', 'kontext', 'seedream', 'seedream-pro', 'seedream5', 'nanobanana', 'nanobanana-pro', 'nanobanana-2', 'klein'];
+                            const allNames = models.map(m => m.name || m);
+                            const top = editFirst.filter(n => allNames.includes(n));
+                            const rest = allNames.filter(n => !editFirst.includes(n));
+                            const ordered = [...top, ...rest];
+                            modelSelect.innerHTML = ordered.map(n => `<option value="${n}"${n === 'gptimage' ? ' selected' : ''}>${n}${editFirst.includes(n) ? ' ★' : ''}</option>`).join('');
+                        } catch(e) {
+                            modelSelect.innerHTML = `
+                                <option value="gptimage" selected>GPT Image</option>
+                                <option value="flux">Flux</option>
+                                <option value="kontext">Kontext</option>
+                                <option value="seedream">Seedream</option>
+                                <option value="nanobanana">Nanobanana</option>
+                                <option value="klein">Klein</option>
+                            `;
+                        }
+                    }
+                };
+                providerSelect.addEventListener('change', updateEditModels);
+                updateEditModels(); // Load models for default provider
+            }
+            
             const refineBtn = modalContent.querySelector('#is-ai-edit-refine-btn');
             const revertBtn = modalContent.querySelector('#is-ai-edit-revert-btn');
             let originalPrompt = '';
@@ -4075,13 +4136,7 @@ export function renderImageStudio(container) {
                 refineBtn.style.opacity = '0.5';
                 
                 try {
-                    const settings = {
-                        provider: localStorage.getItem('worldtools_ai_provider') || 'gemini',
-                        geminiKey: localStorage.getItem('worldtools_gemini_key') || '',
-                        customBaseUrl: localStorage.getItem('worldtools_custom_url') || '',
-                        customModelId: localStorage.getItem('worldtools_custom_model') || '',
-                        customApiKey: localStorage.getItem('worldtools_custom_key') || ''
-                    };
+                    const settings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini' };
                     const res = await fetch('http://127.0.0.1:3000/api/ai/refine-prompt', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -4127,11 +4182,14 @@ export function renderImageStudio(container) {
                     const baseSettings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini', geminiKey: '' };
                     const settings = {
                         ...baseSettings,
-                        imageKey: localStorage.getItem('worldtools_image_key') || ''
+                        imageKey: localStorage.getItem('worldtools_image_key') || '',
+                        pollinationsApiKey: localStorage.getItem('worldtools_pollinations_key') || ''
                     };
 
                     let res, data;
                     if (maskDataUrl) {
+                        const fillProviderVal = modalContent.querySelector('#is-ai-edit-provider-select').value;
+                        const fillModelVal = modalContent.querySelector('#is-ai-edit-model-select').value;
                         res = await fetch('http://127.0.0.1:3000/api/ai/generate-fill', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -4140,6 +4198,8 @@ export function renderImageStudio(container) {
                                 image: imageDataUrl,
                                 mask: maskDataUrl,
                                 settings,
+                                provider: fillProviderVal,
+                                model: fillModelVal,
                                 targetW: targetW,
                                 targetH: targetH
                             })
@@ -4148,12 +4208,14 @@ export function renderImageStudio(container) {
                         if (!res.ok || !data.success) throw new Error(data.message || data.error || "Failed to generate fill");
                     } else {
                         const modelVal = modalContent.querySelector('#is-ai-edit-model-select').value;
+                        const providerVal = modalContent.querySelector('#is-ai-edit-provider-select').value;
                         res = await fetch('http://127.0.0.1:3000/api/ai/edit-image', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
                                 prompt: promptVal, 
                                 model: modelVal, 
+                                provider: providerVal,
                                 image: imageDataUrl,
                                 settings,
                                 targetW: targetW,
@@ -4169,14 +4231,10 @@ export function renderImageStudio(container) {
                     newImg.onload = () => {
                         closeModal();
                         
-                        if (isObj && activeVectorShape) {
-                            if (maskDataUrl) {
-                                activeVectorShape.img = newImg;
-                                saveState(); drawSelectionOverlay();
-                            } else {
-                                activeVectorShape.img = newImg;
-                                saveState(); drawSelectionOverlay();
-                            }
+                        if (isObj && capturedShape) {
+                            capturedShape.img = newImg;
+                            activeVectorShape = capturedShape;
+                            saveState(); drawSelectionOverlay();
                         } else {
                             if (!maskDataUrl) {
                                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -4261,7 +4319,8 @@ export function renderImageStudio(container) {
                         const baseSettings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini', geminiKey: '' };
                         const settings = {
                             ...baseSettings,
-                            imageKey: localStorage.getItem('worldtools_image_key') || ''
+                            imageKey: localStorage.getItem('worldtools_image_key') || '',
+                            pollinationsApiKey: localStorage.getItem('worldtools_pollinations_key') || ''
                         };
                         
                         const response = await fetch('http://127.0.0.1:3000/api/ai/generate-fill', {
@@ -4497,7 +4556,8 @@ export function renderImageStudio(container) {
                 const baseSettings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini', geminiKey: '' };
                 const settings = {
                     ...baseSettings,
-                    imageKey: localStorage.getItem('worldtools_image_key') || ''
+                    imageKey: localStorage.getItem('worldtools_image_key') || '',
+                    pollinationsApiKey: localStorage.getItem('worldtools_pollinations_key') || ''
                 };
                 
                 const response = await fetch('http://127.0.0.1:3000/api/ai/edit-image', {
@@ -4574,15 +4634,25 @@ export function renderImageStudio(container) {
                             <button id="is-ai-create-revert-btn" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;font-size:11px;display:none;text-decoration:underline;">Revert</button>
                         </div>
                     </div>
-                    <div style="display:flex;gap:12px;">
+                    <div style="display:flex; gap:12px; margin-bottom: 12px;">
+                        <div style="flex:1;">
+                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Provider</label>
+                            <select id="is-ai-create-provider-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
+                                <option value="pollinations" selected>Pollinations AI</option>
+                                <option value="magnific">Magnific</option>
+                                <option value="puter">Puter AI</option>
+                            </select>
+                        </div>
                         <div style="flex:1;">
                             <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Model</label>
                             <select id="is-ai-create-model-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
-                                <option value="mystic" selected>Mystic</option>
-                                <option value="reimagine-flux">Reimagine Flux</option>
-                                <option value="nano-banana-pro">Google Banana Pro</option>
+                                <option value="flux" selected>Flux ★</option>
+                                <option value="gptimage">GPT Image ★</option>
+                                <option value="kontext">Kontext</option>
                             </select>
                         </div>
+                    </div>
+                    <div style="display:flex;gap:12px;">
                         <div style="flex:1;">
                             <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Aspect Ratio</label>
                             <select id="is-ai-create-ratio" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
@@ -4591,6 +4661,7 @@ export function renderImageStudio(container) {
                                 <option value="social_story_9_16">9:16 (Portrait)</option>
                                 <option value="classic_4_3">4:3</option>
                                 <option value="traditional_3_4">3:4</option>
+                                <option value="custom">Custom Size</option>
                             </select>
                         </div>
                         <div style="flex:1;">
@@ -4601,6 +4672,16 @@ export function renderImageStudio(container) {
                                 <option value="large">Large (75%)</option>
                                 <option value="full">100% (Full Size)</option>
                             </select>
+                        </div>
+                    </div>
+                    <div style="display:none; gap:12px; margin-top: 12px;" id="is-ai-create-custom-size-group">
+                        <div style="flex:1;">
+                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Custom Width (px)</label>
+                            <input type="number" id="is-ai-create-custom-w" placeholder="e.g. 1024" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Custom Height (px)</label>
+                            <input type="number" id="is-ai-create-custom-h" placeholder="e.g. 1024" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
                         </div>
                     </div>
                 </div>
@@ -4618,6 +4699,62 @@ export function renderImageStudio(container) {
             modalContent.querySelector('#is-ai-modal-create-close').addEventListener('click', closeModal);
             modalContent.querySelector('#is-ai-modal-create-cancel').addEventListener('click', closeModal);
             modalOverlay.addEventListener('click', (ev) => { if(ev.target === modalOverlay) closeModal(); });
+            
+            const providerSelect = modalContent.querySelector('#is-ai-create-provider-select');
+            const modelSelect = modalContent.querySelector('#is-ai-create-model-select');
+            
+            const updateModels = async () => {
+                const provider = providerSelect.value;
+                modelSelect.innerHTML = '';
+                if (provider === 'magnific') {
+                    modelSelect.innerHTML = `
+                        <option value="nano-banana-pro" selected>Google Banana Pro</option>
+                        <option value="mystic">Mystic</option>
+                        <option value="reimagine-flux">Reimagine Flux</option>
+                    `;
+                } else if (provider === 'puter') {
+                    modelSelect.innerHTML = `
+                        <option value="gemini-2.5-flash-image-preview" selected>Gemini 2.5 Flash</option>
+                        <option value="dall-e-3">DALL-E 3</option>
+                        <option value="gpt-image-2">GPT Image 2</option>
+                        <option value="black-forest-labs/flux-schnell">Flux.1 Schnell</option>
+                        <option value="stabilityai/stable-diffusion-3-medium">Stable Diffusion 3</option>
+                    `;
+                } else if (provider === 'pollinations') {
+                    // Create mode: flux first, then gptimage, then others
+                    modelSelect.innerHTML = `<option value="flux" selected>Flux (Loading models...)</option>`;
+                    try {
+                        const res = await fetch('https://gen.pollinations.ai/image/models');
+                        const models = await res.json();
+                        const createFirst = ['flux', 'gptimage', 'gptimage-large', 'gpt-image-2', 'kontext', 'seedream', 'seedream-pro', 'seedream5', 'nanobanana', 'nanobanana-pro', 'nanobanana-2', 'klein', 'zimage'];
+                        const allNames = models.map(m => m.name || m);
+                        const top = createFirst.filter(n => allNames.includes(n));
+                        const rest = allNames.filter(n => !createFirst.includes(n));
+                        const ordered = [...top, ...rest];
+                        modelSelect.innerHTML = ordered.map(n => `<option value="${n}"${n === 'flux' ? ' selected' : ''}>${n}${createFirst.includes(n) ? ' ★' : ''}</option>`).join('');
+                    } catch(e) {
+                        modelSelect.innerHTML = `
+                            <option value="flux" selected>Flux ★</option>
+                            <option value="gptimage">GPT Image ★</option>
+                            <option value="kontext">Kontext</option>
+                            <option value="seedream">Seedream</option>
+                        `;
+                    }
+                }
+            };
+            
+            providerSelect.addEventListener('change', updateModels);
+            updateModels(); // Load models for default provider
+            
+            const ratioSelect = modalContent.querySelector('#is-ai-create-ratio');
+            const customSizeGroup = modalContent.querySelector('#is-ai-create-custom-size-group');
+            ratioSelect.addEventListener('change', () => {
+                if (ratioSelect.value === 'custom') {
+                    customSizeGroup.style.display = 'flex';
+                } else {
+                    customSizeGroup.style.display = 'none';
+                }
+            });
             
             const promptInput = modalContent.querySelector('#is-ai-create-prompt-input');
             promptInput.focus();
@@ -4639,13 +4776,7 @@ export function renderImageStudio(container) {
                 refineBtn.style.opacity = '0.5';
                 
                 try {
-                    const settings = {
-                        provider: localStorage.getItem('worldtools_ai_provider') || 'gemini',
-                        geminiKey: localStorage.getItem('worldtools_gemini_key') || '',
-                        customBaseUrl: localStorage.getItem('worldtools_custom_url') || '',
-                        customModelId: localStorage.getItem('worldtools_custom_model') || '',
-                        customApiKey: localStorage.getItem('worldtools_custom_key') || ''
-                    };
+                    const settings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini' };
                     const res = await fetch('http://127.0.0.1:3000/api/ai/refine-prompt', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -4677,6 +4808,7 @@ export function renderImageStudio(container) {
                     return;
                 }
                 
+                const providerVal = modalContent.querySelector('#is-ai-create-provider-select').value;
                 const modelVal = modalContent.querySelector('#is-ai-create-model-select').value;
                 const ratioVal = modalContent.querySelector('#is-ai-create-ratio').value;
                 const sizeVal = modalContent.querySelector('#is-ai-create-size').value;
@@ -4692,21 +4824,64 @@ export function renderImageStudio(container) {
                 modalContent.querySelector('.bx-loader-alt').parentElement.parentElement.appendChild(loadingMsg);
                 
                 try {
-                    const settings = { imageKey: localStorage.getItem('worldtools_image_key') || '' };
-
-                    const res = await fetch('http://127.0.0.1:3000/api/ai/generate-image', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            prompt: promptVal, 
-                            model: modelVal, 
-                            aspect_ratio: ratioVal,
-                            settings 
-                        })
-                    });
+                    let finalImageUrl = null;
                     
-                    const data = await res.json();
-                    if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to generate image");
+                    if (providerVal === 'puter') {
+                        if (typeof puter === 'undefined') throw new Error("Puter.js SDK is not loaded.");
+                        const apiOptions = { model: modelVal };
+                        if (ratioVal === "square_1_1") { apiOptions.width = 1024; apiOptions.height = 1024; }
+                        else if (ratioVal === "widescreen_16_9") { apiOptions.width = 1024; apiOptions.height = 576; }
+                        else if (ratioVal === "social_story_9_16") { apiOptions.width = 576; apiOptions.height = 1024; }
+                        else if (ratioVal === "classic_4_3") { apiOptions.width = 1024; apiOptions.height = 768; }
+                        else if (ratioVal === "traditional_3_4") { apiOptions.width = 768; apiOptions.height = 1024; }
+                        else if (ratioVal === "custom") {
+                            const cw = parseInt(modalContent.querySelector('#is-ai-create-custom-w').value);
+                            const ch = parseInt(modalContent.querySelector('#is-ai-create-custom-h').value);
+                            if (cw && ch) {
+                                apiOptions.width = cw;
+                                apiOptions.height = ch;
+                            }
+                        }
+                        
+                        const resultImg = await puter.ai.txt2img(promptVal, apiOptions);
+                        if (resultImg instanceof HTMLImageElement) finalImageUrl = resultImg.src;
+                        else if (typeof resultImg === 'string') finalImageUrl = resultImg;
+                        else if (resultImg.url) finalImageUrl = resultImg.url;
+                        else finalImageUrl = URL.createObjectURL(new Blob([resultImg]));
+                    } else {
+                        const settings = { 
+                            imageKey: localStorage.getItem('worldtools_image_key') || '',
+                            pollinationsApiKey: localStorage.getItem('worldtools_pollinations_key') || ''
+                        };
+    
+                        const reqBody = { 
+                            prompt: promptVal, 
+                            model: modelVal,
+                            provider: providerVal,
+                            settings 
+                        };
+
+                        if (ratioVal === "custom") {
+                            const cw = parseInt(modalContent.querySelector('#is-ai-create-custom-w').value);
+                            const ch = parseInt(modalContent.querySelector('#is-ai-create-custom-h').value);
+                            if (cw && ch) {
+                                reqBody.width = cw;
+                                reqBody.height = ch;
+                            }
+                        } else {
+                            reqBody.aspect_ratio = ratioVal;
+                        }
+
+                        const res = await fetch('http://127.0.0.1:3000/api/ai/generate-image', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(reqBody)
+                        });
+                        
+                        const data = await res.json();
+                        if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to generate image");
+                        finalImageUrl = data.imageUrl || data.imageBase64;
+                    }
 
                     const newImg = new Image();
                     newImg.crossOrigin = 'anonymous';
@@ -4760,7 +4935,7 @@ export function renderImageStudio(container) {
                         closeModal();
                         alert("Failed to load generated image.");
                     };
-                    newImg.src = data.imageUrl || data.imageBase64;
+                    newImg.src = finalImageUrl;
                     
                 } catch (err) {
                     console.error(err);
@@ -4807,31 +4982,46 @@ export function renderImageStudio(container) {
             try {
                 const reqPrompt = "Hãy phân tích chi tiết bức ảnh này theo các mục sau:\n1. **Nội dung chính**: Bức ảnh chứa những gì?\n2. **Style & Màu sắc**: Phong cách nghệ thuật, ánh sáng, tone màu chủ đạo?\n3. **Prompt gợi ý**: Đề xuất 1 prompt tiếng Anh chi tiết để tạo ra bức ảnh có phong cách và nội dung tương tự.";
                 
-                const settings = {
-                    provider: localStorage.getItem('worldtools_ai_provider') || 'gemini',
-                    geminiKey: localStorage.getItem('worldtools_gemini_key') || '',
-                    customBaseUrl: localStorage.getItem('worldtools_custom_url') || '',
-                    customModelId: localStorage.getItem('worldtools_custom_model') || '',
-                    customApiKey: localStorage.getItem('worldtools_custom_key') || ''
-                };
+                const settings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini' };
 
-                const res = await fetch('http://127.0.0.1:3000/api/ai/vision', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        imageBase64: imageDataUrl,
-                        prompt: reqPrompt,
-                        settings: settings
-                    })
-                });
-                
-                const data = await res.json();
-                if (data.error) throw new Error(data.error);
+                let analysisResult = "";
+
+                if (settings.provider === 'puter') {
+                    if (typeof puter === 'undefined') throw new Error("Puter.js SDK is not loaded.");
+                    
+                    if (typeof puter.ai.img2txt === 'function') {
+                        // Some APIs take (image, prompt) or just (image)
+                        analysisResult = await puter.ai.img2txt(imageDataUrl, reqPrompt);
+                    } else if (typeof puter.ai.chat === 'function') {
+                        // Fallback to chat if img2txt is not available
+                        analysisResult = await puter.ai.chat(reqPrompt, imageDataUrl);
+                    } else {
+                        throw new Error("Puter API does not support vision analysis currently.");
+                    }
+                    
+                    if (typeof analysisResult === 'object') {
+                        analysisResult = analysisResult.message || analysisResult.text || JSON.stringify(analysisResult);
+                    }
+                } else {
+                    const res = await fetch('http://127.0.0.1:3000/api/ai/vision', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            imageBase64: imageDataUrl,
+                            prompt: reqPrompt,
+                            settings: settings
+                        })
+                    });
+                    
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.error);
+                    analysisResult = data.result;
+                }
 
                 // Update the loading item with actual result
                 const itemIdx = window.aiAnalysisHistory.findIndex(i => i.id === loadingId);
                 if (itemIdx !== -1) {
-                    window.aiAnalysisHistory[itemIdx].result = data.result;
+                    window.aiAnalysisHistory[itemIdx].result = analysisResult;
                 }
                 showAiAnalysisPopup(loadingId);
 
@@ -5240,3 +5430,4 @@ export function renderImageStudio(container) {
         }
     });
 }
+

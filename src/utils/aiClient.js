@@ -3,20 +3,24 @@ export class AIClient {
         return {
             provider: localStorage.getItem('worldtools_ai_provider') || 'gemini',
             geminiKey: localStorage.getItem('worldtools_gemini_key') || '',
+            geminiModelId: localStorage.getItem('worldtools_gemini_model') || 'gemini-1.5-flash',
             customBaseUrl: localStorage.getItem('worldtools_custom_url') || '',
             customModelId: localStorage.getItem('worldtools_custom_model') || '',
             customApiKey: localStorage.getItem('worldtools_custom_key') || '',
-            imageKey: localStorage.getItem('worldtools_image_key') || ''
+            imageKey: localStorage.getItem('worldtools_image_key') || '',
+            pollinationsApiKey: localStorage.getItem('worldtools_pollinations_key') || ''
         };
     }
 
     static setSettings(settings) {
         localStorage.setItem('worldtools_ai_provider', settings.provider);
         localStorage.setItem('worldtools_gemini_key', settings.geminiKey);
+        if (settings.geminiModelId) localStorage.setItem('worldtools_gemini_model', settings.geminiModelId);
         localStorage.setItem('worldtools_custom_url', settings.customBaseUrl);
         localStorage.setItem('worldtools_custom_model', settings.customModelId);
         localStorage.setItem('worldtools_custom_key', settings.customApiKey);
         if (settings.imageKey !== undefined) localStorage.setItem('worldtools_image_key', settings.imageKey);
+        if (settings.pollinationsApiKey !== undefined) localStorage.setItem('worldtools_pollinations_key', settings.pollinationsApiKey);
     }
 
     static async testConnection(settings) {
@@ -41,6 +45,19 @@ export class AIClient {
         const data = await response.json();
         if (!response.ok || !data.success) {
             throw new Error(data.message || 'Image Connection failed');
+        }
+        return true;
+    }
+
+    static async testPollinationsConnection(settings) {
+        const response = await fetch('http://127.0.0.1:3000/api/ai/test-pollinations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || data.error || 'Pollinations Connection failed');
         }
         return true;
     }

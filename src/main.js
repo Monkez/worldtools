@@ -333,40 +333,104 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsCustom = document.getElementById('settings-custom');
     
     const geminiKeyInput = document.getElementById('gemini-key-input');
+    const geminiModelId = document.getElementById('gemini-model-id');
     const customBaseUrl = document.getElementById('custom-base-url');
     const customModelId = document.getElementById('custom-model-id');
     const customApiKey = document.getElementById('custom-api-key');
     const imageKeyInput = document.getElementById('image-api-key-input');
+    const pollinationsApiKey = document.getElementById('pollinations-api-key');
+    
+    const fetchModelsBtn = document.getElementById('fetch-models-btn');
     const testImageConnectionBtn = document.getElementById('test-image-connection-btn');
     const testImageConnectionRes = document.getElementById('test-image-connection-res');
 
     aiProvider.addEventListener('change', () => {
+        settingsGemini.style.display = 'none';
+        settingsCustom.style.display = 'none';
         if (aiProvider.value === 'gemini') {
-            settingsGemini.style.display = 'block';
-            settingsCustom.style.display = 'none';
-        } else {
-            settingsGemini.style.display = 'none';
-            settingsCustom.style.display = 'block';
+            settingsGemini.style.display = 'flex';
+        } else if (aiProvider.value === 'custom') {
+            settingsCustom.style.display = 'flex';
         }
     });
 
-    btnSettings.addEventListener('click', () => {
+    const loadSettings = () => {
         const settings = AIClient.getSettings();
         aiProvider.value = settings.provider;
-        geminiKeyInput.value = settings.geminiKey;
-        customBaseUrl.value = settings.customBaseUrl;
-        customModelId.value = settings.customModelId;
-        customApiKey.value = settings.customApiKey;
+        geminiKeyInput.value = settings.geminiKey || '';
+        if (geminiModelId) {
+            if (settings.geminiModelId && !Array.from(geminiModelId.options).some(o => o.value === settings.geminiModelId)) {
+                geminiModelId.add(new Option(settings.geminiModelId, settings.geminiModelId));
+            }
+            geminiModelId.value = settings.geminiModelId || 'gemini-1.5-flash';
+        }
+        customBaseUrl.value = settings.customBaseUrl || '';
+        if (customModelId) {
+            if (settings.customModelId && !Array.from(customModelId.options).some(o => o.value === settings.customModelId)) {
+                customModelId.add(new Option(settings.customModelId, settings.customModelId));
+            }
+            customModelId.value = settings.customModelId || '';
+        }
+        customApiKey.value = settings.customApiKey || '';
         imageKeyInput.value = settings.imageKey || '';
-        
+        if (pollinationsApiKey) pollinationsApiKey.value = settings.pollinationsApiKey || '';
         aiProvider.dispatchEvent(new Event('change'));
-        settingsModal.style.display = 'flex';
-        testConnectionRes.style.display = 'none';
-    });
+    };
 
-    closeSettings.addEventListener('click', () => {
-        settingsModal.style.display = 'none';
+    btnSettings.addEventListener('click', () => {
+        loadSettings();
+        settingsModal.style.display = 'flex';
     });
+    
+    if (fetchModelsBtn) {
+        fetchModelsBtn.addEventListener('click', async () => {
+            const provider = aiProvider.value;
+            fetchModelsBtn.disabled = true;
+            fetchModelsBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Fetching...";
+
+            try {
+                if (provider === 'gemini') {
+                    const key = geminiKeyInput.value.trim();
+                    if (!key) throw new Error("Please enter your Gemini API Key first.");
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error?.message || "Invalid API Key or network error.");
+                    
+                    const textModels = data.models.filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"));
+                    const modelSelect = document.getElementById('gemini-model-id');
+                    modelSelect.innerHTML = textModels.map(m => `<option value="${m.name.replace('models/', '')}">${m.displayName}</option>`).join('');
+                    
+                    alert(`Loaded ${textModels.length} text models. Click the dropdown arrow in the model input to see them!`);
+                } else if (provider === 'custom') {
+                    const baseUrl = customBaseUrl.value.trim();
+                    const key = customApiKey.value.trim();
+                    if (!baseUrl) throw new Error("Please enter the Custom Base URL first.");
+                    
+                    const response = await fetch(`${baseUrl}/models`, {
+                        method: 'GET',
+                        headers: key ? { 'Authorization': `Bearer ${key}` } : {}
+                    });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error?.message || "Failed to fetch models.");
+                    
+                    const models = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+                    if (models.length === 0) throw new Error("No models returned from API.");
+                    
+                    const modelSelect = document.getElementById('custom-model-id');
+                    modelSelect.innerHTML = models.map(m => `<option value="${m.id}">${m.id}</option>`).join('');
+                    
+                    alert(`Loaded ${models.length} models. Click the dropdown arrow in the model input to see them!`);
+                } else {
+                    alert("Fetch models not supported for " + provider);
+                }
+            } catch (err) {
+                alert(`Error fetching models:\n${err.message}`);
+            } finally {
+                fetchModelsBtn.disabled = false;
+                fetchModelsBtn.innerHTML = "<i class='bx bx-cloud-download'></i> Fetch Models";
+            }
+        });
+    }
 
     testConnectionBtn.addEventListener('click', async () => {
         testConnectionRes.style.display = 'none';
@@ -376,9 +440,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentSettings = {
             provider: aiProvider.value,
             geminiKey: geminiKeyInput.value,
+            geminiModelId: geminiModelId ? geminiModelId.value : '',
             customBaseUrl: customBaseUrl.value,
             customModelId: customModelId.value,
-            customApiKey: customApiKey.value
+            customApiKey: customApiKey.value,
+            pollinationsApiKey: pollinationsApiKey ? pollinationsApiKey.value : ''
         };
 
         try {
@@ -426,14 +492,49 @@ document.addEventListener('DOMContentLoaded', () => {
         testImageConnectionBtn.disabled = false;
     });
 
+    const testPollinationsConnectionBtn = document.getElementById('test-pollinations-connection-btn');
+    const testPollinationsConnectionRes = document.getElementById('test-pollinations-connection-res');
+
+    if (testPollinationsConnectionBtn) {
+        testPollinationsConnectionBtn.addEventListener('click', async () => {
+            testPollinationsConnectionRes.style.display = 'none';
+            testPollinationsConnectionBtn.innerHTML = "<i class='bx bx-loader-alt bx-spin'></i> Testing...";
+            testPollinationsConnectionBtn.disabled = true;
+
+            const currentSettings = {
+                pollinationsApiKey: document.getElementById('pollinations-api-key').value
+            };
+
+            try {
+                await AIClient.testPollinationsConnection(currentSettings);
+                testPollinationsConnectionRes.innerHTML = "<i class='bx bx-check'></i> OK";
+                testPollinationsConnectionRes.style.color = '#10b981';
+            } catch (err) {
+                testPollinationsConnectionRes.innerHTML = `<i class='bx bx-error'></i> Failed`;
+                testPollinationsConnectionRes.style.color = '#ef4444';
+                testPollinationsConnectionRes.title = err.message;
+                alert(`Pollinations API Test Failed:\n${err.message}`);
+            }
+            
+            testPollinationsConnectionRes.style.display = 'inline-flex';
+            testPollinationsConnectionRes.style.alignItems = 'center';
+            testPollinationsConnectionRes.style.gap = '4px';
+            testPollinationsConnectionBtn.innerHTML = "<i class='bx bx-check-shield'></i> Test Connection";
+            testPollinationsConnectionBtn.disabled = false;
+        });
+    }
+
+
     saveSettings.addEventListener('click', () => {
         AIClient.setSettings({
             provider: aiProvider.value,
             geminiKey: geminiKeyInput.value,
+            geminiModelId: document.getElementById('gemini-model-id') ? document.getElementById('gemini-model-id').value : '',
             customBaseUrl: customBaseUrl.value,
             customModelId: customModelId.value,
             customApiKey: customApiKey.value,
-            imageKey: imageKeyInput.value
+            imageKey: imageKeyInput.value,
+            pollinationsApiKey: pollinationsApiKey ? pollinationsApiKey.value : ''
         });
         
         // Visual feedback

@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Nunito:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Quicksand:wght@300;400;500;600;700&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Dancing+Script:wght@400;500;600;700&family=Pacifico&family=Lobster&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400;0,700;1,400&family=Source+Code+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <script src="https://js.puter.com/v2/"></script>
     <title>WorldTools - Premium Tools Collection</title>
   </head>
   <body>
@@ -60,16 +61,25 @@
                         <label style="margin-bottom: 4px; font-size: 12px;">AI Provider</label>
                         <select id="ai-provider" class="input-field" style="padding: 8px 12px; font-size: 14px;">
                             <option value="gemini">Google Gemini</option>
+                            <option value="puter">Puter AI</option>
                             <option value="custom">Custom (OpenAI Compatible)</option>
                         </select>
                     </div>
 
                     <!-- Gemini Settings -->
-                    <div id="settings-gemini">
+                    <div id="settings-gemini" style="display: flex; flex-direction: column; gap: 12px;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label style="margin-bottom: 4px; font-size: 12px;">Google Gemini API Key</label>
                             <input type="password" id="gemini-key-input" class="input-field" placeholder="AIzaSy..." style="padding: 8px 12px; font-size: 14px;" autocomplete="new-password" data-lpignore="true">
                             <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">Leave blank to use the server's default key.</div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="margin-bottom: 4px; font-size: 12px;">Gemini Model</label>
+                            <select id="gemini-model-id" class="input-field" style="padding: 8px 12px; font-size: 14px;">
+                                <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                                <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                                <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+                            </select>
                         </div>
                     </div>
 
@@ -82,7 +92,9 @@
                             </div>
                             <div class="form-group" style="flex: 1; margin-bottom: 0;">
                                 <label style="margin-bottom: 4px; font-size: 12px;">Model ID</label>
-                                <input type="text" id="custom-model-id" class="input-field" placeholder="llama3" style="padding: 8px 12px; font-size: 14px;">
+                                <select id="custom-model-id" class="input-field" style="padding: 8px 12px; font-size: 14px;">
+                                    <option value="llama3">llama3</option>
+                                </select>
                             </div>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
@@ -92,6 +104,7 @@
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
                         <button id="test-connection-btn" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;"><i class='bx bx-wifi'></i> Test Connection</button>
+                        <button id="fetch-models-btn" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;"><i class='bx bx-cloud-download'></i> Fetch Models</button>
                         <span id="test-connection-res" style="font-size: 11px; font-weight: 600; display: none;"></span>
                     </div>
                 </div>
@@ -108,6 +121,21 @@
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <button id="test-image-connection-btn" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;"><i class='bx bx-image-alt'></i> Test Connection</button>
                         <span id="test-image-connection-res" style="font-size: 11px; font-weight: 600; display: none;"></span>
+                    </div>
+                </div>
+
+                <div class="settings-group" style="margin-top: 20px;">
+                    <h3 style="display: flex; align-items: center; gap: 8px; margin-top:0; margin-bottom: 8px; font-size: 16px;"><i class='bx bx-paint-roll' style="color: #a6e3a1;"></i> Pollinations AI</h3>
+                    <p style="color: var(--text-secondary); font-size: 12px; margin-bottom: 16px; line-height: 1.4;">Configure API Key for Pollinations AI (Used for Image Editing).</p>
+                    
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label style="margin-bottom: 4px; font-size: 12px;">Pollinations API Key (Optional)</label>
+                        <input type="password" id="pollinations-api-key" class="input-field" placeholder="sk_... or pk_..." style="padding: 8px 12px; font-size: 14px;" autocomplete="new-password" data-lpignore="true">
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button id="test-pollinations-connection-btn" class="btn-secondary" style="padding: 6px 12px; font-size: 12px;"><i class='bx bx-check-shield'></i> Test Connection</button>
+                        <span id="test-pollinations-connection-res" style="font-size: 11px; font-weight: 600; display: none;"></span>
                     </div>
                 </div>
             </div>
