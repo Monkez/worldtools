@@ -4004,7 +4004,7 @@ export function renderImageStudio(container) {
             drawSelectionOverlay();
         }
 
-        function showAiEditModal(imageDataUrl, isObj, maskDataUrl = null) {
+        function showAiEditModal(imageDataUrl, isObj, maskDataUrl = null, targetW = 1, targetH = 1) {
             const modalOverlay = document.createElement('div');
             modalOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;justify-content:center;align-items:center;backdrop-filter:blur(3px);';
             
@@ -4032,15 +4032,7 @@ export function renderImageStudio(container) {
                         <div style="flex:1;">
                             <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Image Editing API</label>
                             <select id="is-ai-edit-model-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
-                                <option value="mystic" selected>Mystic (Default Edit)</option>
-                                <option value="upscaler">Upscaler - Magnific API</option>
-                                <option value="relight">Relight - Magnific API</option>
-                                <option value="style-transfer">Style Transfer - Magnific API</option>
-                                <option value="remove-background">Remove Background</option>
-                                <option value="reimagine-flux">Reimagine Flux</option>
-                                <option value="image-expand">Image Expand API</option>
-                                <option value="skin-enhancer">Skin Enhancer API</option>
-                                <option value="change-camera">Change Camera</option>
+                                <option value="nano-banana-pro" selected>Google Banana Pro</option>
                             </select>
                         </div>
                     </div>` : ''}
@@ -4147,7 +4139,9 @@ export function renderImageStudio(container) {
                                 prompt: promptVal, 
                                 image: imageDataUrl,
                                 mask: maskDataUrl,
-                                settings 
+                                settings,
+                                targetW: targetW,
+                                targetH: targetH
                             })
                         });
                         data = await res.json();
@@ -4161,7 +4155,9 @@ export function renderImageStudio(container) {
                                 prompt: promptVal, 
                                 model: modelVal, 
                                 image: imageDataUrl,
-                                settings 
+                                settings,
+                                targetW: targetW,
+                                targetH: targetH
                             })
                         });
                         data = await res.json();
@@ -4391,7 +4387,7 @@ export function renderImageStudio(container) {
             }
             
             const maskDataUrl = maskCanvas.toDataURL('image/png');
-            showAiEditModal(imageDataUrl, isObj, maskDataUrl);
+            showAiEditModal(imageDataUrl, isObj, maskDataUrl, targetW, targetH);
         }
 
         // Action 1: Prompt AI
@@ -4428,7 +4424,7 @@ export function renderImageStudio(container) {
                 imageDataUrl = tempC.toDataURL('image/jpeg', 0.9);
             }
             
-            showAiEditModal(imageDataUrl, isObj, null);
+            showAiEditModal(imageDataUrl, isObj, null, targetW, targetH);
         });
 
         // Action 2: Select Area to Prompt
@@ -4584,6 +4580,7 @@ export function renderImageStudio(container) {
                             <select id="is-ai-create-model-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
                                 <option value="mystic" selected>Mystic</option>
                                 <option value="reimagine-flux">Reimagine Flux</option>
+                                <option value="nano-banana-pro">Google Banana Pro</option>
                             </select>
                         </div>
                         <div style="flex:1;">

@@ -547,6 +547,17 @@ app.post('/api/ai/generate-image', express.json(), async (req, res) => {
         if (model !== 'mystic') {
             apiUrl = `https://api.magnific.com/v1/ai/text-to-image/${model}`;
             bodyPayload = { prompt, aspect_ratio }; // Other models might not support resolution
+            
+            // Map aspect ratio for text-to-image models
+            if (aspect_ratio === "square_1_1") bodyPayload.aspect_ratio = "1:1";
+            else if (aspect_ratio === "widescreen_16_9") bodyPayload.aspect_ratio = "16:9";
+            else if (aspect_ratio === "social_story_9_16") bodyPayload.aspect_ratio = "9:16";
+            else if (aspect_ratio === "classic_4_3") bodyPayload.aspect_ratio = "4:3";
+            else if (aspect_ratio === "traditional_3_4") bodyPayload.aspect_ratio = "3:4";
+
+            if (model === 'nano-banana-pro') {
+                bodyPayload.resolution = (resolution || "2K").toUpperCase(); // Default from curl example
+            }
         } else {
             // For mystic, we can keep the default fluid model
             bodyPayload.model = "fluid";
@@ -592,7 +603,7 @@ app.post('/api/ai/generate-image', express.json(), async (req, res) => {
 
 app.post('/api/ai/edit-image', express.json({ limit: '50mb' }), async (req, res) => {
     try {
-        const { settings, prompt, image, model = "mystic", resolution = "1k" } = req.body;
+        const { settings, prompt, image, model = "mystic", resolution = "1k", targetW = 1, targetH = 1 } = req.body;
         const key = settings && settings.imageKey;
         if (!key) return res.status(400).json({ error: "Magnific API Key is missing. Please configure it in Settings." });
         if (!prompt) return res.status(400).json({ error: "Prompt is required." });
@@ -605,60 +616,40 @@ app.post('/api/ai/edit-image', express.json({ limit: '50mb' }), async (req, res)
         let bodyPayload = {};
         let pollUrl = apiUrl;
         
-        if (model === 'mystic') {
-            apiUrl = 'https://api.magnific.com/v1/ai/mystic';
+        if (model === 'nano-banana-pro') {
+            apiUrl = 'https://api.magnific.com/v1/ai/text-to-image/nano-banana-pro';
             pollUrl = apiUrl;
-            // For mystic, we CANNOT pass model (like fluid) if we pass structure_reference!
+            
+            const mimeType = image.match(/^data:(image\/\w+);base64,/) ? image.match(/^data:(image\/\w+);base64,/)[1] : "image/jpeg";
+            const fullImageStr = image.startsWith('data:') ? image : `data:${mimeType};base64,${image}`;
+            
+            const ratio = targetW / targetH;
+            let aspectStr = "1:1";
+            if (ratio >= 2.1) aspectStr = "21:9";
+            else if (ratio >= 1.6) aspectStr = "16:9";
+            else if (ratio >= 1.4) aspectStr = "3:2";
+            else if (ratio >= 1.25) aspectStr = "4:3";
+            else if (ratio >= 1.1) aspectStr = "5:4";
+            else if (ratio >= 0.9) aspectStr = "1:1";
+            else if (ratio >= 0.8) aspectStr = "4:5";
+            else if (ratio >= 0.7) aspectStr = "3:4";
+            else if (ratio >= 0.6) aspectStr = "2:3";
+            else aspectStr = "9:16";
+            
             bodyPayload = { 
-                prompt: prompt, 
-                resolution: resolution,
-                structure_reference: base64Image,
-                structure_strength: 50,
-                engine: "automatic"
+                prompt: prompt,
+                reference_images: [
+                    {
+                        image: fullImageStr,
+                        text: "Reference image for editing",
+                        mime_type: mimeType
+                    }
+                ],
+                aspect_ratio: aspectStr,
+                resolution: (resolution || "2K").toUpperCase()
             };
-        } else if (model === 'upscaler') {
-            apiUrl = 'https://api.magnific.com/v1/ai/image-upscaler-creative';
-            pollUrl = apiUrl;
-            bodyPayload = { prompt, image: base64Image };
-        } else if (model === 'relight') {
-            apiUrl = 'https://api.magnific.com/v1/ai/image-relight';
-            pollUrl = apiUrl;
-            bodyPayload = { prompt, image: base64Image };
-        } else if (model === 'style-transfer') {
-            apiUrl = 'https://api.magnific.com/v1/ai/image-styletransfer';
-            pollUrl = apiUrl;
-            bodyPayload = { prompt, image: base64Image };
-        } else if (model === 'remove-background') {
-            apiUrl = 'https://api.magnific.com/v1/ai/remove-background';
-            pollUrl = apiUrl;
-            bodyPayload = { image: base64Image };
-        } else if (model === 'super-resolution') {
-            const { scale_factor } = req.body;
-            apiUrl = 'https://api.magnific.com/v1/ai/image-upscaler-precision-v2';
-            pollUrl = apiUrl;
-            bodyPayload = { 
-                image: base64Image,
-                sharpen: 7,
-                smart_grain: 7,
-                ultra_detail: 30,
-                flavor: "sublime",
-                scale_factor: scale_factor || 4,
-                filter_nsfw: false
-            };
-        } else if (model === 'reimagine-flux') {
-            apiUrl = 'https://api.magnific.com/v1/ai/image-editing/reimagine-flux';
-            pollUrl = apiUrl;
-            bodyPayload = { prompt, image: base64Image };
-        } else if (model === 'image-expand') {
-            apiUrl = 'https://api.magnific.com/v1/ai/image-expand';
-            pollUrl = apiUrl;
-            bodyPayload = { prompt, image: base64Image };
-        } else if (model === 'inpainting') {
-            apiUrl = 'https://api.magnific.com/v1/ai/ideogram-image-edit';
-            pollUrl = apiUrl;
-            bodyPayload = { prompt, image: base64Image, magic_prompt: "AUTO", rendering_speed: "DEFAULT" };
         } else {
-            // Fallback for others (Skin Enhancer, Change Camera)
+            // Fallback for others
             apiUrl = `https://api.magnific.com/v1/ai/image-editing/${model}`;
             pollUrl = apiUrl;
             bodyPayload = { prompt, image: base64Image };
@@ -705,7 +696,7 @@ app.post('/api/ai/edit-image', express.json({ limit: '50mb' }), async (req, res)
 
 app.post('/api/ai/generate-fill', express.json({limit: '50mb'}), async (req, res) => {
     try {
-        const { settings, prompt, image, mask } = req.body;
+        const { settings, prompt, image, mask, targetW = 1, targetH = 1 } = req.body;
         
         // Fallback to imageKey or geminiKey as they might be stored in settings
         const key = settings?.imageKey || settings?.geminiKey || process.env.MAGNIFIC_API_KEY || process.env.GEMINI_API_KEY;
@@ -713,18 +704,46 @@ app.post('/api/ai/generate-fill', express.json({limit: '50mb'}), async (req, res
         if (!key) return res.status(400).json({ success: false, message: "Magnific API Key is missing. Please set it in Settings." });
         if (!image || !mask) return res.status(400).json({ success: false, message: "Image and mask are required." });
 
-        const base64Image = image.replace(/^data:image\/\w+;base64,/, '');
-        const base64Mask = mask.replace(/^data:image\/\w+;base64,/, '');
+        const imgMime = image.match(/^data:(image\/\w+);base64,/) ? image.match(/^data:(image\/\w+);base64,/)[1] : "image/jpeg";
+        const fullImageStr = image.startsWith('data:') ? image : `data:${imgMime};base64,${image}`;
+        
+        const maskMime = mask.match(/^data:(image\/\w+);base64,/) ? mask.match(/^data:(image\/\w+);base64,/)[1] : "image/png";
+        const fullMaskStr = mask.startsWith('data:') ? mask : `data:${maskMime};base64,${mask}`;
 
-        // Using Magnific Inpainting API
-        const apiUrl = 'https://api.magnific.com/v1/ai/ideogram-image-edit'; 
+        const finalPrompt = (prompt || "Remove the object in the masked area") + 
+            " [SYSTEM: You must edit ONLY the region corresponding to the black area in the mask reference image. Keep the rest of the original image exactly unchanged.]";
+
+        const ratio = targetW / targetH;
+        let aspectStr = "1:1";
+        if (ratio >= 2.1) aspectStr = "21:9";
+        else if (ratio >= 1.6) aspectStr = "16:9";
+        else if (ratio >= 1.4) aspectStr = "3:2";
+        else if (ratio >= 1.25) aspectStr = "4:3";
+        else if (ratio >= 1.1) aspectStr = "5:4";
+        else if (ratio >= 0.9) aspectStr = "1:1";
+        else if (ratio >= 0.8) aspectStr = "4:5";
+        else if (ratio >= 0.7) aspectStr = "3:4";
+        else if (ratio >= 0.6) aspectStr = "2:3";
+        else aspectStr = "9:16";
+
+        const apiUrl = 'https://api.magnific.com/v1/ai/text-to-image/nano-banana-pro'; 
 
         const bodyPayload = {
-            image: base64Image,
-            mask: base64Mask,
-            prompt: prompt || "", // If prompt is empty, it acts as object removal
-            magic_prompt: "AUTO",
-            rendering_speed: "DEFAULT"
+            prompt: finalPrompt,
+            reference_images: [
+                {
+                    image: fullImageStr,
+                    text: "Original Image",
+                    mime_type: imgMime
+                },
+                {
+                    image: fullMaskStr,
+                    text: "Mask (black area is the part to edit)",
+                    mime_type: maskMime
+                }
+            ],
+            aspect_ratio: aspectStr,
+            resolution: "2K"
         };
 
         const createRes = await fetch(apiUrl, {
