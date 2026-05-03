@@ -8,7 +8,12 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const OpenAI = require('openai');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-const youtubedl = require('youtube-dl-exec');
+const ytDlExec = require('youtube-dl-exec');
+let ytBinaryPath = ytDlExec.constants.YOUTUBE_DL_PATH;
+if (ytBinaryPath.includes('app.asar')) {
+    ytBinaryPath = ytBinaryPath.replace('app.asar', 'app.asar.unpacked');
+}
+const youtubedl = ytDlExec.create(ytBinaryPath);
 
 let ffmpegPath = ffmpegInstaller.path;
 if (ffmpegPath.includes('app.asar')) {
