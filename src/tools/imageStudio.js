@@ -4034,8 +4034,8 @@ export function renderImageStudio(container) {
                         <div style="flex:1;">
                             <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Provider</label>
                             <select id="is-ai-edit-provider-select" style="width:100%;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:8px;font-size:13px;outline:none;box-sizing:border-box;">
-                                <option value="pollinations" selected>Pollinations AI</option>
-                                <option value="magnific">Magnific</option>
+                                ${!maskDataUrl ? '<option value="pollinations" selected>Pollinations AI</option>' : ''}
+                                <option value="magnific" ${maskDataUrl ? 'selected' : ''}>Magnific</option>
                                 ${!maskDataUrl ? '<option value="puter">Puter AI</option>' : ''}
                             </select>
                         </div>
@@ -4190,13 +4190,41 @@ export function renderImageStudio(container) {
                     if (maskDataUrl) {
                         const fillProviderVal = modalContent.querySelector('#is-ai-edit-provider-select').value;
                         const fillModelVal = modalContent.querySelector('#is-ai-edit-model-select').value;
+                        
+                        let finalMaskDataUrl = maskDataUrl;
+                        if (fillProviderVal === 'pollinations') {
+                            // Pollinations expects transparent area for edit, opaque for keep.
+                            // Our default maskDataUrl is: white (#FFFFFF) = keep, black (#000000) = edit
+                            const tempCanvas = document.createElement('canvas');
+                            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+                            const maskImg = new Image();
+                            await new Promise(resolve => {
+                                maskImg.onload = resolve;
+                                maskImg.src = maskDataUrl;
+                            });
+                            tempCanvas.width = maskImg.width;
+                            tempCanvas.height = maskImg.height;
+                            tempCtx.drawImage(maskImg, 0, 0);
+                            const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                            const dataBytes = imgData.data;
+                            for (let i = 0; i < dataBytes.length; i += 4) {
+                                // If it's black (edit area), make it transparent
+                                const isBlack = dataBytes[i] < 128 && dataBytes[i+1] < 128 && dataBytes[i+2] < 128;
+                                if (isBlack) {
+                                    dataBytes[i+3] = 0; // Alpha 0 = transparent
+                                }
+                            }
+                            tempCtx.putImageData(imgData, 0, 0);
+                            finalMaskDataUrl = tempCanvas.toDataURL('image/png');
+                        }
+
                         res = await fetch('http://127.0.0.1:3000/api/ai/generate-fill', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
                                 prompt: promptVal, 
                                 image: imageDataUrl,
-                                mask: maskDataUrl,
+                                mask: finalMaskDataUrl,
                                 settings,
                                 provider: fillProviderVal,
                                 model: fillModelVal,
