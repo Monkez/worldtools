@@ -3675,6 +3675,8 @@ export function renderImageStudio(container) {
     document.addEventListener('keydown', (e) => {
         // Only if we are viewing the studio
         if (!document.getElementById('is-canvas')) return;
+        // Ignore if typing in input fields
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
         
         if (e.key === 'Delete' && currentTool === 'select') {
             if (multiSelected.size > 0) {
@@ -5180,7 +5182,7 @@ export function renderImageStudio(container) {
             const minY = Math.min(s.y, s.y2);
             const maxY = Math.max(s.y, s.y2);
             
-            const pad = (s.strokeWidth || 0) + 10;
+            const pad = s.type === 'image' ? 0 : ((s.strokeWidth || 0) + 10);
             const targetW = Math.abs(maxX - minX) + pad*2;
             const targetH = Math.abs(maxY - minY) + pad*2;
             
