@@ -381,6 +381,10 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSettings();
         settingsModal.style.display = 'flex';
     });
+
+    closeSettings.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
     
     if (fetchModelsBtn) {
         fetchModelsBtn.addEventListener('click', async () => {

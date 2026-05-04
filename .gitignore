@@ -23,4 +23,18 @@ dist-ssr
 *.sln
 *.sw?
 
+# Build output
 release/
+
+# Temp directories
+uploads/
+outputs/
+puter_demo/
+worldtools-uploads/
+worldtools-outputs/
+
+# Test files
+test_*
+check_*
+scratch.*
+*.blockmap
