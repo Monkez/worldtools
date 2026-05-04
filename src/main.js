@@ -25,7 +25,9 @@ import { renderKeyboardTest } from './tools/keyboardTest.js'
 import { renderMouseTest } from './tools/mouseTest.js'
 import { renderDeviceInfo } from './tools/deviceInfo.js'
 import { renderSerialTerminal } from './tools/serialTerminal.js'
+import { renderAdminDashboard } from './tools/adminDashboard.js'
 import { AIClient } from './utils/aiClient.js'
+import Analytics from './utils/analytics.js'
 
 // List of all tools
 export const tools = [
@@ -229,12 +231,36 @@ export const tools = [
         description: 'Professional serial port monitor like Hercules.',
         category: 'Developer Tools',
         render: renderSerialTerminal
+    },
+    {
+        id: 'admin',
+        name: 'Admin Dashboard',
+        icon: 'bx-bar-chart-square',
+        description: 'Analytics and traffic monitoring.',
+        category: 'Admin',
+        render: renderAdminDashboard,
+        hidden: true
     }
 ];
 
 let currentToolId = 'dashboard';
 
+// Global fetch interceptor to automatically track all API calls
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+    try {
+        const urlObj = typeof args[0] === 'string' ? new URL(args[0], window.location.origin) : null;
+        if (urlObj && urlObj.pathname.startsWith('/api/') && !urlObj.pathname.startsWith('/api/analytics/')) {
+            Analytics.trackApiCall(urlObj.pathname);
+        }
+    } catch { /* ignore parse errors */ }
+    return originalFetch(...args);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Track page visit
+    Analytics.trackVisit();
+
     const sidebar = document.getElementById('sidebar');
     const closeBtn = document.getElementById('close-sidebar');
     const openBtn = document.getElementById('open-sidebar');
@@ -381,6 +407,16 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSettings();
         settingsModal.style.display = 'flex';
     });
+
+    const btnAdmin = document.getElementById('btn-admin');
+    if (btnAdmin) {
+        btnAdmin.addEventListener('click', () => {
+            loadTool('admin');
+            if (window.innerWidth <= 768) {
+                sidebar.classList.add('collapsed');
+            }
+        });
+    }
 
     closeSettings.addEventListener('click', () => {
         settingsModal.style.display = 'none';
@@ -567,6 +603,9 @@ export function loadTool(id) {
 
     currentToolId = id;
     
+    // Track tool usage
+    Analytics.trackToolOpen(id, tool.name);
+
     // Update sidebar active states
     document.querySelectorAll('.tool-item').forEach(el => {
         el.classList.remove('active');

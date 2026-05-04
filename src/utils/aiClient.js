@@ -1,4 +1,5 @@
 import { getApiBase } from './apiBase.js';
+import Analytics from './analytics.js';
 
 export class AIClient {
     static getSettings() {
