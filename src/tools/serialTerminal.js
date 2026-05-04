@@ -284,6 +284,72 @@ export function renderSerialTerminal(container) {
         }
     }
 
+    function showElectronPortModal(ports) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter:blur(2px); z-index:9999; display:flex; align-items:center; justify-content:center;';
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:#1f2937; border:1px solid #374151; border-radius:12px; padding:20px; width:320px; max-height:80vh; overflow-y:auto; box-shadow:0 10px 25px rgba(0,0,0,0.5); font-family:"Outfit",sans-serif;';
+        
+        const title = document.createElement('h3');
+        title.style.cssText = 'margin:0 0 16px 0; color:#f3f4f6; font-size:16px; font-weight:600; display:flex; align-items:center; gap:8px;';
+        title.innerHTML = '<i class="bx bx-usb"></i> Select Serial Port';
+        modal.appendChild(title);
+        
+        if (!ports || ports.length === 0) {
+            const noPorts = document.createElement('p');
+            noPorts.style.cssText = 'color:#9ca3af; font-size:13px; margin-bottom:16px;';
+            noPorts.textContent = 'No serial ports found on this system.';
+            modal.appendChild(noPorts);
+        } else {
+            ports.forEach(p => {
+                const btn = document.createElement('button');
+                btn.style.cssText = 'display:block; width:100%; padding:12px; margin-bottom:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#e5e7eb; cursor:pointer; text-align:left; font-size:13px; transition:all 0.2s;';
+                btn.textContent = p.displayName || p.portName || p.portId;
+                btn.onclick = () => {
+                    window.electronAPI.selectSerialPort(p.portId);
+                    document.body.removeChild(overlay);
+                };
+                btn.onmouseover = () => { btn.style.background = 'rgba(99,102,241,0.15)'; btn.style.borderColor = '#6366f1'; };
+                btn.onmouseout = () => { btn.style.background = 'rgba(255,255,255,0.05)'; btn.style.borderColor = 'rgba(255,255,255,0.1)'; };
+                modal.appendChild(btn);
+            });
+        }
+        
+        const refreshBtn = document.createElement('button');
+        refreshBtn.style.cssText = 'display:block; width:100%; padding:10px; margin-bottom:8px; background:rgba(16,185,129,0.1); border:1px solid #10b981; border-radius:8px; color:#10b981; cursor:pointer; font-size:13px; font-weight:600; transition:all 0.2s;';
+        refreshBtn.innerHTML = '<i class="bx bx-refresh"></i> Refresh Ports';
+        refreshBtn.onclick = () => {
+            window.__serialRefreshFlag = true;
+            window.electronAPI.cancelSerialPort();
+            document.body.removeChild(overlay);
+        };
+        refreshBtn.onmouseover = () => { refreshBtn.style.background = 'rgba(16,185,129,0.2)'; };
+        refreshBtn.onmouseout = () => { refreshBtn.style.background = 'rgba(16,185,129,0.1)'; };
+        modal.appendChild(refreshBtn);
+        
+        const cancelBtn = document.createElement('button');
+        cancelBtn.style.cssText = 'display:block; width:100%; padding:10px; background:transparent; border:1px solid #ef4444; border-radius:8px; color:#ef4444; cursor:pointer; font-size:13px; font-weight:600; transition:all 0.2s;';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.onclick = () => {
+            window.__serialRefreshFlag = false;
+            window.electronAPI.cancelSerialPort();
+            document.body.removeChild(overlay);
+        };
+        cancelBtn.onmouseover = () => { cancelBtn.style.background = 'rgba(239,68,68,0.1)'; };
+        cancelBtn.onmouseout = () => { cancelBtn.style.background = 'transparent'; };
+        modal.appendChild(cancelBtn);
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    }
+
+    if (window.electronAPI) {
+        window.electronAPI.onSerialPortsList((ports) => {
+            showElectronPortModal(ports);
+        });
+    }
+
     // Check Web Serial API
     if (!('serial' in navigator)) {
         appendTerminal('Web Serial API is not supported. Please use Chrome or Edge browser.', 'sys');
@@ -306,15 +372,23 @@ export function renderSerialTerminal(container) {
             appendTerminal('Disconnect first before selecting a new port.', 'sys');
             return;
         }
-        try {
-            port = await navigator.serial.requestPort();
-            updateUI();
-            appendTerminal(`Port selected: ${getPortName(port)}. Click Connect to open.`, 'sys');
-        } catch (e) {
-            if (e.name !== 'NotFoundError') {
-                appendTerminal(`Port selection failed: ${e.message}`, 'sys');
+        
+        async function promptPort() {
+            try {
+                window.__serialRefreshFlag = false;
+                port = await navigator.serial.requestPort();
+                updateUI();
+                appendTerminal(`Port selected: ${getPortName(port)}. Click Connect to open.`, 'sys');
+            } catch (e) {
+                if (window.__serialRefreshFlag) {
+                    setTimeout(promptPort, 100);
+                } else if (e.name !== 'NotFoundError') {
+                    appendTerminal(`Port selection failed: ${e.message}`, 'sys');
+                }
             }
         }
+        
+        promptPort();
     });
 
     // Connect / Disconnect

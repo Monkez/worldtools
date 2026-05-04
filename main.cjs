@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { fork } = require('child_process');
 const fs = require('fs');
@@ -13,7 +13,8 @@ function createWindow() {
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.cjs')
     }
   });
 
@@ -38,6 +39,43 @@ function createWindow() {
   setTimeout(() => {
     mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
   }, 1000);
+
+  let serialCallback = null;
+
+  mainWindow.webContents.session.on('select-serial-port', (event, portList, webContents, callback) => {
+    event.preventDefault();
+    serialCallback = callback;
+    // Send list of ports to renderer so UI can display them
+    mainWindow.webContents.send('serial-ports-list', portList);
+  });
+
+  ipcMain.on('serial-port-selected', (event, portId) => {
+    if (serialCallback) {
+      serialCallback(portId);
+      serialCallback = null;
+    }
+  });
+
+  ipcMain.on('serial-port-cancel', (event) => {
+    if (serialCallback) {
+      serialCallback('');
+      serialCallback = null;
+    }
+  });
+
+  mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    if (permission === 'serial') {
+      return true;
+    }
+    return true;
+  });
+
+  mainWindow.webContents.session.setDevicePermissionHandler((details) => {
+    if (details.deviceType === 'serial') {
+      return true;
+    }
+    return true;
+  });
 }
 
 app.whenReady().then(createWindow);
