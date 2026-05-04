@@ -185,6 +185,16 @@ worldtools/
 
 ---
 
+## 🙏 Credits
+
+<a href="https://pollinations.ai">
+  <img src="https://pollinations.ai/favicon.ico" width="20" style="vertical-align: middle;" />
+</a> AI Image generation & editing powered by <a href="https://pollinations.ai"><strong>pollinations.ai</strong></a>
+
+[![Built with pollinations.ai](https://img.shields.io/badge/Built%20with-pollinations.ai-6366f1?style=flat-square)](https://pollinations.ai)
+
+---
+
 ## 📄 License
 
 MIT License — see [LICENSE](LICENSE) for details.
