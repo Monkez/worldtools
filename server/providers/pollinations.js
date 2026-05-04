@@ -9,6 +9,31 @@
 
 const { mapAspectToDimensions } = require('./utils');
 
+async function uploadToTmpFiles(base64DataUrl) {
+    try {
+        const b64 = base64DataUrl.includes(',') ? base64DataUrl.split(',')[1] : base64DataUrl;
+        const mimeMatch = base64DataUrl.match(/^data:(image\/\w+);base64,/);
+        const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+        const ext = mime.split('/')[1] || 'png';
+        const buffer = Buffer.from(b64, 'base64');
+        
+        const formData = new FormData();
+        formData.append('file', new Blob([buffer], { type: mime }), `image.${ext}`);
+        
+        const res = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data && data.status === 'success' && data.data && data.data.url) {
+            return data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/').replace('http://', 'https://');
+        }
+        throw new Error("Invalid response from tmpfiles");
+    } catch (e) {
+        throw new Error("Failed to upload image to temp host: " + e.message);
+    }
+}
+
 /**
  * Test Pollinations API key validity
  */
@@ -117,7 +142,8 @@ async function generateImage({ prompt, model = "flux", aspect_ratio = "square_1_
 async function editImage({ prompt, image, model = "kontext", targetW = 1, targetH = 1, apiKey }) {
     if (!apiKey) throw new Error("Pollinations API Key is required for image editing.");
 
-    const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
+    console.log("Uploading reference image to tmpfiles...");
+    const uploadedImageUrl = await uploadToTmpFiles(image);
 
     // Determine size from aspect ratio
     const ratio = targetW / targetH;
@@ -128,7 +154,7 @@ async function editImage({ prompt, image, model = "kontext", targetW = 1, target
     const postPayload = {
         prompt,
         model,
-        image: imageUrl,
+        image: uploadedImageUrl,
         size: openAiSize,
         response_format: "b64_json"
     };
@@ -177,8 +203,11 @@ async function generateFill({ prompt, image, mask, targetW = 1, targetH = 1, api
     if (!image) throw new Error("Image is required for inpainting.");
     if (!mask) throw new Error("Mask is required for inpainting.");
 
-    const imageUrl = image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`;
-    const maskUrl = mask.startsWith('data:') ? mask : `data:image/png;base64,${mask}`;
+    console.log("Uploading image and mask to tmpfiles...");
+    const [uploadedImageUrl, uploadedMaskUrl] = await Promise.all([
+        uploadToTmpFiles(image),
+        uploadToTmpFiles(mask)
+    ]);
 
     // Determine size from aspect ratio
     const ratio = targetW / targetH;
@@ -189,8 +218,8 @@ async function generateFill({ prompt, image, mask, targetW = 1, targetH = 1, api
     const postPayload = {
         prompt,
         model,
-        image: imageUrl,
-        mask: maskUrl,
+        image: uploadedImageUrl,
+        mask: uploadedMaskUrl,
         size,
         response_format: "b64_json"
     };
