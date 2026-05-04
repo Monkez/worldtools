@@ -1,3 +1,5 @@
+import { getApiBase } from '../utils/apiBase.js';
+
 export function renderColorPicker(container) {
     container.innerHTML = `
         <div class="panel" style="max-width: 1000px; margin: 0 auto; display: flex; gap: 40px; align-items: flex-start;">
@@ -109,7 +111,7 @@ export function renderColorPicker(container) {
     const triggerEyeDropper = async () => {
         try {
             // Attempt to use the powerful Electron native color picker if backend is available
-            const res = await fetch('http://127.0.0.1:3000/api/tools/color-picker');
+            const res = await fetch(`${getApiBase()}/api/tools/color-picker`);
             if (res.ok) {
                 const data = await res.json();
                 if (data.color) {

@@ -1,3 +1,4 @@
+import { getApiBase } from '../utils/apiBase.js';
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 import TimelinePlugin from 'wavesurfer.js/dist/plugins/timeline.esm.js';
@@ -381,7 +382,7 @@ export function renderMediaEditor(container) {
         formData.append('format', trimFormat.value);
         
         try {
-            const res = await fetch('http://127.0.0.1:3000/api/trim', {
+            const res = await fetch(`${getApiBase()}/api/trim`, {
                 method: 'POST',
                 body: formData
             });
@@ -418,7 +419,7 @@ export function renderMediaEditor(container) {
         formData.append('format', trimFormat.value);
         
         try {
-            const res = await fetch('http://127.0.0.1:3000/api/trim', {
+            const res = await fetch(`${getApiBase()}/api/trim`, {
                 method: 'POST',
                 body: formData
             });
@@ -488,7 +489,7 @@ export function renderMediaEditor(container) {
         mergeFilesArray.forEach(f => formData.append('files', f));
 
         try {
-            const res = await fetch('http://127.0.0.1:3000/api/merge', {
+            const res = await fetch(`${getApiBase()}/api/merge`, {
                 method: 'POST',
                 body: formData
             });

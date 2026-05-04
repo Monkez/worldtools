@@ -1,3 +1,5 @@
+import { getApiBase } from '../utils/apiBase.js';
+
 export function renderConvertThings(container) {
     container.innerHTML = `
         <div class="panel" style="max-width: 900px; margin: 0 auto;">
@@ -214,7 +216,7 @@ export function renderConvertThings(container) {
         formData.append('format', format);
 
         try {
-            const response = await fetch('http://127.0.0.1:3000/api/convert', {
+            const response = await fetch(`${getApiBase()}/api/convert`, {
                 method: 'POST',
                 body: formData
             });

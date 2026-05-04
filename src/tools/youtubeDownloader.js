@@ -1,3 +1,5 @@
+import { getApiBase } from '../utils/apiBase.js';
+
 export function renderYoutubeDownloader(container) {
     container.innerHTML = `
         <div class="panel" style="max-width: 800px; margin: 0 auto;">
@@ -141,7 +143,7 @@ export function renderYoutubeDownloader(container) {
         btnFetch.disabled = true;
 
         try {
-            const res = await fetch(`http://127.0.0.1:3000/api/yt/info?url=${encodeURIComponent(url)}`);
+            const res = await fetch(`${getApiBase()}/api/yt/info?url=${encodeURIComponent(url)}`);
             if(!res.ok) throw new Error(await res.text());
             
             const data = await res.json();
@@ -202,7 +204,7 @@ export function renderYoutubeDownloader(container) {
         btn.style.pointerEvents = 'none';
         btn.style.opacity = '0.7';
 
-        const dlUrl = `http://127.0.0.1:3000/api/yt/download-stream?url=${encodeURIComponent(url)}&itag=${encodeURIComponent(itag)}&t=${Date.now()}`;
+        const dlUrl = `${getApiBase()}/api/yt/download-stream?url=${encodeURIComponent(url)}&itag=${encodeURIComponent(itag)}&t=${Date.now()}`;
         
         try {
             const progressText = downloadingState.querySelector('p');
@@ -219,7 +221,7 @@ export function renderYoutubeDownloader(container) {
                 eventSource.close();
                 const data = JSON.parse(e.data);
                 
-                const fileUrl = `http://127.0.0.1:3000/api/yt/get-file?filename=${encodeURIComponent(data.filename)}&title=${encodeURIComponent(data.title)}`;
+                const fileUrl = `${getApiBase()}/api/yt/get-file?filename=${encodeURIComponent(data.filename)}&title=${encodeURIComponent(data.title)}`;
                 
                 const a = document.createElement('a');
                 a.style.display = 'none';

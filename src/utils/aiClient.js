@@ -1,3 +1,5 @@
+import { getApiBase } from './apiBase.js';
+
 export class AIClient {
     static getSettings() {
         return {
@@ -24,7 +26,7 @@ export class AIClient {
     }
 
     static async testConnection(settings) {
-        const response = await fetch('http://127.0.0.1:3000/api/ai/test', {
+        const response = await fetch(`${getApiBase()}/api/ai/test`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ settings })
@@ -37,7 +39,7 @@ export class AIClient {
     }
 
     static async testImageConnection(settings) {
-        const response = await fetch('http://127.0.0.1:3000/api/ai/test-image', {
+        const response = await fetch(`${getApiBase()}/api/ai/test-image`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ settings })
@@ -50,7 +52,7 @@ export class AIClient {
     }
 
     static async testPollinationsConnection(settings) {
-        const response = await fetch('http://127.0.0.1:3000/api/ai/test-pollinations', {
+        const response = await fetch(`${getApiBase()}/api/ai/test-pollinations`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ settings })
@@ -74,7 +76,7 @@ export class AIClient {
         try {
             const settings = this.getSettings();
             
-            const response = await fetch('http://127.0.0.1:3000/api/ai/chat', {
+            const response = await fetch(`${getApiBase()}/api/ai/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

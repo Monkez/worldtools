@@ -1,5 +1,6 @@
 import { removeBackground } from '@imgly/background-removal';
 import { AIClient } from '../utils/aiClient.js';
+import { getApiBase } from '../utils/apiBase.js';
 
 export function renderImageStudio(container) {
     window._isGetCVal = function(id) {
@@ -4160,7 +4161,7 @@ export function renderImageStudio(container) {
                 
                 try {
                     const settings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini' };
-                    const res = await fetch('http://127.0.0.1:3000/api/ai/refine-prompt', {
+                    const res = await fetch(`${getApiBase()}/api/ai/refine-prompt`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ prompt: currentVal, settings })
@@ -4241,7 +4242,7 @@ export function renderImageStudio(container) {
                             finalMaskDataUrl = tempCanvas.toDataURL('image/png');
                         }
 
-                        res = await fetch('http://127.0.0.1:3000/api/ai/generate-fill', {
+                        res = await fetch(`${getApiBase()}/api/ai/generate-fill`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
@@ -4260,7 +4261,7 @@ export function renderImageStudio(container) {
                     } else {
                         const modelVal = modalContent.querySelector('#is-ai-edit-model-select').value;
                         const providerVal = modalContent.querySelector('#is-ai-edit-provider-select').value;
-                        res = await fetch('http://127.0.0.1:3000/api/ai/edit-image', {
+                        res = await fetch(`${getApiBase()}/api/ai/edit-image`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ 
@@ -4374,7 +4375,7 @@ export function renderImageStudio(container) {
                             pollinationsApiKey: localStorage.getItem('worldtools_pollinations_key') || ''
                         };
                         
-                        const response = await fetch('http://127.0.0.1:3000/api/ai/generate-fill', {
+                        const response = await fetch(`${getApiBase()}/api/ai/generate-fill`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ settings, prompt, image: imgBase64, mask: maskBase64 })
@@ -4611,7 +4612,7 @@ export function renderImageStudio(container) {
                     pollinationsApiKey: localStorage.getItem('worldtools_pollinations_key') || ''
                 };
                 
-                const response = await fetch('http://127.0.0.1:3000/api/ai/edit-image', {
+                const response = await fetch(`${getApiBase()}/api/ai/edit-image`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ settings, image: imageDataUrl, model: 'super-resolution', prompt: 'upscale', scale_factor: scaleFactor })
@@ -4828,7 +4829,7 @@ export function renderImageStudio(container) {
                 
                 try {
                     const settings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini' };
-                    const res = await fetch('http://127.0.0.1:3000/api/ai/refine-prompt', {
+                    const res = await fetch(`${getApiBase()}/api/ai/refine-prompt`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ prompt: currentVal, settings })
@@ -4923,7 +4924,7 @@ export function renderImageStudio(container) {
                             reqBody.aspect_ratio = ratioVal;
                         }
 
-                        const res = await fetch('http://127.0.0.1:3000/api/ai/generate-image', {
+                        const res = await fetch(`${getApiBase()}/api/ai/generate-image`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(reqBody)
@@ -5054,7 +5055,7 @@ export function renderImageStudio(container) {
                         analysisResult = analysisResult.message || analysisResult.text || JSON.stringify(analysisResult);
                     }
                 } else {
-                    const res = await fetch('http://127.0.0.1:3000/api/ai/vision', {
+                    const res = await fetch(`${getApiBase()}/api/ai/vision`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({

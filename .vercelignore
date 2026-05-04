@@ -1,0 +1,8 @@
+release/
+*.exe
+*.blockmap
+main.cjs
+electron-env.d.ts
+test_poll_*.cjs
+check_poll_*.cjs
+test_poll_*.png
