@@ -1678,6 +1678,25 @@ export function renderImageStudio(container) {
     let previousToolBeforeCtrl = null;
     let canvasSelected = false;
 
+    // Reset all modifier key states when window loses focus (prevents stuck keys)
+    function resetModifierStates() {
+        isSpaceDown = false;
+        isShiftDown = false;
+        isCtrlDown = false;
+        isPanning = false;
+        previousToolBeforeCtrl = null;
+        if (canvasContainer) canvasContainer.style.cursor = 'auto';
+        if (canvas) {
+            if (currentTool === 'text') canvas.style.cursor = 'text';
+            else if (currentTool === 'select') canvas.style.cursor = 'default';
+            else canvas.style.cursor = 'none';
+        }
+    }
+    window.addEventListener('blur', resetModifierStates);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) resetModifierStates();
+    });
+
     // Helper: select the background canvas (deselect any object)
     function selectCanvasBackground() {
         activeVectorShape = null;
@@ -3032,6 +3051,8 @@ export function renderImageStudio(container) {
     // Paste Image
     document.addEventListener('paste', (e) => {
         if (!document.getElementById('is-canvas')) return;
+        // Don't intercept paste when user is typing in an input field
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
         let hasImage = false;
         for (let i = 0; i < items.length; i++) {
