@@ -18,6 +18,7 @@ import { renderMediaEditor } from './tools/mediaEditor.js'
 import { renderImageStudio } from './tools/imageStudio.js'
 import { renderAiDetector } from './tools/aiDetector.js'
 import { renderPromptHelper } from './tools/promptHelper.js'
+import { renderDesignPromptTemplates } from './tools/designPromptTemplates.js'
 import { renderCalculator } from './tools/calculator.js'
 import { renderScreenTest } from './tools/screenTest.js'
 import { renderAudioTest } from './tools/audioTest.js'
@@ -133,6 +134,14 @@ export const tools = [
         description: 'Generate professional, optimized prompts from simple ideas.',
         category: 'AI Smart Tools',
         render: renderPromptHelper
+    },
+    {
+        id: 'design-prompt-templates',
+        name: 'Design Prompt Templates',
+        icon: 'bx-images',
+        description: 'Save design screenshots with reusable style prompt templates.',
+        category: 'Design & Media',
+        render: renderDesignPromptTemplates
     },
     {
         id: 'base64',

@@ -18,7 +18,8 @@
       "output": "release"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "signAndEditExecutable": false
     },
     "asarUnpack": [
       "**/*.{node,exe,dll}"
