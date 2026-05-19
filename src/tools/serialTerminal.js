@@ -2,6 +2,7 @@ export function renderSerialTerminal(container) {
     let port = null, reader = null, writer = null, readableStreamClosed = null;
     let isConnected = false;
     let rxBuffer = [], txHistory = [], txHistoryIdx = -1;
+    let pendingRxText = '', pendingRxTimer = null;
     let rxCount = 0, txCount = 0;
     let autoScroll = true, showTimestamp = true, displayMode = 'ascii';
     const _savedMacros = localStorage.getItem('serial-macros');
@@ -251,6 +252,22 @@ export function renderSerialTerminal(container) {
         if (autoScroll) terminal.scrollTop = terminal.scrollHeight;
     }
 
+    function flushPendingRx() {
+        if (pendingRxTimer) {
+            clearTimeout(pendingRxTimer);
+            pendingRxTimer = null;
+        }
+        if (!pendingRxText) return;
+        appendTerminal(pendingRxText, 'rx');
+        pendingRxText = '';
+    }
+
+    function appendRxChunk(text) {
+        pendingRxText += text;
+        if (pendingRxTimer) clearTimeout(pendingRxTimer);
+        pendingRxTimer = setTimeout(flushPendingRx, 25);
+    }
+
     function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function toHex(s) { return Array.from(new TextEncoder().encode(s)).map(b => b.toString(16).toUpperCase().padStart(2,'0')).join(' '); }
     function parseEscapes(s) { return s.replace(/\\r/g,'\r').replace(/\\n/g,'\n').replace(/\\t/g,'\t').replace(/\\0/g,'\0'); }
@@ -305,7 +322,11 @@ export function renderSerialTerminal(container) {
             ports.forEach(p => {
                 const btn = document.createElement('button');
                 btn.style.cssText = 'display:block; width:100%; padding:12px; margin-bottom:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#e5e7eb; cursor:pointer; text-align:left; font-size:13px; transition:all 0.2s;';
-                btn.textContent = p.displayName || p.portName || p.portId;
+                let portLabel = p.portName || p.portId;
+                if (p.displayName && p.displayName !== portLabel) {
+                    portLabel = `${p.displayName} (${portLabel})`;
+                }
+                btn.textContent = portLabel;
                 btn.onclick = () => {
                     window.electronAPI.selectSerialPort(p.portId);
                     document.body.removeChild(overlay);
@@ -422,6 +443,7 @@ export function renderSerialTerminal(container) {
 
     async function disconnect() {
         try {
+            flushPendingRx();
             if (reader) { await reader.cancel(); reader.releaseLock(); reader = null; }
             if (readableStreamClosed) { try { await readableStreamClosed; } catch {} readableStreamClosed = null; }
             if (port) { await port.close(); port = null; }
@@ -443,12 +465,13 @@ export function renderSerialTerminal(container) {
                 if (value) {
                     rxCount += value.length;
                     rxCountEl.textContent = rxCount;
-                    appendTerminal(value, 'rx');
+                    appendRxChunk(value);
                 }
             }
         } catch (e) {
             if (isConnected) appendTerminal(`Read error: ${e.message}`, 'sys');
         } finally {
+            flushPendingRx();
             reader.releaseLock();
         }
     }

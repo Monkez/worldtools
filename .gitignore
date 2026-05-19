@@ -32,6 +32,8 @@ outputs/
 puter_demo/
 worldtools-uploads/
 worldtools-outputs/
+tmp-asar/
+tmp-asar-installed/
 
 # Test files
 test_*

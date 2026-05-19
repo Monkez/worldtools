@@ -168,6 +168,10 @@ export function renderImageStudio(container) {
                         <button class="is-btn-icon is-text-style" id="is-font-italic" title="Italic" style="font-style: italic; font-size: 14px;">I</button>
                         <button class="is-btn-icon is-text-style" id="is-font-underline" title="Underline" style="text-decoration: underline; font-size: 14px;">U</button>
                         <div class="is-divider"></div>
+                        <button class="is-btn-icon is-text-align" id="is-font-align-left" title="Align Left" data-align="left"><i class='bx bx-align-left'></i></button>
+                        <button class="is-btn-icon is-text-align" id="is-font-align-center" title="Align Center" data-align="center"><i class='bx bx-align-middle'></i></button>
+                        <button class="is-btn-icon is-text-align" id="is-font-align-right" title="Align Right" data-align="right"><i class='bx bx-align-right'></i></button>
+                        <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Style</span>
                         <select id="is-text-render-style" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 80px; cursor: pointer;">
                             <option value="normal">Normal</option>
@@ -190,6 +194,10 @@ export function renderImageStudio(container) {
                         <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Stroke</span>
                         <input type="number" id="is-shape-stroke" value="5" min="1" max="50" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 48px; text-align: center;">
+
+                        <div class="is-divider" id="is-shape-radius-divider" style="display: none;"></div>
+                        <span id="is-shape-radius-label" style="display: none; font-size: 11px; color: #888;">Radius</span>
+                        <input type="number" id="is-shape-radius" value="0" min="0" max="200" style="display: none; background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 48px; text-align: center;">
                     </span>
                     <!-- Brush controls -->
                     <span id="is-ctx-brush" style="display: none; contents;">
@@ -292,7 +300,17 @@ export function renderImageStudio(container) {
                     </span>
                     <button class="is-btn-icon" id="is-ctx-front" title="Bring to Front" style="display: none; font-size: 14px;"><i class='bx bx-arrow-to-top'></i></button>
                     <button class="is-btn-icon" id="is-ctx-back" title="Send to Back" style="display: none; font-size: 14px;"><i class='bx bx-arrow-to-bottom'></i></button>
-                    <button class="is-btn-icon" id="is-ctx-group" title="Group (Ctrl+G)" style="display: none; font-size: 12px; gap:3px; width:auto; padding:0 8px; color:#22d3ee;"><i class='bx bx-group'></i></button>
+                    <button class="is-btn-icon" id="is-ctx-group" title="Group (Ctrl+G)" style="display: none; font-size: 12px; gap:3px; width:auto; padding:0 8px; color:#22d3ee;"><i class='bx bx-group'></i> Group</button>
+                    <span id="is-ctx-align" style="display: none; align-items: center; gap: 4px;">
+                        <div class="is-divider"></div>
+                        <button class="is-btn-icon is-obj-align" data-align="top" title="Align Top"><i class='bx bx-align-left' style='transform: rotate(90deg);'></i></button>
+                        <button class="is-btn-icon is-obj-align" data-align="v-middle" title="Align Middle"><i class='bx bx-align-middle' style='transform: rotate(90deg);'></i></button>
+                        <button class="is-btn-icon is-obj-align" data-align="bottom" title="Align Bottom"><i class='bx bx-align-right' style='transform: rotate(90deg);'></i></button>
+                        <div class="is-divider"></div>
+                        <button class="is-btn-icon is-obj-align" data-align="left" title="Align Left"><i class='bx bx-align-left'></i></button>
+                        <button class="is-btn-icon is-obj-align" data-align="h-middle" title="Align Center"><i class='bx bx-align-middle'></i></button>
+                        <button class="is-btn-icon is-obj-align" data-align="right" title="Align Right"><i class='bx bx-align-right'></i></button>
+                    </span>
                     <button class="is-btn-icon" id="is-ctx-ungroup" title="Ungroup" style="display: none; font-size: 12px; gap:3px; width:auto; padding:0 8px; color:#fb923c;"><i class='bx bx-unlink'></i></button>
                     <button class="is-btn-icon" id="is-ctx-del" title="Delete (Del)" style="color: #fca5a5; display: none;"><i class='bx bx-trash'></i></button>
                 </div>
@@ -418,11 +436,14 @@ export function renderImageStudio(container) {
     
     // Deep clone a vector shape (for duplicate / Shift+drag)
     function cloneShape(s) {
-        const clone = { ...s, id: nextShapeId() };
+        const clone = { ...s, id: s.type === 'group' ? 'g_' + Date.now() + '_' + Math.floor(Math.random()*1000) : nextShapeId() };
         if (s.points) clone.points = s.points.map(p => ({ ...p }));
         if (s.originalPoints) clone.originalPoints = s.originalPoints.map(p => ({ ...p }));
         if (s.connections) clone.connections = JSON.parse(JSON.stringify(s.connections));
         if (s.type === 'image' && s.img) clone.img = s.img;
+        if (s.type === 'group' && s.children) {
+            clone.children = s.children.map(child => cloneShape(child));
+        }
         return clone;
     }
     
@@ -698,7 +719,28 @@ export function renderImageStudio(container) {
     const ctxTextSpan = container.querySelector('#is-ctx-text');
     const ctxShapeSpan = container.querySelector('#is-ctx-shape');
     
+    function wrapTextLines(context, text, maxWidth) {
+        const words = text.split('\n').map(line => line.split(' '));
+        const lines = [];
+        for (let i = 0; i < words.length; i++) {
+            let currentLine = words[i][0] || '';
+            for (let j = 1; j < words[i].length; j++) {
+                const word = words[i][j];
+                const width = context.measureText(currentLine + ' ' + word).width;
+                if (width < maxWidth) {
+                    currentLine += ' ' + word;
+                } else {
+                    lines.push(currentLine);
+                    currentLine = word;
+                }
+            }
+            lines.push(currentLine);
+        }
+        return lines;
+    }
+    
     function drawShape(targetCtx, s) {
+        if (s.isEditing) return;
         targetCtx.save();
         targetCtx.globalAlpha = s.opacity ?? 1;
         
@@ -737,7 +779,21 @@ export function renderImageStudio(container) {
             targetCtx.moveTo(s.x2, s.y2);
             targetCtx.lineTo(s.x2 - headlen * Math.cos(angle + Math.PI / 6), s.y2 - headlen * Math.sin(angle + Math.PI / 6));
         } else if (s.type === 'rect') {
-            targetCtx.rect(s.x, s.y, w, h);
+            if (s.borderRadius > 0) {
+                const r = Math.min(s.borderRadius, Math.abs(w) / 2, Math.abs(h) / 2);
+                targetCtx.moveTo(s.x + r, s.y);
+                targetCtx.lineTo(s.x + w - r, s.y);
+                targetCtx.quadraticCurveTo(s.x + w, s.y, s.x + w, s.y + r);
+                targetCtx.lineTo(s.x + w, s.y + h - r);
+                targetCtx.quadraticCurveTo(s.x + w, s.y + h, s.x + w - r, s.y + h);
+                targetCtx.lineTo(s.x + r, s.y + h);
+                targetCtx.quadraticCurveTo(s.x, s.y + h, s.x, s.y + h - r);
+                targetCtx.lineTo(s.x, s.y + r);
+                targetCtx.quadraticCurveTo(s.x, s.y, s.x + r, s.y);
+                targetCtx.closePath();
+            } else {
+                targetCtx.rect(s.x, s.y, w, h);
+            }
         } else if (s.type === 'circle') {
             const rx = Math.abs(w) / 2;
             const ry = Math.abs(h) / 2;
@@ -827,11 +883,24 @@ export function renderImageStudio(container) {
             if (s.fontBold) fontStyle += 'bold ';
             targetCtx.font = `${fontStyle}${s.fontSize}px "${s.fontFamily || 'Arial'}", sans-serif`;
             targetCtx.textBaseline = 'top';
+            targetCtx.textAlign = s.align || 'left';
             
-            const metrics = targetCtx.measureText(s.text);
-            const textWidth = metrics.width;
-            const textHeight = s.fontSize;
+            const maxWidth = Math.max(20, Math.abs(s.x2 - s.x));
+            const lines = wrapTextLines(targetCtx, s.text, maxWidth);
+            const lineHeight = s.fontSize * 1.2;
+            const textHeight = lines.length * lineHeight;
             
+            let maxLineWidth = 0;
+            lines.forEach(l => {
+                const w = targetCtx.measureText(l).width;
+                if (w > maxLineWidth) maxLineWidth = w;
+            });
+            const textWidth = maxLineWidth;
+            
+            let drawX = s.x;
+            if (s.align === 'center') drawX = s.x + maxWidth / 2;
+            else if (s.align === 'right') drawX = s.x + maxWidth;
+
             // Effect background / glow
             if (s.textStyle === 'solid-bg' || s.textStyle === 'shadow') {
                 targetCtx.save();
@@ -846,7 +915,13 @@ export function renderImageStudio(container) {
                 }
                 
                 targetCtx.fillStyle = s.textBgColor || '#000000';
-                const rx = s.x - padX, ry = s.y - padY, rw = textWidth + padX * 2, rh = textHeight + padY * 2, r = s.fontSize * 0.2;
+                
+                let rx;
+                if (s.align === 'center') rx = s.x + (maxWidth - textWidth) / 2 - padX;
+                else if (s.align === 'right') rx = s.x + (maxWidth - textWidth) - padX;
+                else rx = s.x - padX;
+
+                const ry = s.y - padY, rw = textWidth + padX * 2, rh = textHeight + padY * 2, r = s.fontSize * 0.2;
                 targetCtx.beginPath();
                 targetCtx.moveTo(rx + r, ry);
                 targetCtx.lineTo(rx + rw - r, ry);
@@ -865,7 +940,9 @@ export function renderImageStudio(container) {
                 targetCtx.shadowColor = s.textBgColor || '#000000';
                 targetCtx.shadowBlur = s.fontSize * 0.4;
                 targetCtx.fillStyle = s.stroke;
-                targetCtx.fillText(s.text, s.x, s.y);
+                lines.forEach((line, i) => {
+                    targetCtx.fillText(line, drawX, s.y + i * lineHeight);
+                });
                 targetCtx.restore();
             }
             
@@ -876,19 +953,33 @@ export function renderImageStudio(container) {
                 targetCtx.strokeStyle = s.textBgColor || '#000000';
                 targetCtx.lineWidth = s.fontSize * 0.12;
                 targetCtx.lineJoin = 'round';
-                targetCtx.strokeText(s.text, s.x, s.y);
+                lines.forEach((line, i) => {
+                    targetCtx.strokeText(line, drawX, s.y + i * lineHeight);
+                });
             }
             
-            targetCtx.fillText(s.text, s.x, s.y);
+            lines.forEach((line, i) => {
+                targetCtx.fillText(line, drawX, s.y + i * lineHeight);
+            });
             
             if (s.fontUnderline) {
                 targetCtx.beginPath();
                 targetCtx.strokeStyle = s.stroke;
                 targetCtx.lineWidth = Math.max(1, s.fontSize / 15);
-                targetCtx.moveTo(s.x, s.y + s.fontSize + 2);
-                targetCtx.lineTo(s.x + textWidth, s.y + s.fontSize + 2);
+                lines.forEach((line, i) => {
+                    const lw = targetCtx.measureText(line).width;
+                    let ux;
+                    if (s.align === 'center') ux = drawX - lw / 2;
+                    else if (s.align === 'right') ux = drawX - lw;
+                    else ux = drawX;
+                    
+                    targetCtx.moveTo(ux, s.y + i * lineHeight + s.fontSize + 2);
+                    targetCtx.lineTo(ux + lw, s.y + i * lineHeight + s.fontSize + 2);
+                });
                 targetCtx.stroke();
             }
+            
+            s.y2 = s.y + textHeight;
         } else if (s.type === 'path' && s.points && s.points.length > 1) {
             targetCtx.lineCap = 'round';
             targetCtx.lineJoin = 'round';
@@ -1205,6 +1296,20 @@ export function renderImageStudio(container) {
             container.querySelector('#is-smooth-level').style.display = 'none';
             container.querySelector('#is-smooth-level-label').style.display = 'none';
             container.querySelector('#is-smooth-level-val').style.display = 'none';
+
+            if (multiSelected.size >= 2) {
+                container.querySelector('#is-ctx-front').style.display = 'none';
+                container.querySelector('#is-ctx-back').style.display = 'none';
+                container.querySelector('#is-obj-copy').style.display = 'none';
+                container.querySelector('#is-obj-flatten').style.display = 'none';
+                container.querySelector('#is-ctx-align').style.display = 'flex';
+                return;
+            } else {
+                if (container.querySelector('#is-ctx-align')) {
+                    container.querySelector('#is-ctx-align').style.display = 'none';
+                }
+            }
+
             if (s.type === 'text') {
                 ctxTextSpan.style.display = 'contents';
                 ctxShapeSpan.style.display = 'none';
@@ -1214,6 +1319,10 @@ export function renderImageStudio(container) {
                 container.querySelector('#is-font-bold').classList.toggle('active', !!s.fontBold);
                 container.querySelector('#is-font-italic').classList.toggle('active', !!s.fontItalic);
                 container.querySelector('#is-font-underline').classList.toggle('active', !!s.fontUnderline);
+                
+                const curAlign = s.align || 'left';
+                container.querySelectorAll('.is-text-align').forEach(b => b.classList.toggle('active', b.getAttribute('data-align') === curAlign));
+
                 container.querySelector('#is-text-render-style').value = s.textStyle || 'normal';
                 container.querySelector('#is-text-bg-color').value = s.textBgColor || '#000000';
             } else if (s.type === 'path') {
@@ -1258,6 +1367,16 @@ export function renderImageStudio(container) {
                 container.querySelector('#is-arrowhead-label').style.display = hasArrow ? '' : 'none';
                 container.querySelector('#is-arrowhead-style').style.display = hasArrow ? '' : 'none';
                 container.querySelector('#is-arrowhead-style').value = s.arrowHead || 'open';
+                if (s.type === 'rect') {
+                    container.querySelector('#is-shape-radius-divider').style.display = '';
+                    container.querySelector('#is-shape-radius-label').style.display = '';
+                    container.querySelector('#is-shape-radius').style.display = '';
+                    container.querySelector('#is-shape-radius').value = s.borderRadius || 0;
+                } else {
+                    container.querySelector('#is-shape-radius-divider').style.display = 'none';
+                    container.querySelector('#is-shape-radius-label').style.display = 'none';
+                    container.querySelector('#is-shape-radius').style.display = 'none';
+                }
             } else if (s.type === 'image') {
                 ctxTextSpan.style.display = 'none';
                 ctxShapeSpan.style.display = 'none';
@@ -1275,6 +1394,17 @@ export function renderImageStudio(container) {
                 } else {
                     container.querySelector('#is-shape-fill-color').setAttribute('data-transparent', 'false');
                     container.querySelector('#is-shape-fill-color').value = s.fill;
+                }
+                
+                if (s.type === 'rect') {
+                    container.querySelector('#is-shape-radius-divider').style.display = '';
+                    container.querySelector('#is-shape-radius-label').style.display = '';
+                    container.querySelector('#is-shape-radius').style.display = '';
+                    container.querySelector('#is-shape-radius').value = s.borderRadius || 0;
+                } else {
+                    container.querySelector('#is-shape-radius-divider').style.display = 'none';
+                    container.querySelector('#is-shape-radius-label').style.display = 'none';
+                    container.querySelector('#is-shape-radius').style.display = 'none';
                 }
             }
 
@@ -1457,6 +1587,18 @@ export function renderImageStudio(container) {
             }
         });
     });
+
+    container.querySelectorAll('.is-text-align').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const align = btn.getAttribute('data-align');
+            container.querySelectorAll('.is-text-align').forEach(b => b.classList.toggle('active', b === btn));
+            if (activeVectorShape && activeVectorShape.type === 'text') {
+                activeVectorShape.align = align;
+                drawSelectionOverlay();
+            }
+        });
+    });
     
     // Text color change
     container.querySelector('#is-text-color').addEventListener('input', () => {
@@ -1505,9 +1647,9 @@ export function renderImageStudio(container) {
         if (s.fontItalic) fontStr += 'italic ';
         if (s.fontBold) fontStr += 'bold ';
         ctx.font = `${fontStr}${s.fontSize}px "${s.fontFamily || 'Arial'}", sans-serif`;
-        const metrics = ctx.measureText(s.text);
-        s.x2 = s.x + metrics.width;
-        s.y2 = s.y + s.fontSize;
+        const maxWidth = Math.max(20, Math.abs(s.x2 - s.x));
+        const lines = wrapTextLines(ctx, s.text, maxWidth);
+        s.y2 = s.y + lines.length * (s.fontSize * 1.2);
     }
 
     // Brush context bar controls
@@ -2009,18 +2151,33 @@ export function renderImageStudio(container) {
                     drawSelectionOverlay();
                     return;
                 }
-                // Normal click: clear multi-select
-                multiSelected.clear();
-                container.querySelector('#is-ctx-group').style.display = 'none';
+                // Normal click: clear multi-select if not clicking on already selected item
+                if (!multiSelected.has(hitShape)) {
+                    multiSelected.clear();
+                    container.querySelector('#is-ctx-group').style.display = 'none';
+                }
+                
                 // If we're in control point editing mode on the active shape,
                 // clicking the shape body should not start a move - only handles work
                 if (hitShape === activeVectorShape && activeVectorShape.originalPoints && activeVectorShape.originalPoints.length > 1) {
                     // Allow move if not near a control point (control points checked above)
                     // Shift+drag = duplicate the object and drag the clone
                     if (isShiftDown) {
-                        const dupe = cloneShape(hitShape);
-                        vectorShapes.push(dupe);
-                        activeVectorShape = dupe;
+                        if (multiSelected.size > 1 && multiSelected.has(hitShape)) {
+                            const newSelection = new Set();
+                            multiSelected.forEach(s => {
+                                const dupe = cloneShape(s);
+                                vectorShapes.push(dupe);
+                                newSelection.add(dupe);
+                            });
+                            multiSelected.clear();
+                            newSelection.forEach(s => multiSelected.add(s));
+                            activeVectorShape = [...newSelection][newSelection.size - 1];
+                        } else {
+                            const dupe = cloneShape(hitShape);
+                            vectorShapes.push(dupe);
+                            activeVectorShape = dupe;
+                        }
                     } else {
                         activeVectorShape = hitShape;
                     }
@@ -2029,11 +2186,24 @@ export function renderImageStudio(container) {
                     drawSelectionOverlay();
                     return;
                 }
+
                 // Shift+drag = duplicate the object and drag the clone
                 if (isShiftDown) {
-                    const dupe = cloneShape(hitShape);
-                    vectorShapes.push(dupe);
-                    activeVectorShape = dupe;
+                    if (multiSelected.size > 1 && multiSelected.has(hitShape)) {
+                        const newSelection = new Set();
+                        multiSelected.forEach(s => {
+                            const dupe = cloneShape(s);
+                            vectorShapes.push(dupe);
+                            newSelection.add(dupe);
+                        });
+                        multiSelected.clear();
+                        newSelection.forEach(s => multiSelected.add(s));
+                        activeVectorShape = [...newSelection][newSelection.size - 1];
+                    } else {
+                        const dupe = cloneShape(hitShape);
+                        vectorShapes.push(dupe);
+                        activeVectorShape = dupe;
+                    }
                 } else {
                     activeVectorShape = hitShape;
                 }
@@ -2135,18 +2305,20 @@ export function renderImageStudio(container) {
             input.style.fontWeight = isBold ? 'bold' : 'normal';
             input.style.fontStyle = isItalic ? 'italic' : 'normal';
             input.style.textDecoration = isUnderline ? 'underline' : 'none';
-            input.style.lineHeight = '1';
-            input.style.background = getContrastBackground(input.style.color);
-            input.style.outline = '2px dashed rgba(0,0,0,0.5)';
+            input.style.textAlign = container.querySelector('.is-text-align.active')?.getAttribute('data-align') || 'left';
+            input.style.lineHeight = '1.2';
+            input.style.outline = '2px solid #3b82f6';
             input.style.outlineOffset = '2px';
             input.style.minWidth = '20px';
             input.style.minHeight = '1em';
-            input.style.padding = '2px 4px';
-            input.style.margin = '-2px -4px'; // offset padding
-            input.style.whiteSpace = 'pre';
+            input.style.padding = '0';
+            input.style.margin = '0';
+            input.style.whiteSpace = 'pre-wrap';
+            input.style.wordBreak = 'break-word';
             input.style.zIndex = '1000';
             input.style.cursor = 'text';
-            input.style.background = 'transparent';
+            input.style.background = 'rgba(255,255,255,0.8)';
+            input.style.backdropFilter = 'blur(4px)';
             
             canvasWrapper.appendChild(input);
             // Use setTimeout to avoid immediate blur from the same mousedown
@@ -2160,9 +2332,16 @@ export function renderImageStudio(container) {
                     if (isItalic) fontStr += 'italic ';
                     if (isBold) fontStr += 'bold ';
                     ctx.font = `${fontStr}${fontSize}px "${fontFamily}", sans-serif`;
-                    const metrics = ctx.measureText(txt);
-                    const w = metrics.width;
-                    const h = fontSize;
+                    
+                    const textLines = txt.split('\n');
+                    let maxW = 0;
+                    textLines.forEach(l => {
+                        const lw = ctx.measureText(l).width;
+                        if (lw > maxW) maxW = lw;
+                    });
+                    
+                    const w = maxW + 5; // tiny buffer to avoid initial auto-wrap
+                    const h = textLines.length * fontSize * 1.2;
                     
                     vectorShapes.push({
                         type: 'text',
@@ -2416,6 +2595,7 @@ export function renderImageStudio(container) {
                     activeVectorShape.y2 += dy;
                     }
                 }
+                if (activeVectorShape.type === 'text') recalcTextBounds(activeVectorShape);
                 startX = pos.x; startY = pos.y;
                 updateConnections();
                 drawSelectionOverlay();
@@ -2765,6 +2945,8 @@ export function renderImageStudio(container) {
                 if (canvasWrapper.querySelector('.is-text-input')) return;
                 
                 activeVectorShape = s;
+                s.isEditing = true;
+                
                 const input = document.createElement('div');
                 input.className = 'is-text-input';
                 input.contentEditable = true;
@@ -2772,29 +2954,28 @@ export function renderImageStudio(container) {
                 input.style.position = 'absolute';
                 input.style.left = s.x + 'px';
                 input.style.top = s.y + 'px';
+                input.style.width = Math.max(50, Math.abs(s.x2 - s.x)) + 'px';
                 input.style.color = s.stroke;
                 input.style.fontSize = s.fontSize + 'px';
                 input.style.fontFamily = s.fontFamily || 'Arial';
                 input.style.fontWeight = s.fontBold ? 'bold' : 'normal';
                 input.style.fontStyle = s.fontItalic ? 'italic' : 'normal';
                 input.style.textDecoration = s.fontUnderline ? 'underline' : 'none';
-                input.style.lineHeight = '1';
-                input.style.background = getContrastBackground(input.style.color);
-                input.style.outline = '2px dashed rgba(0,0,0,0.5)';
+                input.style.textAlign = s.align || 'left';
+                input.style.lineHeight = '1.2';
+                input.style.outline = '2px solid #3b82f6';
                 input.style.outlineOffset = '2px';
-                input.style.minWidth = '20px';
                 input.style.minHeight = '1em';
-                input.style.padding = '2px 4px';
-                input.style.margin = '-2px -4px';
-                input.style.whiteSpace = 'pre';
+                input.style.padding = '0';
+                input.style.margin = '0';
+                input.style.whiteSpace = 'pre-wrap';
+                input.style.wordBreak = 'break-word';
                 input.style.zIndex = '1000';
                 input.style.cursor = 'text';
-                input.style.background = 'rgba(255,255,255,0.9)';
+                input.style.background = 'rgba(255,255,255,0.8)';
+                input.style.backdropFilter = 'blur(4px)';
                 
-                // Hide the shape while editing
-                const shapeIdx = vectorShapes.indexOf(s);
                 const origShape = { ...s };
-                
                 canvasWrapper.appendChild(input);
                 setTimeout(() => {
                     input.focus();
@@ -2808,6 +2989,7 @@ export function renderImageStudio(container) {
                 
                 const commitEdit = () => {
                     const txt = input.innerText.trim();
+                    s.isEditing = false;
                     input.remove();
                     if (txt) {
                         s.text = txt;
@@ -2826,6 +3008,7 @@ export function renderImageStudio(container) {
                         s.text = origShape.text;
                         s.x2 = origShape.x2;
                         s.y2 = origShape.y2;
+                        s.isEditing = false;
                         input.remove();
                         input.removeEventListener('blur', commitEdit);
                         drawSelectionOverlay();
@@ -2925,7 +3108,8 @@ export function renderImageStudio(container) {
                 stroke: shapeColor,
                 strokeWidth: shapeStroke,
                 fill: (fillColor && fillColor !== 'transparent') ? fillColor : null,
-                rotation: 0, flipH: false, flipV: false
+                rotation: 0, flipH: false, flipV: false,
+                borderRadius: 0
             });
             activeVectorShape = vectorShapes[vectorShapes.length - 1];
             currentTool = 'select';
@@ -3583,7 +3767,11 @@ export function renderImageStudio(container) {
     // Group selected objects
     container.querySelector('#is-ctx-group').addEventListener('click', () => {
         if (multiSelected.size < 2) return;
-        const children = [...multiSelected];
+        const children = [...multiSelected].sort((a, b) => vectorShapes.indexOf(a) - vectorShapes.indexOf(b));
+        const topObject = children[children.length - 1];
+        const topIdx = vectorShapes.indexOf(topObject);
+        const selectedBelowCount = children.length - 1; // All except the top one
+
         // Calculate bounding box of all children
         let gx1 = Infinity, gy1 = Infinity, gx2 = -Infinity, gy2 = -Infinity;
         children.forEach(s => {
@@ -3603,13 +3791,70 @@ export function renderImageStudio(container) {
             children: children,
             stroke: 'transparent', strokeWidth: 0
         };
-        vectorShapes.push(group);
+        // Insert at the original top-most position
+        vectorShapes.splice(topIdx - selectedBelowCount, 0, group);
         multiSelected.clear();
         activeVectorShape = group;
         container.querySelector('#is-ctx-group').style.display = 'none';
         container.querySelector('#is-ctx-ungroup').style.display = 'flex';
         drawSelectionOverlay();
         saveState();
+    });
+
+    // Alignment tools
+    container.querySelectorAll('.is-obj-align').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (multiSelected.size < 2) return;
+            const alignType = btn.getAttribute('data-align');
+            
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            multiSelected.forEach(s => {
+                const sLeft = s.type === 'polyarrow' || s.type === 'path' ? s.x : Math.min(s.x, s.x2);
+                const sTop = s.type === 'polyarrow' || s.type === 'path' ? s.y : Math.min(s.y, s.y2);
+                const sRight = s.type === 'polyarrow' || s.type === 'path' ? s.x2 : Math.max(s.x, s.x2);
+                const sBottom = s.type === 'polyarrow' || s.type === 'path' ? s.y2 : Math.max(s.y, s.y2);
+                if (sLeft < minX) minX = sLeft;
+                if (sTop < minY) minY = sTop;
+                if (sRight > maxX) maxX = sRight;
+                if (sBottom > maxY) maxY = sBottom;
+            });
+            const centerX = minX + (maxX - minX) / 2;
+            const centerY = minY + (maxY - minY) / 2;
+            
+            const _shiftShape = (sh, ddx, ddy) => {
+                sh.x += ddx; sh.x2 += ddx;
+                sh.y += ddy; sh.y2 += ddy;
+                if (sh.originalPoints) sh.originalPoints.forEach(p => { p.x += ddx; p.y += ddy; });
+                if (sh.smoothLevel && sh.originalPoints && typeof applySmoothToShape === 'function') applySmoothToShape(sh, sh.smoothLevel);
+                else if (sh.points) sh.points.forEach(p => { p.x += ddx; p.y += ddy; });
+                if (sh.connections) sh.connections = null;
+                if (sh.type === 'group' && sh.children) sh.children.forEach(c => _shiftShape(c, ddx, ddy));
+            };
+
+            multiSelected.forEach(s => {
+                const sLeft = s.type === 'polyarrow' || s.type === 'path' ? s.x : Math.min(s.x, s.x2);
+                const sTop = s.type === 'polyarrow' || s.type === 'path' ? s.y : Math.min(s.y, s.y2);
+                const sRight = s.type === 'polyarrow' || s.type === 'path' ? s.x2 : Math.max(s.x, s.x2);
+                const sBottom = s.type === 'polyarrow' || s.type === 'path' ? s.y2 : Math.max(s.y, s.y2);
+                const sCenterX = sLeft + (sRight - sLeft) / 2;
+                const sCenterY = sTop + (sBottom - sTop) / 2;
+                
+                let ddx = 0, ddy = 0;
+                switch(alignType) {
+                    case 'top': ddy = minY - sTop; break;
+                    case 'v-middle': ddy = centerY - sCenterY; break;
+                    case 'bottom': ddy = maxY - sBottom; break;
+                    case 'left': ddx = minX - sLeft; break;
+                    case 'h-middle': ddx = centerX - sCenterX; break;
+                    case 'right': ddx = maxX - sRight; break;
+                }
+                if (ddx !== 0 || ddy !== 0) {
+                    _shiftShape(s, ddx, ddy);
+                }
+            });
+            drawSelectionOverlay();
+            saveState();
+        });
     });
 
     // Ungroup
@@ -3643,6 +3888,13 @@ export function renderImageStudio(container) {
     container.querySelector('#is-shape-stroke').addEventListener('input', () => {
         if (activeVectorShape && activeVectorShape.type !== 'text') {
             activeVectorShape.strokeWidth = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+            drawSelectionOverlay();
+        }
+    });
+
+    container.querySelector('#is-shape-radius').addEventListener('input', () => {
+        if (activeVectorShape && activeVectorShape.type === 'rect') {
+            activeVectorShape.borderRadius = parseInt(container.querySelector('#is-shape-radius').value) || 0;
             drawSelectionOverlay();
         }
     });
