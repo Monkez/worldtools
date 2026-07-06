@@ -1,6 +1,7 @@
 import { removeBackground } from '@imgly/background-removal';
 import { AIClient } from '../utils/aiClient.js';
 import { getApiBase } from '../utils/apiBase.js';
+import { ensurePuterLoaded } from '../utils/puterLoader.js';
 
 export function renderImageStudio(container) {
     window._isGetCVal = function(id) {
@@ -102,12 +103,12 @@ export function renderImageStudio(container) {
                 <!-- ULTRA COMPACT LEFT TOOLBAR -->
                 <div style="width: 40px; background: #252526; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 4px; z-index: 10;">
                     <button class="is-btn-icon is-tool active" data-tool="select" title="Select Object (V)"><i class='bx bx-pointer'></i></button>
-                    <button class="is-btn-icon is-tool" data-tool="region" title="Select Region"><i class='bx bx-crop'></i></button>
                     <div style="width: 24px; height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
                     <button class="is-btn-icon is-tool" data-tool="brush" title="Brush"><i class='bx bx-paint'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="fill" title="Paint Bucket"><i class='bx bx-color-fill'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="eraser" title="Eraser"><i class='bx bx-eraser'></i></button>
                     <div style="width: 24px; height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
+                    <button class="is-btn-icon is-tool" data-tool="line" title="Line - drag one segment"><i class='bx bx-minus'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="polyarrow" title="Line/Arrow — Click to add points, Space to finish, Esc to cancel"><i class='bx bx-trending-up'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="rect" title="Rectangle"><i class='bx bx-square'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="circle" title="Circle"><i class='bx bx-circle'></i></button>
@@ -122,12 +123,12 @@ export function renderImageStudio(container) {
                 </div>
 
                 <!-- CONTEXT BAR (shown for all tools) -->
-                <div id="is-context-bar" style="display: none; position: absolute; top: 0; left: 40px; right: 0; background: #252526; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 4px 12px; z-index: 20; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div id="is-context-bar" style="display: none; position: absolute; top: 0; left: 40px; right: 248px; background: #252526; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 4px 12px; z-index: 20; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span id="is-obj-type-info" style="display: none; font-size: 11px; color: #8b8b8b; align-items: center; gap: 4px; padding: 0 4px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); height: 22px;"></span>
                     <!-- Text-specific controls -->
                     <span id="is-ctx-text" style="display: none; contents;">
                         <span style="font-size: 11px; color: #888;">Color</span>
-                        <input type="color" id="is-text-color" list="is-color-swatches" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
+                        <input type="color" id="is-text-color" list="is-color-swatches" value="#000000" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;">
                         <div class="is-divider"></div>
                         <select id="is-font-family" style="background: #1e1e1e; color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 3px 6px; font-size: 12px; width: 160px; cursor: pointer;">
                             <optgroup label="Vietnamese Fonts">
@@ -185,11 +186,11 @@ export function renderImageStudio(container) {
                     <!-- Shape-specific controls -->
                     <span id="is-ctx-shape" style="display: none; contents;">
                         <span style="font-size: 11px; color: #888;">Color</span>
-                        <input type="color" id="is-shape-color" list="is-color-swatches" value="#6366f1" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Stroke Color">
+                        <input type="color" id="is-shape-color" list="is-color-swatches" value="#2563eb" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Stroke Color">
                         
                         <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Fill</span>
-                        <input type="color" id="is-shape-fill-color" list="is-color-swatches" value="#8b5cf6" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Fill Color">
+                        <input type="color" id="is-shape-fill-color" list="is-color-swatches" value="#2563eb" data-transparent="true" style="width: 24px; height: 24px; border: none; border-radius: 4px; cursor: pointer; padding: 0; background: none;" title="Fill Color">
 
                         <div class="is-divider"></div>
                         <span style="font-size: 11px; color: #888;">Stroke</span>
@@ -270,8 +271,8 @@ export function renderImageStudio(container) {
                         <button class="is-btn-icon" id="is-canvas-remove-bg" title="Remove Background" style="gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ec4899;"><i class='bx bx-cut'></i> Remove BG</button>
                     </span>
                     <div class="is-divider" id="is-ctx-del-divider" style="display: none;"></div>
-                    <button class="is-btn-icon" id="is-obj-copy" title="Copy Object" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px;"><i class='bx bx-copy'></i></button>
-                    <button class="is-btn-icon" id="is-obj-flatten" title="Merge Down" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ef4444;"><i class='bx bx-layer-minus'></i></button>
+                    <button class="is-btn-icon" id="is-obj-copy" title="Copy Object" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px;"><i class='bx bx-copy'></i> Copy</button>
+                    <button class="is-btn-icon" id="is-obj-flatten" title="Merge Down" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ef4444;"><i class='bx bx-layer-minus'></i> Merge</button>
                     <button class="is-btn-icon" id="is-obj-smart-remove" title="AI Tool" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #10b981;"><i class='bx bxs-magic-wand'></i> AI Tool</button>
                     <button class="is-btn-icon" id="is-obj-remove-bg" title="Remove Background" style="display: none; gap: 4px; width: auto; padding: 0 8px; font-size: 11px; color: #ec4899;"><i class='bx bx-cut'></i> Remove BG</button>
                     <span id="is-polyarrow-opts" style="display:none; align-items:center; gap:6px;">
@@ -317,11 +318,55 @@ export function renderImageStudio(container) {
 
                 <!-- MAIN CANVAS AREA -->
                 <div id="is-canvas-container" style="flex: 1; background: #111; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <div id="is-empty-state" style="position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:15; pointer-events:none;">
+                        <div style="width:min(520px, calc(100% - 48px)); background:rgba(30,30,30,0.92); border:1px solid rgba(255,255,255,0.12); border-radius:8px; box-shadow:0 20px 50px rgba(0,0,0,0.45); padding:22px; color:#f3f4f6; pointer-events:auto;">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                                <i class='bx bx-image-add' style="font-size:28px; color:#60a5fa;"></i>
+                                <div>
+                                    <div style="font-size:18px; font-weight:700;">Start your image</div>
+                                    <div style="font-size:12px; color:#a1a1aa; margin-top:2px;">Open an image, create with AI, or begin with a blank canvas.</div>
+                                </div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-top:18px;">
+                                <button class="is-empty-action" id="is-empty-open" type="button"><i class='bx bx-folder-open'></i><span>Open Image</span></button>
+                                <button class="is-empty-action" id="is-empty-ai" type="button"><i class='bx bxs-magic-wand'></i><span>Generate AI</span></button>
+                                <button class="is-empty-action" id="is-empty-blank" type="button"><i class='bx bx-edit-alt'></i><span>Blank Canvas</span></button>
+                            </div>
+                            <div style="font-size:11px; color:#71717a; margin-top:14px;">Tip: you can also paste an image directly from the clipboard.</div>
+                        </div>
+                    </div>
                     <div id="is-canvas-wrapper" style="position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.8); background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMUlEQVQ4T2NkYGAQYcAP3uCTZhw1gGGYhAGBZIA/ENF5gNqGoB4TjxrAwDAJg4MGAgB/xwgfV7oJlwAAAABJRU5ErkJggg==') repeat; transition: transform 0.1s;">
                         <canvas id="is-canvas" width="1600" height="1200" style="display: block;"></canvas>
                         <canvas id="is-overlay" width="1600" height="1200" style="display: block; position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
                     </div>
                 </div>
+                <aside id="is-side-panel" style="width:248px; background:#202020; border-left:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; min-width:220px;">
+                    <div style="display:flex; border-bottom:1px solid rgba(255,255,255,0.08); padding:6px; gap:4px;">
+                        <button class="is-panel-tab active" data-panel="layers" type="button"><i class='bx bx-layer'></i> Layers</button>
+                        <button class="is-panel-tab" data-panel="props" type="button"><i class='bx bx-slider-alt'></i> Properties</button>
+                        <button class="is-panel-tab" data-panel="history" type="button"><i class='bx bx-history'></i> History</button>
+                    </div>
+                    <div class="is-panel-section active" id="is-panel-layers">
+                        <div class="is-panel-head">
+                            <span>Objects</span>
+                            <span id="is-layer-count">0</span>
+                        </div>
+                        <div id="is-layer-list" class="is-layer-list"></div>
+                    </div>
+                    <div class="is-panel-section" id="is-panel-props">
+                        <div class="is-panel-head"><span>Selection</span></div>
+                        <div id="is-properties-content" class="is-panel-empty">Select an object to edit its common settings.</div>
+                    </div>
+                    <div class="is-panel-section" id="is-panel-history">
+                        <div class="is-panel-head"><span>Quick Actions</span></div>
+                        <div class="is-quick-actions">
+                            <button type="button" id="is-panel-undo"><i class='bx bx-undo'></i> Undo</button>
+                            <button type="button" id="is-panel-redo"><i class='bx bx-redo'></i> Redo</button>
+                            <button type="button" id="is-panel-save"><i class='bx bx-save'></i> Save PNG</button>
+                        </div>
+                        <div id="is-history-summary" class="is-panel-empty"></div>
+                    </div>
+                </aside>
             </div>
         </div>
         <style>
@@ -334,6 +379,27 @@ export function renderImageStudio(container) {
             .is-text-style.active { background: rgba(59, 130, 246, 0.3) !important; color: #fff; }
             .is-slider-group { margin-bottom: 12px; font-size: 12px; color: #ccc; }
             .is-slider-group label { display: flex; justify-content: space-between; margin-bottom: 4px; }
+            .is-empty-action { min-height: 72px; background:#111827; border:1px solid rgba(255,255,255,0.12); color:#e5e7eb; border-radius:7px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; font-family:inherit; font-size:12px; font-weight:600; }
+            .is-empty-action:hover { background:#1f2937; border-color:rgba(96,165,250,0.55); color:#fff; }
+            .is-empty-action i { font-size:22px; color:#60a5fa; }
+            .is-panel-tab { flex:1; height:30px; border:none; background:transparent; color:#9ca3af; border-radius:5px; cursor:pointer; font-size:11px; display:flex; align-items:center; justify-content:center; gap:4px; font-family:inherit; }
+            .is-panel-tab.active, .is-panel-tab:hover { background:rgba(255,255,255,0.08); color:#fff; }
+            .is-panel-section { display:none; overflow:auto; padding:10px; flex:1; }
+            .is-panel-section.active { display:block; }
+            .is-panel-head { display:flex; justify-content:space-between; align-items:center; color:#d4d4d8; font-size:11px; text-transform:uppercase; letter-spacing:.4px; font-weight:700; margin-bottom:8px; }
+            .is-layer-list { display:flex; flex-direction:column; gap:6px; }
+            .is-layer-item { border:1px solid rgba(255,255,255,0.08); background:#181818; color:#d4d4d8; border-radius:6px; padding:7px 8px; cursor:pointer; display:flex; align-items:center; gap:8px; min-height:34px; font-size:12px; }
+            .is-layer-item:hover { border-color:rgba(96,165,250,0.4); background:#222; }
+            .is-layer-item.active { border-color:#3b82f6; background:rgba(59,130,246,0.16); color:#fff; }
+            .is-layer-meta { margin-left:auto; color:#71717a; font-size:10px; }
+            .is-panel-empty { color:#8b8b8b; font-size:12px; line-height:1.45; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:10px; }
+            .is-prop-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+            .is-prop-field label { display:block; color:#8b8b8b; font-size:10px; margin-bottom:4px; }
+            .is-prop-field input, .is-prop-field select { width:100%; box-sizing:border-box; background:#111; color:#fff; border:1px solid rgba(255,255,255,0.12); border-radius:5px; padding:6px; font-size:12px; }
+            .is-quick-actions { display:grid; grid-template-columns:1fr; gap:7px; margin-bottom:10px; }
+            .is-quick-actions button { height:32px; border:1px solid rgba(255,255,255,0.1); background:#181818; color:#d4d4d8; border-radius:6px; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px; }
+            .is-quick-actions button:hover { background:#252525; color:#fff; }
+            .is-toast { position:absolute; top:16px; left:50%; transform:translateX(-50%); background:rgba(24,24,27,0.94); color:#fff; border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:9px 14px; z-index:9999; font-size:12px; box-shadow:0 10px 30px rgba(0,0,0,0.35); display:flex; align-items:center; gap:8px; }
             #is-zoom, #is-linewidth, .is-filter { accent-color: #3b82f6; }
             input[type="number"]::-webkit-outer-spin-button,
             input[type="number"]::-webkit-inner-spin-button {
@@ -387,6 +453,77 @@ export function renderImageStudio(container) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[ch]));
+    }
+
+    function showToast(message, type = 'info', ms = 2400) {
+        const host = container.querySelector('#is-canvas-container') || container;
+        host.querySelectorAll('.is-toast').forEach(t => t.remove());
+        const toast = document.createElement('div');
+        toast.className = 'is-toast';
+        const icon = type === 'error' ? 'bx-error-circle' : type === 'success' ? 'bx-check-circle' : 'bx-info-circle';
+        const color = type === 'error' ? '#f87171' : type === 'success' ? '#34d399' : '#60a5fa';
+        toast.innerHTML = `<i class='bx ${icon}' style="color:${color};font-size:16px;"></i><span>${escapeHtml(message)}</span>`;
+        host.appendChild(toast);
+        setTimeout(() => toast.remove(), ms);
+        return toast;
+    }
+
+    function showStudioConfirm({ title, message, confirmText = 'Continue', danger = false }) {
+        return new Promise(resolve => {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.58);backdrop-filter:blur(4px);';
+            modal.innerHTML = `
+                <div style="width:360px;background:#1f1f1f;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,0.6);padding:18px;font-family:inherit;color:#f4f4f5;">
+                    <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(title)}</div>
+                    <div style="font-size:13px;color:#a1a1aa;line-height:1.45;margin-bottom:18px;">${escapeHtml(message)}</div>
+                    <div style="display:flex;justify-content:flex-end;gap:8px;">
+                        <button id="is-confirm-cancel" style="background:#303030;color:#d4d4d8;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 14px;cursor:pointer;font-family:inherit;">Cancel</button>
+                        <button id="is-confirm-ok" style="background:${danger ? '#dc2626' : '#2563eb'};color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-family:inherit;font-weight:600;">${escapeHtml(confirmText)}</button>
+                    </div>
+                </div>
+            `;
+            const finish = value => { modal.remove(); resolve(value); };
+            modal.querySelector('#is-confirm-cancel').addEventListener('click', () => finish(false));
+            modal.querySelector('#is-confirm-ok').addEventListener('click', () => finish(true));
+            modal.addEventListener('click', e => { if (e.target === modal) finish(false); });
+            document.body.appendChild(modal);
+        });
+    }
+
+    function showStudioPrompt({ title, message, defaultValue = '', confirmText = 'Apply' }) {
+        return new Promise(resolve => {
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.58);backdrop-filter:blur(4px);';
+            modal.innerHTML = `
+                <div style="width:380px;background:#1f1f1f;border:1px solid rgba(255,255,255,0.12);border-radius:10px;box-shadow:0 18px 50px rgba(0,0,0,0.6);padding:18px;font-family:inherit;color:#f4f4f5;">
+                    <div style="font-size:16px;font-weight:700;margin-bottom:8px;">${escapeHtml(title)}</div>
+                    <div style="font-size:13px;color:#a1a1aa;line-height:1.45;margin-bottom:12px;">${escapeHtml(message)}</div>
+                    <input id="is-prompt-input" value="${escapeHtml(defaultValue)}" style="width:100%;box-sizing:border-box;background:#111;color:#fff;border:1px solid rgba(255,255,255,0.14);border-radius:6px;padding:9px 10px;font-size:14px;outline:none;margin-bottom:16px;">
+                    <div style="display:flex;justify-content:flex-end;gap:8px;">
+                        <button id="is-prompt-cancel" style="background:#303030;color:#d4d4d8;border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 14px;cursor:pointer;font-family:inherit;">Cancel</button>
+                        <button id="is-prompt-ok" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-family:inherit;font-weight:600;">${escapeHtml(confirmText)}</button>
+                    </div>
+                </div>
+            `;
+            const input = modal.querySelector('#is-prompt-input');
+            const finish = value => { modal.remove(); resolve(value); };
+            modal.querySelector('#is-prompt-cancel').addEventListener('click', () => finish(null));
+            modal.querySelector('#is-prompt-ok').addEventListener('click', () => finish(input.value));
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') finish(input.value);
+                if (e.key === 'Escape') finish(null);
+            });
+            modal.addEventListener('click', e => { if (e.target === modal) finish(null); });
+            document.body.appendChild(modal);
+            input.focus();
+            input.select();
+        });
+    }
+
     // Setup custom range slider fill styling
     function setupRangeInput(input) {
         const update = () => {
@@ -422,6 +559,7 @@ export function renderImageStudio(container) {
     let selection = null; // {x, y, w, h, isFloating, imgData}
     let isDraggingSelection = false;
     let clipboardData = null;
+    let objectClipboard = null;
     
     // Vector Shapes
     let vectorShapes = [];
@@ -430,7 +568,14 @@ export function renderImageStudio(container) {
     let currentPathPoints = []; // for brush path recording
     let currentPolyPoints = []; // for polyline arrow tools
     let draggingControlPointIdx = -1; // index of control point being dragged
+    let labelDragState = null;
+    let lastCanvasPointer = null;
     let shapeIdCounter = 0;
+    let canvasBgColor = '#ffffff';
+    let canvasGrid = 'none';
+    let canvasGridSize = 20;
+    let studioStarted = false;
+    const DRAFT_KEY = 'worldtools_image_studio_draft_v2';
     
     function nextShapeId() { return 'shape_' + (++shapeIdCounter); }
     
@@ -563,26 +708,355 @@ export function renderImageStudio(container) {
     const canvasWrapper = container.querySelector('#is-canvas-wrapper');
     const sizeInfo = container.querySelector('#is-obj-type-info');
 
+    function markStudioStarted() {
+        studioStarted = true;
+        updateEmptyState();
+    }
+
+    function updateEmptyState() {
+        const empty = container.querySelector('#is-empty-state');
+        if (!empty) return;
+        const hasObjects = vectorShapes && vectorShapes.length > 0;
+        empty.style.display = (!studioStarted && !hasObjects) ? 'flex' : 'none';
+    }
+
+    let panelRefreshQueued = false;
+    function queueStudioPanelRefresh() {
+        if (panelRefreshQueued) return;
+        panelRefreshQueued = true;
+        requestAnimationFrame(() => {
+            panelRefreshQueued = false;
+            refreshStudioPanels();
+        });
+    }
+
+    function ensureShapeIds() {
+        vectorShapes.forEach(shape => {
+            if (!shape.id) shape.id = nextShapeId();
+            if (shape.type === 'group' && shape.children) {
+                shape.children.forEach(child => { if (!child.id) child.id = nextShapeId(); });
+            }
+        });
+    }
+
+    function shapeIcon(type) {
+        return {
+            image: 'bx-image', text: 'bx-text', path: 'bx-paint', polyarrow: 'bx-trending-up',
+            group: 'bx-group', rect: 'bx-square', circle: 'bx-circle', ellipse: 'bx-shape-circle',
+            triangle: 'bx-shape-triangle', star: 'bx-star'
+        }[type] || 'bx-shape-polygon';
+    }
+
+    function shapeName(shape, index) {
+        const names = {
+            image: 'Image', text: 'Text', path: 'Brush Path', polyarrow: 'Line/Arrow',
+            group: 'Group', rect: 'Rectangle', circle: 'Circle', ellipse: 'Ellipse',
+            triangle: 'Triangle', diamond: 'Diamond', parallelogram: 'Parallelogram',
+            pentagon: 'Pentagon', hexagon: 'Hexagon', star: 'Star'
+        };
+        if (shape.type === 'text' && shape.text) return '"' + shape.text.slice(0, 24) + (shape.text.length > 24 ? '...' : '') + '"';
+        return `${names[shape.type] || 'Object'} ${index + 1}`;
+    }
+
+    function refreshStudioPanels() {
+        ensureShapeIds();
+        updateEmptyState();
+
+        const layerList = container.querySelector('#is-layer-list');
+        const layerCount = container.querySelector('#is-layer-count');
+        const props = container.querySelector('#is-properties-content');
+        const historySummary = container.querySelector('#is-history-summary');
+        if (!layerList || !props || !historySummary) return;
+
+        layerCount.textContent = vectorShapes.length;
+        if (!vectorShapes.length) {
+            layerList.innerHTML = `<div class="is-panel-empty">No objects yet. Add text, shapes, brush strokes, pasted images, or AI-generated objects.</div>`;
+        } else {
+            layerList.innerHTML = vectorShapes.map((shape, visualIdx) => {
+                const stackIndex = vectorShapes.length - 1 - visualIdx;
+                const s = vectorShapes[stackIndex];
+                const active = s === activeVectorShape || multiSelected.has(s);
+                const w = Math.round(Math.abs((s.x2 || 0) - (s.x || 0)));
+                const h = Math.round(Math.abs((s.y2 || 0) - (s.y || 0)));
+                return `<button class="is-layer-item ${active ? 'active' : ''}" type="button" data-shape-id="${escapeHtml(s.id)}">
+                    <i class='bx ${shapeIcon(s.type)}'></i>
+                    <span>${escapeHtml(shapeName(s, stackIndex))}</span>
+                    <span class="is-layer-meta">${w}x${h}</span>
+                </button>`;
+            }).join('');
+        }
+
+        if (!activeVectorShape) {
+            props.innerHTML = `<div class="is-panel-empty">Select an object on the canvas or from Layers to edit its position, size, opacity, and rotation.</div>`;
+        } else if (multiSelected.size >= 2) {
+            props.innerHTML = `<div class="is-panel-empty">${multiSelected.size} objects selected. Use the context bar to group, align, or delete them.</div>`;
+        } else {
+            const s = activeVectorShape;
+            const opacity = Math.round((s.opacity ?? 1) * 100);
+            const labelColor = normalizeHexColor(s.labelColor, '#ffffff');
+            const labelBg = normalizeHexColor(s.labelBg, '#111827');
+            props.innerHTML = `
+                <div class="is-panel-empty" style="margin-bottom:10px;">${escapeHtml(shapeName(s, vectorShapes.indexOf(s)))} · ${escapeHtml(s.type)}</div>
+                ${s.type !== 'text' ? `<div class="is-prop-field" style="margin-bottom:8px;"><label>Attached Label</label><input type="text" data-prop="label" value="${escapeHtml(s.label || '')}" placeholder="Optional label on this object"></div>
+                <div class="is-prop-grid" style="margin-bottom:10px;">
+                    <div class="is-prop-field"><label>Label Size</label><input type="number" data-prop="labelFontSize" min="8" max="96" value="${parseInt(s.labelFontSize, 10) || 16}"></div>
+                    <div class="is-prop-field"><label>Label Font</label><select data-prop="labelFontFamily">
+                        ${['Arial','Inter','Be Vietnam Pro','Montserrat','Georgia','Times New Roman','Courier New'].map(f => `<option value="${escapeHtml(f)}" ${(s.labelFontFamily || 'Arial') === f ? 'selected' : ''}>${escapeHtml(f)}</option>`).join('')}
+                    </select></div>
+                    <div class="is-prop-field"><label>Text Color</label><input type="color" data-prop="labelColor" value="${labelColor}"></div>
+                    <div class="is-prop-field"><label>Label Fill</label><input type="color" data-prop="labelBg" value="${labelBg}"></div>
+                </div>` : ''}
+                <div class="is-prop-grid">
+                    <div class="is-prop-field"><label>X</label><input type="number" data-prop="x" value="${Math.round(s.x || 0)}"></div>
+                    <div class="is-prop-field"><label>Y</label><input type="number" data-prop="y" value="${Math.round(s.y || 0)}"></div>
+                    <div class="is-prop-field"><label>Width</label><input type="number" data-prop="w" min="1" value="${Math.round(Math.abs((s.x2 || 0) - (s.x || 0)))}"></div>
+                    <div class="is-prop-field"><label>Height</label><input type="number" data-prop="h" min="1" value="${Math.round(Math.abs((s.y2 || 0) - (s.y || 0)))}"></div>
+                    <div class="is-prop-field"><label>Rotation</label><input type="number" data-prop="rotation" value="${Math.round(s.rotation || 0)}"></div>
+                    <div class="is-prop-field"><label>Opacity %</label><input type="number" data-prop="opacity" min="1" max="100" value="${opacity}"></div>
+                </div>`;
+        }
+
+        historySummary.innerHTML = `Undo history: ${Math.max(historyStep + 1, 0)} / ${history.length}<br>Canvas: ${canvas.width} x ${canvas.height}px<br>Objects: ${vectorShapes.length}`;
+    }
+
+    function applyPropertyEdit(prop, rawValue) {
+        if (!activeVectorShape || multiSelected.size >= 2) return;
+        if (prop === 'label') {
+            const label = String(rawValue || '').trim();
+            if (label) activeVectorShape.label = label;
+            else delete activeVectorShape.label;
+            markStudioStarted();
+            drawSelectionOverlay();
+            saveState();
+            return;
+        }
+        if (['labelFontSize', 'labelFontFamily', 'labelColor', 'labelBg'].includes(prop)) {
+            const s = activeVectorShape;
+            if (prop === 'labelFontSize') s.labelFontSize = Math.max(8, Math.min(96, parseInt(rawValue, 10) || 16));
+            if (prop === 'labelFontFamily') s.labelFontFamily = String(rawValue || 'Arial');
+            if (prop === 'labelColor') s.labelColor = normalizeHexColor(rawValue, '#ffffff');
+            if (prop === 'labelBg') s.labelBg = normalizeHexColor(rawValue, '#111827');
+            markStudioStarted();
+            drawSelectionOverlay();
+            saveState();
+            return;
+        }
+        const value = parseFloat(rawValue);
+        if (!Number.isFinite(value)) return;
+        const s = activeVectorShape;
+        const width = Math.max(1, Math.abs((s.x2 || 0) - (s.x || 0)));
+        const height = Math.max(1, Math.abs((s.y2 || 0) - (s.y || 0)));
+        if (prop === 'x') { const dx = value - s.x; s.x += dx; s.x2 += dx; }
+        if (prop === 'y') { const dy = value - s.y; s.y += dy; s.y2 += dy; }
+        if (prop === 'w') s.x2 = s.x + Math.max(1, value) * (s.x2 >= s.x ? 1 : -1);
+        if (prop === 'h') s.y2 = s.y + Math.max(1, value) * (s.y2 >= s.y ? 1 : -1);
+        if (prop === 'rotation') s.rotation = value;
+        if (prop === 'opacity') s.opacity = Math.max(1, Math.min(100, value)) / 100;
+        if (prop === 'w' && s.type === 'text') recalcTextBounds(s, Math.max(1, value));
+        if (prop === 'h' && height && s.type !== 'text') s.y2 = s.y + Math.max(1, value) * (s.y2 >= s.y ? 1 : -1);
+        markStudioStarted();
+        drawSelectionOverlay();
+        saveState();
+    }
+
+    container.querySelectorAll('.is-panel-tab').forEach(tabBtn => {
+        tabBtn.addEventListener('click', () => {
+            container.querySelectorAll('.is-panel-tab').forEach(b => b.classList.toggle('active', b === tabBtn));
+            const panel = tabBtn.getAttribute('data-panel');
+            container.querySelectorAll('.is-panel-section').forEach(section => {
+                section.classList.toggle('active', section.id === `is-panel-${panel}`);
+            });
+        });
+    });
+
+    container.querySelector('#is-layer-list').addEventListener('click', e => {
+        const item = e.target.closest('.is-layer-item');
+        if (!item) return;
+        const shape = vectorShapes.find(s => s.id === item.dataset.shapeId);
+        if (!shape) return;
+        activeVectorShape = shape;
+        canvasSelected = false;
+        selection = null;
+        multiSelected.clear();
+        currentTool = 'select';
+        tools.forEach(t => t.classList.toggle('active', t.getAttribute('data-tool') === 'select'));
+        canvas.style.cursor = 'default';
+        drawSelectionOverlay();
+    });
+
+    container.querySelector('#is-properties-content').addEventListener('change', e => {
+        const input = e.target.closest('input[data-prop], select[data-prop]');
+        if (!input) return;
+        applyPropertyEdit(input.dataset.prop, input.value);
+    });
+
+    container.querySelector('#is-panel-undo').addEventListener('click', () => container.querySelector('#is-undo').click());
+    container.querySelector('#is-panel-redo').addEventListener('click', () => container.querySelector('#is-redo').click());
+    container.querySelector('#is-panel-save').addEventListener('click', () => container.querySelector('#is-download-btn').click());
+    container.querySelector('#is-empty-open').addEventListener('click', () => container.querySelector('#is-upload-btn').click());
+    container.querySelector('#is-empty-ai').addEventListener('click', () => {
+        markStudioStarted();
+        container.querySelector('#is-canvas-smart-remove').click();
+        setTimeout(() => container.querySelector('#is-ai-opt-create')?.click(), 60);
+    });
+    container.querySelector('#is-empty-blank').addEventListener('click', () => {
+        markStudioStarted();
+        showToast('Blank canvas ready', 'success');
+    });
+
     // Save state for Undo/Redo
     const MAX_HISTORY = 50;
+    let draftSaveTimer = null;
+    let isRestoringDraft = false;
+
+    function getImageSource(img) {
+        if (!img) return '';
+        if (img instanceof HTMLCanvasElement) return img.toDataURL('image/png');
+        return img.currentSrc || img.src || '';
+    }
+
+    function serializeShape(shape) {
+        const clone = { ...shape };
+        if (shape.points) clone.points = shape.points.map(p => ({ ...p }));
+        if (shape.originalPoints) clone.originalPoints = shape.originalPoints.map(p => ({ ...p }));
+        if (shape.connections) clone.connections = JSON.parse(JSON.stringify(shape.connections));
+        if (shape.type === 'image') {
+            clone.imageSrc = getImageSource(shape.img);
+            delete clone.img;
+        }
+        if (shape.type === 'group' && shape.children) {
+            clone.children = shape.children.map(child => serializeShape(child));
+        }
+        return clone;
+    }
+
+    function snapshotShape(s) {
+        const clone = { ...s };
+        if (s.points) clone.points = s.points.map(p => ({ ...p }));
+        if (s.originalPoints) clone.originalPoints = s.originalPoints.map(p => ({ ...p }));
+        if (s.connections) clone.connections = JSON.parse(JSON.stringify(s.connections));
+        if (s.type === 'image' && s.img) clone.img = s.img;
+        if (s.type === 'group' && s.children) clone.children = s.children.map(child => snapshotShape(child));
+        return clone;
+    }
+
+    function loadImage(src) {
+        return new Promise((resolve, reject) => {
+            if (!src) {
+                resolve(null);
+                return;
+            }
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
+
+    async function deserializeShape(shape) {
+        const clone = { ...shape };
+        if (shape.points) clone.points = shape.points.map(p => ({ ...p }));
+        if (shape.originalPoints) clone.originalPoints = shape.originalPoints.map(p => ({ ...p }));
+        if (shape.connections) clone.connections = JSON.parse(JSON.stringify(shape.connections));
+        if (shape.type === 'image' && shape.imageSrc) {
+            clone.img = await loadImage(shape.imageSrc);
+            delete clone.imageSrc;
+        }
+        if (shape.type === 'group' && shape.children) {
+            clone.children = await Promise.all(shape.children.map(child => deserializeShape(child)));
+        }
+        return clone;
+    }
+
+    function persistDraft() {
+        if (isRestoringDraft) return;
+        try {
+            const draft = {
+                version: 2,
+                savedAt: Date.now(),
+                canvasWidth: canvas.width,
+                canvasHeight: canvas.height,
+                baseDataURL: canvas.toDataURL('image/png'),
+                canvasBgColor,
+                canvasGrid,
+                canvasGridSize,
+                shapeIdCounter,
+                shapes: vectorShapes.map(shape => serializeShape(shape))
+            };
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+        } catch (err) {
+            console.warn('Image Studio draft autosave failed:', err);
+        }
+    }
+
+    function scheduleDraftSave() {
+        clearTimeout(draftSaveTimer);
+        draftSaveTimer = setTimeout(persistDraft, 400);
+    }
+
+    async function restoreDraftIfAvailable() {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return false;
+
+        try {
+            isRestoringDraft = true;
+            const draft = JSON.parse(raw);
+            if (!draft || !draft.baseDataURL) return false;
+
+            canvas.width = draft.canvasWidth || canvas.width;
+            canvas.height = draft.canvasHeight || canvas.height;
+            overlay.width = canvas.width;
+            overlay.height = canvas.height;
+            sizeInfo.innerText = `${canvas.width} x ${canvas.height}`;
+
+            canvasBgColor = draft.canvasBgColor || '#ffffff';
+            canvasGrid = draft.canvasGrid || 'none';
+            canvasGridSize = draft.canvasGridSize || 20;
+            shapeIdCounter = Math.max(shapeIdCounter, draft.shapeIdCounter || 0);
+
+            const bgInput = container.querySelector('#is-canvas-bg-color');
+            const gridInput = container.querySelector('#is-canvas-grid');
+            const gridSizeInput = container.querySelector('#is-canvas-grid-size');
+            if (bgInput) bgInput.value = canvasBgColor;
+            if (gridInput) gridInput.value = canvasGrid;
+            if (gridSizeInput) gridSizeInput.value = canvasGridSize;
+
+            const baseImg = await loadImage(draft.baseDataURL);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(baseImg, 0, 0);
+
+            vectorShapes = await Promise.all((draft.shapes || []).map(shape => deserializeShape(shape)));
+            studioStarted = true;
+            activeVectorShape = null;
+            multiSelected.clear();
+            selection = null;
+            drawSelectionOverlay();
+            return true;
+        } catch (err) {
+            console.warn('Image Studio draft restore failed:', err);
+            return false;
+        } finally {
+            isRestoringDraft = false;
+        }
+    }
+
     function saveState() {
         if (historyStep < history.length - 1) {
             history = history.slice(0, historyStep + 1);
         }
         // Deep clone vectorShapes (handle Image objects and nested objects)
         const shapesClone = vectorShapes.map(s => {
-            const clone = { ...s };
-            if (s.points) clone.points = s.points.map(p => ({ ...p }));
-            if (s.originalPoints) clone.originalPoints = s.originalPoints.map(p => ({ ...p }));
-            if (s.connections) clone.connections = JSON.parse(JSON.stringify(s.connections));
-            if (s.type === 'image' && s.img) {
-                clone.img = s.img; // keep same Image reference
-            }
-            return clone;
+            return snapshotShape(s);
         });
         history.push({
             dataURL: canvas.toDataURL(),
-            shapes: shapesClone
+            shapes: shapesClone,
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height,
+            canvasBgColor,
+            canvasGrid,
+            canvasGridSize
         });
         historyStep++;
         // Enforce history limit to prevent memory leaks
@@ -592,10 +1066,13 @@ export function renderImageStudio(container) {
             historyStep -= excess;
             if (historyStep < 0) historyStep = 0;
         }
+        if (vectorShapes.length > 0) studioStarted = true;
+        scheduleDraftSave();
+        refreshStudioPanels();
     }
-    
-    // Initial save
-    saveState();
+
+    const initialRestorePromise = restoreDraftIfAvailable().then(() => saveState());
+    window.addEventListener('beforeunload', persistDraft);
     
     // Flood fill (paint bucket) algorithm
     function floodFill(startX, startY, hexColor, tolerance) {
@@ -737,6 +1214,126 @@ export function renderImageStudio(container) {
             lines.push(currentLine);
         }
         return lines;
+    }
+
+    function measureTextLayout(context, text, fontSize, maxWidth) {
+        const lines = wrapTextLines(context, text || '', maxWidth);
+        const fallbackMetrics = context.measureText('Mg');
+        let ascent = fallbackMetrics.actualBoundingBoxAscent || fontSize * 0.82;
+        let descent = fallbackMetrics.actualBoundingBoxDescent || fontSize * 0.22;
+        let maxLineWidth = 0;
+
+        lines.forEach(line => {
+            const metrics = context.measureText(line || ' ');
+            maxLineWidth = Math.max(maxLineWidth, metrics.width);
+            ascent = Math.max(ascent, metrics.actualBoundingBoxAscent || ascent);
+            descent = Math.max(descent, metrics.actualBoundingBoxDescent || descent);
+        });
+
+        const lineHeight = Math.max(fontSize * 1.2, ascent + descent);
+        const textHeight = lines.length ? ascent + descent + (lines.length - 1) * lineHeight : ascent + descent;
+        return { lines, lineHeight, ascent, descent, textHeight, textWidth: maxLineWidth };
+    }
+
+    function getShapeLabelAnchor(s) {
+        if (s.type === 'polyarrow' && s.points && s.points.length > 1) {
+            const mid = Math.floor((s.points.length - 1) / 2);
+            const a = s.points[mid];
+            const b = s.points[mid + 1] || a;
+            return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        }
+        return {
+            x: s.x + (s.x2 - s.x) / 2,
+            y: s.y + (s.y2 - s.y) / 2
+        };
+    }
+
+    function normalizeHexColor(value, fallback = '#111827') {
+        const v = String(value || '').trim();
+        if (/^#[0-9a-f]{6}$/i.test(v)) return v;
+        return fallback;
+    }
+
+    function getAttachedLabelBounds(s, targetCtx = ctx) {
+        if (!s || !s.label || s.type === 'text') return null;
+        const text = String(s.label).trim();
+        if (!text) return null;
+
+        const fontSize = parseInt(s.labelFontSize, 10) || 16;
+        const anchor = getShapeLabelAnchor(s);
+        const x = anchor.x + (s.labelOffsetX || 0);
+        const y = anchor.y + (s.labelOffsetY ?? -10);
+
+        targetCtx.save();
+        targetCtx.font = `600 ${fontSize}px "${s.labelFontFamily || 'Arial'}", sans-serif`;
+        const metrics = targetCtx.measureText(text);
+        targetCtx.restore();
+
+        const padX = 8;
+        const padY = 5;
+        const width = metrics.width + padX * 2;
+        const height = fontSize + padY * 2;
+        return {
+            x: x - width / 2,
+            y: y - height / 2,
+            w: width,
+            h: height,
+            cx: x,
+            cy: y
+        };
+    }
+
+    function isPointInAttachedLabel(pos, s) {
+        const b = getAttachedLabelBounds(s);
+        if (!b) return false;
+        return pos.x >= b.x && pos.x <= b.x + b.w && pos.y >= b.y && pos.y <= b.y + b.h;
+    }
+
+    function findTopLabelAt(pos) {
+        for (let i = vectorShapes.length - 1; i >= 0; i--) {
+            if (isPointInAttachedLabel(pos, vectorShapes[i])) return vectorShapes[i];
+        }
+        return null;
+    }
+
+    function drawAttachedLabel(targetCtx, s) {
+        if (!s.label || s.type === 'text') return;
+        const text = String(s.label).trim();
+        if (!text) return;
+
+        const fontSize = s.labelFontSize || 16;
+        const bounds = getAttachedLabelBounds(s, targetCtx);
+        if (!bounds) return;
+
+        targetCtx.save();
+        targetCtx.globalAlpha = s.opacity ?? 1;
+        targetCtx.font = `600 ${fontSize}px "${s.labelFontFamily || 'Arial'}", sans-serif`;
+        targetCtx.textAlign = 'center';
+        targetCtx.textBaseline = 'middle';
+
+        const x = bounds.cx;
+        const y = bounds.cy;
+        const boxW = bounds.w;
+        const boxH = bounds.h;
+        const r = 5;
+
+        targetCtx.fillStyle = s.labelBg || 'rgba(17,24,39,0.82)';
+        targetCtx.beginPath();
+        targetCtx.moveTo(x - boxW / 2 + r, y - boxH / 2);
+        targetCtx.lineTo(x + boxW / 2 - r, y - boxH / 2);
+        targetCtx.quadraticCurveTo(x + boxW / 2, y - boxH / 2, x + boxW / 2, y - boxH / 2 + r);
+        targetCtx.lineTo(x + boxW / 2, y + boxH / 2 - r);
+        targetCtx.quadraticCurveTo(x + boxW / 2, y + boxH / 2, x + boxW / 2 - r, y + boxH / 2);
+        targetCtx.lineTo(x - boxW / 2 + r, y + boxH / 2);
+        targetCtx.quadraticCurveTo(x - boxW / 2, y + boxH / 2, x - boxW / 2, y + boxH / 2 - r);
+        targetCtx.lineTo(x - boxW / 2, y - boxH / 2 + r);
+        targetCtx.quadraticCurveTo(x - boxW / 2, y - boxH / 2, x - boxW / 2 + r, y - boxH / 2);
+        targetCtx.closePath();
+        targetCtx.fill();
+
+        targetCtx.fillStyle = s.labelColor || '#ffffff';
+        targetCtx.fillText(text, x, y + 0.5);
+        targetCtx.restore();
     }
     
     function drawShape(targetCtx, s) {
@@ -882,20 +1479,11 @@ export function renderImageStudio(container) {
             if (s.fontItalic) fontStyle += 'italic ';
             if (s.fontBold) fontStyle += 'bold ';
             targetCtx.font = `${fontStyle}${s.fontSize}px "${s.fontFamily || 'Arial'}", sans-serif`;
-            targetCtx.textBaseline = 'top';
+            targetCtx.textBaseline = 'alphabetic';
             targetCtx.textAlign = s.align || 'left';
             
             const maxWidth = Math.max(20, Math.abs(s.x2 - s.x));
-            const lines = wrapTextLines(targetCtx, s.text, maxWidth);
-            const lineHeight = s.fontSize * 1.2;
-            const textHeight = lines.length * lineHeight;
-            
-            let maxLineWidth = 0;
-            lines.forEach(l => {
-                const w = targetCtx.measureText(l).width;
-                if (w > maxLineWidth) maxLineWidth = w;
-            });
-            const textWidth = maxLineWidth;
+            const { lines, lineHeight, ascent, descent, textHeight, textWidth } = measureTextLayout(targetCtx, s.text, s.fontSize, maxWidth);
             
             let drawX = s.x;
             if (s.align === 'center') drawX = s.x + maxWidth / 2;
@@ -941,7 +1529,7 @@ export function renderImageStudio(container) {
                 targetCtx.shadowBlur = s.fontSize * 0.4;
                 targetCtx.fillStyle = s.stroke;
                 lines.forEach((line, i) => {
-                    targetCtx.fillText(line, drawX, s.y + i * lineHeight);
+                    targetCtx.fillText(line, drawX, s.y + ascent + i * lineHeight);
                 });
                 targetCtx.restore();
             }
@@ -954,12 +1542,12 @@ export function renderImageStudio(container) {
                 targetCtx.lineWidth = s.fontSize * 0.12;
                 targetCtx.lineJoin = 'round';
                 lines.forEach((line, i) => {
-                    targetCtx.strokeText(line, drawX, s.y + i * lineHeight);
+                    targetCtx.strokeText(line, drawX, s.y + ascent + i * lineHeight);
                 });
             }
             
             lines.forEach((line, i) => {
-                targetCtx.fillText(line, drawX, s.y + i * lineHeight);
+                targetCtx.fillText(line, drawX, s.y + ascent + i * lineHeight);
             });
             
             if (s.fontUnderline) {
@@ -973,8 +1561,9 @@ export function renderImageStudio(container) {
                     else if (s.align === 'right') ux = drawX - lw;
                     else ux = drawX;
                     
-                    targetCtx.moveTo(ux, s.y + i * lineHeight + s.fontSize + 2);
-                    targetCtx.lineTo(ux + lw, s.y + i * lineHeight + s.fontSize + 2);
+                    const underlineY = s.y + ascent + i * lineHeight + Math.max(2, descent * 0.35);
+                    targetCtx.moveTo(ux, underlineY);
+                    targetCtx.lineTo(ux + lw, underlineY);
                 });
                 targetCtx.stroke();
             }
@@ -1083,11 +1672,13 @@ export function renderImageStudio(container) {
             }
             targetCtx.stroke();
         }
-        
+
+        drawAttachedLabel(targetCtx, s);
         targetCtx.restore();
     }
     
     function drawSelectionOverlay() {
+        queueStudioPanelRefresh();
         octx.clearRect(0, 0, overlay.width, overlay.height);
         
         // Draw grid pattern on overlay (non-destructive)
@@ -1437,6 +2028,26 @@ export function renderImageStudio(container) {
         selToolbar.style.top = selection.y + 'px';
     }
 
+    function setColorInputValue(selector, value, transparent = false) {
+        const input = container.querySelector(selector);
+        if (!input) return;
+        input.dataset.transparent = transparent ? 'true' : 'false';
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function applyDefaultStyleForTool(tool) {
+        if (tool === 'line' || tool === 'polyarrow') {
+            setColorInputValue('#is-shape-color', '#ef4444', false);
+            setColorInputValue('#is-shape-fill-color', '#ef4444', true);
+        } else if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(tool)) {
+            setColorInputValue('#is-shape-color', '#2563eb', false);
+            setColorInputValue('#is-shape-fill-color', '#2563eb', true);
+        } else if (tool === 'text') {
+            setColorInputValue('#is-text-color', '#000000', false);
+        }
+    }
+
     // Tool Selection
     tools.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1452,10 +2063,12 @@ export function renderImageStudio(container) {
             tools.forEach(t => t.classList.remove('active'));
             btn.classList.add('active');
             currentTool = btn.getAttribute('data-tool');
+            applyDefaultStyleForTool(currentTool);
             currentPolyPoints = []; // Reset poly points on tool switch
             hideCanvasTooltip();
             if (currentTool === 'text') canvas.style.cursor = 'text';
             else if (currentTool === 'select' || currentTool === 'region') canvas.style.cursor = 'default';
+            else if (currentTool === 'line') canvas.style.cursor = 'crosshair';
             else if (currentTool === 'fill') canvas.style.cursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' stroke='%23000' stroke-width='1.5' d='M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z'/%3E%3C/svg%3E") 2 22, crosshair`;
             else canvas.style.cursor = 'none'; // custom cursor for all drawing tools
             
@@ -1469,7 +2082,7 @@ export function renderImageStudio(container) {
 
             contextBar.style.display = 'flex';
             
-            const isShapeTool = ['polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool);
+            const isShapeTool = ['line', 'polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool);
             if (currentTool === 'text') {
                 ctxTextSpan.style.display = 'contents';
             } else if (isShapeTool) {
@@ -1556,6 +2169,8 @@ export function renderImageStudio(container) {
                 text: "Click to place text · Type and press <b style='color:#60a5fa;'>Enter</b> to confirm",
             
                 fill: "Click to flood fill area with color",
+
+                line: "Drag to draw one straight line",
             
                 region: "Drag to select a region · Then use toolbar to cut/copy/crop",
             
@@ -1648,8 +2263,8 @@ export function renderImageStudio(container) {
         if (s.fontBold) fontStr += 'bold ';
         ctx.font = `${fontStr}${s.fontSize}px "${s.fontFamily || 'Arial'}", sans-serif`;
         const maxWidth = Math.max(20, Math.abs(s.x2 - s.x));
-        const lines = wrapTextLines(ctx, s.text, maxWidth);
-        s.y2 = s.y + lines.length * (s.fontSize * 1.2);
+        const layout = measureTextLayout(ctx, s.text, s.fontSize, maxWidth);
+        s.y2 = s.y + layout.textHeight;
     }
 
     // Brush context bar controls
@@ -1695,10 +2310,6 @@ export function renderImageStudio(container) {
     });
     
     // Canvas background color
-    let canvasBgColor = '#ffffff';
-    let canvasGrid = 'none';
-    let canvasGridSize = 20;
-    
     container.querySelector('#is-canvas-bg-color').addEventListener('input', (e) => {
         canvasBgColor = e.target.value;
         // Fill entire canvas with background color
@@ -1803,15 +2414,28 @@ export function renderImageStudio(container) {
         }
     });
 
-    container.querySelector('#is-zoom-fit').addEventListener('click', () => {
+    function fitCanvasToWindow(attempt = 0) {
         const cw = canvasContainer.clientWidth;
         const ch = canvasContainer.clientHeight;
+        if ((!cw || !ch || !canvas.width || !canvas.height) && attempt < 10) {
+            requestAnimationFrame(() => fitCanvasToWindow(attempt + 1));
+            return;
+        }
+        if (!cw || !ch || !canvas.width || !canvas.height) return;
         const scaleX = Math.max(cw - 120, 50) / canvas.width;
         const scaleY = Math.max(ch - 120, 50) / canvas.height;
         updateZoom(Math.min(scaleX, scaleY, 4) * 100);
-    });
+    }
+
+    container.querySelector('#is-zoom-fit').addEventListener('click', fitCanvasToWindow);
 
     container.querySelector('#is-zoom-reset').addEventListener('click', () => updateZoom(100));
+
+    initialRestorePromise.finally(() => {
+        requestAnimationFrame(() => requestAnimationFrame(() => fitCanvasToWindow()));
+        setTimeout(() => fitCanvasToWindow(), 120);
+        setTimeout(() => fitCanvasToWindow(), 350);
+    });
 
     // Panning & Zoom with Mouse
     let isPanning = false;
@@ -1983,10 +2607,84 @@ export function renderImageStudio(container) {
         return luma > 150 ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)';
     }
 
+    const hitCanvas = document.createElement('canvas');
+    const hitCtx = hitCanvas.getContext('2d', { willReadFrequently: true });
+
+    function makeHitShape(shape) {
+        const clone = { ...shape };
+        if (shape.points) clone.points = shape.points.map(p => ({ ...p }));
+        if (shape.originalPoints) clone.originalPoints = shape.originalPoints.map(p => ({ ...p }));
+        if (shape.children) clone.children = shape.children.map(child => makeHitShape(child));
+        if (shape.img) clone.img = shape.img;
+        if (shape.type === 'image') {
+            clone.type = 'rect';
+            delete clone.img;
+            clone.fill = '#000000';
+        }
+        clone.stroke = '#000000';
+        clone.strokeWidth = Math.max(shape.strokeWidth || 1, 10);
+        if (shape.type !== 'image' && shape.type !== 'text') {
+            clone.fill = shape.fill && shape.fill !== 'transparent' ? '#000000' : null;
+        }
+        clone.opacity = 1;
+        if (clone.label) {
+            clone.labelColor = '#000000';
+            clone.labelBg = '#000000';
+        }
+        return clone;
+    }
+
+    function isPointInShape(pos, s) {
+        if (!s) return false;
+        const x = Math.round(pos.x);
+        const y = Math.round(pos.y);
+        if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return false;
+
+        if (hitCanvas.width !== canvas.width || hitCanvas.height !== canvas.height) {
+            hitCanvas.width = canvas.width;
+            hitCanvas.height = canvas.height;
+        }
+
+        hitCtx.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
+        drawShape(hitCtx, makeHitShape(s));
+        const alpha = hitCtx.getImageData(x, y, 1, 1).data[3];
+        hitCtx.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
+        return alpha > 8;
+    }
+
+    function findTopShapeAt(pos) {
+        for (let i = vectorShapes.length - 1; i >= 0; i--) {
+            if (isPointInShape(pos, vectorShapes[i])) return vectorShapes[i];
+        }
+        return null;
+    }
+
+    function constrainLineEnd(start, end) {
+        if (!isShiftDown) return { x: end.x, y: end.y };
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        const adx = Math.abs(dx);
+        const ady = Math.abs(dy);
+        if (adx > ady * 2) return { x: end.x, y: start.y };
+        if (ady > adx * 2) return { x: start.x, y: end.y };
+        const d = Math.max(adx, ady);
+        return {
+            x: start.x + d * Math.sign(dx || 1),
+            y: start.y + d * Math.sign(dy || 1)
+        };
+    }
+
+    function getConstrainedPolyPoint(pos, snap = null) {
+        if (snap) return { x: snap.x, y: snap.y };
+        if (!isShiftDown || currentPolyPoints.length === 0) return { x: pos.x, y: pos.y };
+        return constrainLineEnd(currentPolyPoints[currentPolyPoints.length - 1], pos);
+    }
+
     canvas.addEventListener('mousedown', (e) => {
         if (e.button === 1 || isSpaceDown) return;
         if (currentTool === 'smartremove') return; // Ignore if panning
         const pos = getMousePos(e);
+        lastCanvasPointer = pos;
         
         if (currentTool === 'select') {
             // Check vector handles first
@@ -2063,37 +2761,27 @@ export function renderImageStudio(container) {
                     return;
                 }
             }
+
+            const hitLabel = findTopLabelAt(pos);
+            if (hitLabel) {
+                canvasSelected = false;
+                multiSelected.clear();
+                activeVectorShape = hitLabel;
+                selection = null;
+                labelDragState = {
+                    shape: hitLabel,
+                    startX: pos.x,
+                    startY: pos.y,
+                    offsetX: hitLabel.labelOffsetX || 0,
+                    offsetY: hitLabel.labelOffsetY ?? -10,
+                    moved: false
+                };
+                drawSelectionOverlay();
+                return;
+            }
             
             // Check vector shapes (hit test in local rotated space)
-            let hitShape = null;
-            for(let i = vectorShapes.length - 1; i >= 0; i--) {
-                let s = vectorShapes[i];
-                let cx = s.x + (s.x2 - s.x) / 2;
-                let cy = s.y + (s.y2 - s.y) / 2;
-                let w = Math.abs(s.x2 - s.x);
-                let h = Math.abs(s.y2 - s.y);
-                let srot = (s.rotation || 0) * Math.PI / 180;
-                
-                // Transform mouse to local space of this shape
-                let sdx = pos.x - cx;
-                let sdy = pos.y - cy;
-                let scosR = Math.cos(-srot);
-                let ssinR = Math.sin(-srot);
-                let slocalX = sdx * scosR - sdy * ssinR;
-                let slocalY = sdx * ssinR + sdy * scosR;
-                
-                let p = (s.strokeWidth || 0) / 2 + 5;
-                let hw = w / 2 + p;
-                let hh = h / 2 + p;
-                if (s.type === 'circle' || s.type === 'ellipse') {
-                    let r = Math.max(w, h) / 2 + p;
-                    hw = r; hh = r;
-                }
-                if (Math.abs(slocalX) <= hw && Math.abs(slocalY) <= hh) {
-                    hitShape = s;
-                    break;
-                }
-            }
+            let hitShape = findTopShapeAt(pos);
             
             if (hitShape && e.altKey && activeVectorShape) {
                 // Alt+Click: select the next object underneath at this position
@@ -2215,7 +2903,13 @@ export function renderImageStudio(container) {
             }
             
             
-            selectCanvasBackground();
+            activeVectorShape = null;
+            multiSelected.clear();
+            canvasSelected = false;
+            selection = null;
+            isDrawing = true;
+            startX = pos.x;
+            startY = pos.y;
             return;
         }
         
@@ -2240,7 +2934,7 @@ export function renderImageStudio(container) {
         if (currentTool === 'polyarrow') {
             // Check for snap to shape connection point
             const snap = findNearestSnapPoint(pos, [], 20);
-            const pt = snap ? { x: snap.x, y: snap.y } : { x: pos.x, y: pos.y };
+            const pt = getConstrainedPolyPoint(pos, snap);
             
             // Store snap info for connections
             if (currentPolyPoints.length === 0 && snap) {
@@ -2339,9 +3033,10 @@ export function renderImageStudio(container) {
                         const lw = ctx.measureText(l).width;
                         if (lw > maxW) maxW = lw;
                     });
-                    
-                    const w = maxW + 5; // tiny buffer to avoid initial auto-wrap
-                    const h = textLines.length * fontSize * 1.2;
+                    const initialWidth = maxW + 5; // tiny buffer to avoid initial auto-wrap
+                    const layout = measureTextLayout(ctx, txt, fontSize, Math.max(20, initialWidth));
+                    const w = initialWidth;
+                    const h = layout.textHeight;
                     
                     vectorShapes.push({
                         type: 'text',
@@ -2420,8 +3115,20 @@ export function renderImageStudio(container) {
         if (e.button === 1 || isSpaceDown || isPanning) return;
         if (currentTool === 'smartremove') return;
         const pos = getMousePos(e);
+        lastCanvasPointer = pos;
 
         if (currentTool === 'select') {
+            if (labelDragState) {
+                const dx = pos.x - labelDragState.startX;
+                const dy = pos.y - labelDragState.startY;
+                if (Math.hypot(dx, dy) > 3) labelDragState.moved = true;
+                if (labelDragState.moved) {
+                    labelDragState.shape.labelOffsetX = labelDragState.offsetX + dx;
+                    labelDragState.shape.labelOffsetY = labelDragState.offsetY + dy;
+                    drawSelectionOverlay();
+                }
+                return;
+            }
             // Canvas resize dragging
             if (isResizingCanvas) {
                 const newW = Math.max(50, Math.round(canvasResizeOrigW + (pos.x - canvasResizeStartX)));
@@ -2605,9 +3312,15 @@ export function renderImageStudio(container) {
             if (isDrawing) {
                 octx.clearRect(0, 0, overlay.width, overlay.height);
                 vectorShapes.forEach(s => drawShape(octx, s));
+                const rx = Math.min(startX, pos.x);
+                const ry = Math.min(startY, pos.y);
+                const rw = Math.abs(pos.x - startX);
+                const rh = Math.abs(pos.y - startY);
+                octx.fillStyle = 'rgba(96, 165, 250, 0.1)';
+                octx.fillRect(rx, ry, rw, rh);
                 octx.strokeStyle = '#3b82f6';
                 octx.setLineDash([5, 5]);
-                octx.strokeRect(startX, startY, pos.x - startX, pos.y - startY);
+                octx.strokeRect(rx, ry, rw, rh);
                 octx.setLineDash([]);
             } else if (canvasSelected && !activeVectorShape && !isDrawing) {
                 // Canvas resize handle hover
@@ -2687,7 +3400,7 @@ export function renderImageStudio(container) {
                 octx.strokeStyle = '#fff';
                 octx.lineWidth = 1;
                 octx.stroke();
-            } else if (['polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star', 'crop', 'text'].includes(currentTool)) {
+            } else if (['line', 'polyarrow', 'rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star', 'crop', 'text'].includes(currentTool)) {
                 // Draw a custom crosshair cursor on overlay
                 drawSelectionOverlay();
                 octx.strokeStyle = '#000';
@@ -2728,14 +3441,8 @@ export function renderImageStudio(container) {
                     octx.beginPath();
                     const last = currentPolyPoints[currentPolyPoints.length - 1];
                     octx.moveTo(last.x, last.y);
-                    let lineEndX = pos.x, lineEndY = pos.y;
-                    if (isShiftDown) {
-                        const adx = Math.abs(pos.x - last.x), ady = Math.abs(pos.y - last.y);
-                        if (adx > ady * 2) { lineEndY = last.y; }
-                        else if (ady > adx * 2) { lineEndX = last.x; }
-                        else { const d = Math.max(adx, ady); lineEndX = last.x + d * Math.sign(pos.x - last.x || 1); lineEndY = last.y + d * Math.sign(pos.y - last.y || 1); }
-                    }
-                    octx.lineTo(lineEndX, lineEndY);
+                    const previewEnd = constrainLineEnd(last, pos);
+                    octx.lineTo(previewEnd.x, previewEnd.y);
                     octx.stroke();
                     octx.setLineDash([]);
                     octx.globalAlpha = 1;
@@ -2806,6 +3513,25 @@ export function renderImageStudio(container) {
             octx.strokeStyle = '#fff';
             octx.lineWidth = 1;
             octx.stroke();
+        } else if (currentTool === 'line') {
+            const shapeColor = window._isGetCVal('#is-shape-color');
+            const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+            const end = constrainLineEnd({ x: startX, y: startY }, pos);
+            drawSelectionOverlay();
+            drawShape(octx, {
+                type: 'polyarrow',
+                points: [{ x: startX, y: startY }, end],
+                originalPoints: [{ x: startX, y: startY }, end],
+                x: Math.min(startX, end.x) - shapeStroke,
+                y: Math.min(startY, end.y) - shapeStroke,
+                x2: Math.max(startX, end.x) + shapeStroke,
+                y2: Math.max(startY, end.y) + shapeStroke,
+                stroke: shapeColor,
+                strokeWidth: shapeStroke,
+                arrowMode: 'none',
+                lineStyle: container.querySelector('#is-line-style').value,
+                arrowHead: container.querySelector('#is-arrowhead-style').value
+            });
         } else if (['rect', 'circle', 'ellipse', 'triangle', 'diamond', 'parallelogram', 'pentagon', 'hexagon', 'star'].includes(currentTool)) {
             const shapeColor = window._isGetCVal('#is-shape-color');
             const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
@@ -2877,11 +3603,54 @@ export function renderImageStudio(container) {
         drawSelectionOverlay();
         saveState();
     }
+
+    function finalizeLineShape(endPos) {
+        if (currentTool !== 'line' || !endPos) return false;
+        const shapeColor = window._isGetCVal('#is-shape-color');
+        const shapeStroke = parseInt(container.querySelector('#is-shape-stroke').value) || 5;
+        const end = constrainLineEnd({ x: startX, y: startY }, endPos);
+        if (Math.hypot(end.x - startX, end.y - startY) < 3) {
+            drawSelectionOverlay();
+            return true;
+        }
+        const minX = Math.min(startX, end.x);
+        const minY = Math.min(startY, end.y);
+        const maxX = Math.max(startX, end.x);
+        const maxY = Math.max(startY, end.y);
+        vectorShapes.push({
+            id: nextShapeId(),
+            type: 'polyarrow',
+            points: [{ x: startX, y: startY }, { x: end.x, y: end.y }],
+            originalPoints: [{ x: startX, y: startY }, { x: end.x, y: end.y }],
+            x: minX - shapeStroke, y: minY - shapeStroke,
+            x2: maxX + shapeStroke, y2: maxY + shapeStroke,
+            stroke: shapeColor,
+            strokeWidth: shapeStroke,
+            rotation: 0, flipH: false, flipV: false,
+            arrowMode: 'none',
+            lineStyle: container.querySelector('#is-line-style').value,
+            arrowHead: container.querySelector('#is-arrowhead-style').value,
+            connections: { start: null, end: null }
+        });
+        activeVectorShape = vectorShapes[vectorShapes.length - 1];
+        currentTool = 'select';
+        tools.forEach(t => t.classList.toggle('active', t.getAttribute('data-tool') === 'select'));
+        canvas.style.cursor = 'default';
+        drawSelectionOverlay();
+        saveState();
+        return true;
+    }
     
     // Space to finish polyarrow, Escape to cancel / select canvas
     document.addEventListener('keydown', (e) => {
         if (!container.querySelector('#is-canvas')) return;
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+        if (currentTool === 'line' && isDrawing && e.key === 'Tab') {
+            e.preventDefault();
+            isDrawing = false;
+            finalizeLineShape(lastCanvasPointer || { x: startX, y: startY });
+            return;
+        }
         if (currentTool === 'polyarrow') {
             if (e.key === ' ' || e.code === 'Space') {
                 e.preventDefault();
@@ -3026,8 +3795,22 @@ export function renderImageStudio(container) {
         if (currentTool === 'smartremove') return;
         if (e.button === 1 || isSpaceDown) return;
         const pos = getMousePos(e);
+        lastCanvasPointer = pos;
 
         if (currentTool === 'select') {
+            if (labelDragState) {
+                const state = labelDragState;
+                labelDragState = null;
+                isDrawing = false;
+                if (state.moved) {
+                    markStudioStarted();
+                    drawSelectionOverlay();
+                    saveState();
+                } else {
+                    editAttachedLabel(state.shape);
+                }
+                return;
+            }
             if (isResizingCanvas) {
                 isResizingCanvas = false;
                 canvas.style.cursor = 'default';
@@ -3052,7 +3835,29 @@ export function renderImageStudio(container) {
                 saveState();
                 return;
             }
-            isDrawing = false;
+            if (isDrawing) {
+                isDrawing = false;
+                const x = Math.min(startX, pos.x);
+                const y = Math.min(startY, pos.y);
+                const w = Math.abs(pos.x - startX);
+                const h = Math.abs(pos.y - startY);
+                if (w > 5 && h > 5) {
+                    selection = {
+                        x: x, y: y, w: w, h: h,
+                        isFloating: false,
+                        imgData: null
+                    };
+                    const allSpans = ['is-ctx-text','is-ctx-shape','is-ctx-brush','is-ctx-eraser','is-ctx-fill','is-ctx-crop','is-ctx-select','is-ctx-region-actions'];
+                    allSpans.forEach(id => container.querySelector('#'+id).style.display = 'none');
+                    container.querySelector('#is-ctx-region-actions').style.display = 'contents';
+                    container.querySelector('#is-region-info').textContent = `${Math.round(w)} x ${Math.round(h)} px`;
+                    contextBar.style.display = 'flex';
+                    drawSelectionOverlay();
+                } else {
+                    selectCanvasBackground();
+                }
+                return;
+            }
             return;
         }
         
@@ -3088,6 +3893,11 @@ export function renderImageStudio(container) {
         if (currentTool === 'crop') {
             // Crop tool now just shows region hint, actual crop is via region tool
             drawSelectionOverlay();
+            return;
+        }
+
+        if (currentTool === 'line') {
+            finalizeLineShape(pos);
             return;
         }
         
@@ -3226,6 +4036,7 @@ export function renderImageStudio(container) {
                 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0);
+                markStudioStarted();
                 saveState();
             };
             img.src = event.target.result;
@@ -3302,15 +4113,22 @@ export function renderImageStudio(container) {
     });
 
     // Clear
-    container.querySelector('#is-clear').addEventListener('click', () => {
-        if(confirm('Are you sure you want to clear the canvas?')) {
+    container.querySelector('#is-clear').addEventListener('click', async () => {
+        if(await showStudioConfirm({
+            title: 'Clear canvas?',
+            message: 'This removes the current base image, selection, and all editable objects. You can still use Undo right after clearing.',
+            confirmText: 'Clear Canvas',
+            danger: true
+        })) {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             vectorShapes = [];
             activeVectorShape = null;
             selection = null;
+            studioStarted = false;
             drawSelectionOverlay();
             saveState();
+            showToast('Canvas cleared', 'success');
         }
     });
     
@@ -3413,6 +4231,18 @@ export function renderImageStudio(container) {
 
     // Selection Toolbar Logic
     function performCopy() {
+        const selected = getSelectedShapes();
+        if (selected.length > 0) {
+            copyObjectsToInternalClipboard(selected);
+            copySelectedObjects().catch(err => console.warn('Object preview copy failed:', err));
+            const copyBtn = container.querySelector('#is-copy-btn');
+            if (copyBtn) {
+                copyBtn.style.color = '#4ade80';
+                setTimeout(() => copyBtn.style.color = '', 800);
+            }
+            return;
+        }
+
         // Copy entire canvas (with all vector shapes baked) to clipboard
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = canvas.width;
@@ -3565,10 +4395,11 @@ export function renderImageStudio(container) {
     });
 
     function performCut() {
-        performCopy();
-        if (activeVectorShape) {
-            vectorShapes = vectorShapes.filter(s => s !== activeVectorShape);
-            activeVectorShape = null;
+        const selected = getSelectedShapes();
+        if (selected.length > 0) {
+            copyObjectsToInternalClipboard(selected);
+            deleteSelectedObjects();
+            return;
         } else if (selection) {
             if (!selection.isFloating) {
                 ctx.fillStyle = '#ffffff';
@@ -3581,7 +4412,23 @@ export function renderImageStudio(container) {
     }
 
     function performPaste() {
-        if (clipboardData) {
+        if (objectClipboard && objectClipboard.shapes.length > 0) {
+            const clones = objectClipboard.shapes.map(s => {
+                const clone = cloneShape(s);
+                shiftShapeRecursive(clone, 24, 24);
+                return clone;
+            });
+
+            vectorShapes.push(...clones);
+            multiSelected.clear();
+            if (clones.length > 1) clones.forEach(clone => multiSelected.add(clone));
+            activeVectorShape = clones[clones.length - 1];
+            currentTool = 'select';
+            tools.forEach(t => t.classList.toggle('active', t.getAttribute('data-tool') === 'select'));
+            canvas.style.cursor = 'default';
+            drawSelectionOverlay();
+            saveState();
+        } else if (clipboardData) {
             if (selection) {
                 if (selection.isFloating) {
                     ctx.putImageData(selection.imgData, selection.x, selection.y);
@@ -3750,6 +4597,7 @@ export function renderImageStudio(container) {
             vectorShapes.splice(idx, 1);
             vectorShapes.push(activeVectorShape);
             drawSelectionOverlay();
+            saveState();
         }
     });
     
@@ -3761,6 +4609,7 @@ export function renderImageStudio(container) {
             vectorShapes.splice(idx, 1);
             vectorShapes.unshift(activeVectorShape);
             drawSelectionOverlay();
+            saveState();
         }
     });
 
@@ -3905,6 +4754,16 @@ export function renderImageStudio(container) {
         const entry = history[step];
         if (!entry) return;
         _restorePending = true;
+        if (entry.canvasWidth && entry.canvasHeight) {
+            canvas.width = entry.canvasWidth;
+            canvas.height = entry.canvasHeight;
+            overlay.width = entry.canvasWidth;
+            overlay.height = entry.canvasHeight;
+            sizeInfo.innerText = `${canvas.width} x ${canvas.height}`;
+        }
+        canvasBgColor = entry.canvasBgColor || canvasBgColor;
+        canvasGrid = entry.canvasGrid || canvasGrid;
+        canvasGridSize = entry.canvasGridSize || canvasGridSize;
         const img = new Image();
         img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -3912,21 +4771,16 @@ export function renderImageStudio(container) {
             _restorePending = false;
             // Redraw overlay AFTER canvas is ready to avoid visual desync
             drawSelectionOverlay();
+            scheduleDraftSave();
+            refreshStudioPanels();
         };
         img.src = entry.dataURL;
         // Restore vector shapes (deep clone including nested objects)
-        vectorShapes = entry.shapes.map(s => {
-            const clone = { ...s };
-            if (s.points) clone.points = s.points.map(p => ({ ...p }));
-            if (s.originalPoints) clone.originalPoints = s.originalPoints.map(p => ({ ...p }));
-            if (s.connections) clone.connections = JSON.parse(JSON.stringify(s.connections));
-            if (s.type === 'image' && s.img) {
-                clone.img = s.img;
-            }
-            return clone;
-        });
+        vectorShapes = entry.shapes.map(s => snapshotShape(s));
         activeVectorShape = null;
         selection = null;
+        studioStarted = vectorShapes.length > 0 || historyStep > 0;
+        refreshStudioPanels();
     };
 
     container.querySelector('#is-undo').addEventListener('click', () => {
@@ -3983,6 +4837,10 @@ export function renderImageStudio(container) {
         if (e.ctrlKey && e.key.toLowerCase() === 'c') {
             e.preventDefault();
             performCopy();
+        }
+        if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+            e.preventDefault();
+            selectAllObjects();
         }
         if (e.ctrlKey && e.key.toLowerCase() === 'x') {
             e.preventDefault();
@@ -4089,9 +4947,15 @@ export function renderImageStudio(container) {
         }, 1500);
     });
 
-    container.querySelector('#is-flatten-all').addEventListener('click', () => {
+    container.querySelector('#is-flatten-all').addEventListener('click', async () => {
         if (!vectorShapes || vectorShapes.length === 0) return;
-        if (!confirm("Are you sure you want to merge all objects into the base image? This cannot be undone.")) return;
+        const ok = await showStudioConfirm({
+            title: 'Merge all objects?',
+            message: 'All editable objects will be painted into the base image. This keeps the visual result but removes individual layer editing.',
+            confirmText: 'Merge All',
+            danger: true
+        });
+        if (!ok) return;
         
         vectorShapes.forEach(s => {
             if (typeof drawShape === 'function') drawShape(ctx, s);
@@ -4100,6 +4964,7 @@ export function renderImageStudio(container) {
         activeVectorShape = null;
         saveState();
         drawSelectionOverlay();
+        showToast('Objects merged into the image', 'success');
     });
 
     // Helper: run removeBackground on a source and show progress on a button
@@ -4226,14 +5091,14 @@ export function renderImageStudio(container) {
         menu.style.top = top + 'px';
 
         menu.innerHTML = `
-            <div style="padding: 4px 10px; font-size: 10px; color: #9ca3af; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">AI Generation</div>
-            <button class="is-btn-icon" id="is-ai-opt-create" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bxs-magic-wand' style="margin-right: 6px; color:#10b981;"></i> Create Image Object</button>
-            <button class="is-btn-icon" id="is-ai-opt-whole" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-image-alt' style="margin-right: 6px;"></i> Prompt AI (Edit)</button>
-            <button class="is-btn-icon" id="is-ai-opt-area" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-highlight' style="margin-right: 6px;"></i> Select Area to Prompt</button>
+            <div style="padding: 4px 10px; font-size: 10px; color: #9ca3af; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Create or Edit</div>
+            <button class="is-btn-icon" id="is-ai-opt-create" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;" title="Generate a new editable image object"><i class='bx bxs-magic-wand' style="margin-right: 6px; color:#10b981;"></i> Generate New Image</button>
+            <button class="is-btn-icon" id="is-ai-opt-whole" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;" title="Apply a prompt to the whole canvas or selected image"><i class='bx bx-image-alt' style="margin-right: 6px;"></i> Edit Whole Image</button>
+            <button class="is-btn-icon" id="is-ai-opt-area" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;" title="Draw an area first, then describe the change"><i class='bx bx-highlight' style="margin-right: 6px;"></i> Edit Selected Area</button>
             <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0; width: 100%;"></div>
-            <div style="padding: 4px 10px; font-size: 10px; color: #9ca3af; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">AI Enhancement</div>
-            <button class="is-btn-icon" id="is-ai-opt-super" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-zoom-in' style="margin-right: 6px;"></i> Super Resolution</button>
-            <button class="is-btn-icon" id="is-ai-opt-analyze" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-search-alt' style="margin-right: 6px;"></i> Analysis with AI</button>
+            <div style="padding: 4px 10px; font-size: 10px; color: #9ca3af; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Enhance</div>
+            <button class="is-btn-icon" id="is-ai-opt-super" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-zoom-in' style="margin-right: 6px;"></i> Upscale Image</button>
+            <button class="is-btn-icon" id="is-ai-opt-analyze" style="justify-content: flex-start; padding: 6px 10px; width: 100%; border-radius: 4px; font-size: 11px; white-space: nowrap;"><i class='bx bx-search-alt' style="margin-right: 6px;"></i> Analyze Image</button>
         `;
 
         const closeMenu = (ev) => {
@@ -4424,7 +5289,7 @@ export function renderImageStudio(container) {
                     promptInput.value = data.prompt;
                     revertBtn.style.display = 'block';
                 } catch (err) {
-                    alert('Refine failed: ' + err.message);
+                    showToast('Refine failed: ' + err.message, 'error');
                 } finally {
                     refineBtn.innerHTML = "<i class='bx bx-brush'></i> Refine Prompt";
                     refineBtn.disabled = false;
@@ -4538,6 +5403,7 @@ export function renderImageStudio(container) {
                         if (isObj && capturedShape) {
                             capturedShape.img = newImg;
                             activeVectorShape = capturedShape;
+                            markStudioStarted();
                             saveState(); drawSelectionOverlay();
                         } else {
                             if (!maskDataUrl) {
@@ -4545,19 +5411,20 @@ export function renderImageStudio(container) {
                                 vectorShapes.splice(0, vectorShapes.length);
                             }
                             ctx.drawImage(newImg, 0, 0, canvas.width, canvas.height);
+                            markStudioStarted();
                             saveState();
                             drawSelectionOverlay();
                         }
                     };
                     newImg.onerror = () => {
                         closeModal();
-                        alert("Failed to load edited image.");
+                        showToast("Failed to load edited image.", 'error');
                     };
                     newImg.src = data.imageUrl || data.imageBase64;
                     
                 } catch (err) {
                     console.error(err);
-                    alert("Edit failed: " + err.message);
+                    showToast("Edit failed: " + err.message, 'error');
                     btnSubmit.innerHTML = "<i class='bx bxs-magic-wand'></i> Apply Edit";
                     btnSubmit.disabled = false;
                     btnSubmit.style.opacity = '1';
@@ -4640,16 +5507,18 @@ export function renderImageStudio(container) {
                         newImage.onload = () => {
                             if (activeVectorShape && activeVectorShape.type === 'image') {
                                 activeVectorShape.img = newImage;
+                                markStudioStarted();
                                 saveState(); drawSelectionOverlay();
                             } else {
                                 ctx.drawImage(newImage, 0, 0, canvas.width, canvas.height);
+                                markStudioStarted();
                                 saveState(); drawSelectionOverlay();
                             }
                         };
                         newImage.src = data.imageUrl || data.imageBase64;
                     } catch (err) {
                         console.error("AI Generation error:", err);
-                        alert("AI Generation failed: " + err.message);
+                        showToast("AI generation failed: " + err.message, 'error');
                     }
                 } else {
                     console.log("No prompt, skipping legacy remove");
@@ -4837,24 +5706,26 @@ export function renderImageStudio(container) {
                 imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
             }
             
-            const scaleStr = prompt("Enter Upscale Level (e.g., 2 for 2x, 4 for 4x, 9 for 9x):", "4");
+            const scaleStr = await showStudioPrompt({
+                title: 'Super Resolution',
+                message: 'Choose an upscale level. 2x is faster; 4x is a good default; higher values can take longer.',
+                defaultValue: '4',
+                confirmText: 'Upscale'
+            });
             if (!scaleStr) {
                 document.addEventListener('pointerdown', closeMenu);
                 return;
             }
             const scaleFactor = parseInt(scaleStr);
             if (isNaN(scaleFactor) || scaleFactor < 1) {
-                alert("Invalid scale factor.");
+                showToast("Invalid scale factor.", 'error');
                 return;
             }
             
             const btn = e.target;
             const origHTML = btn.innerHTML;
             
-            const toast = document.createElement('div');
-            toast.innerHTML = `<i class='bx bx-loader-alt bx-spin'></i> Running Super Resolution ${scaleFactor}x (10-30s)...`;
-            toast.style.cssText = "position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#10b981;padding:10px 20px;border-radius:20px;font-size:13px;z-index:9999;font-family:sans-serif;";
-            container.appendChild(toast);
+            const toast = showToast(`Running Super Resolution ${scaleFactor}x (10-30s)...`, 'info', 30000);
             
             try {
                 const baseSettings = typeof AIClient !== 'undefined' ? AIClient.getSettings() : { provider: 'gemini', geminiKey: '' };
@@ -4901,13 +5772,15 @@ export function renderImageStudio(container) {
                             });
                         }
                     }
+                    markStudioStarted();
                     saveState(); drawSelectionOverlay();
+                    showToast('Upscaled image applied', 'success');
                 };
-                newImg.onerror = () => { toast.remove(); alert("Failed to load upscaled image"); };
+                newImg.onerror = () => { toast.remove(); showToast("Failed to load upscaled image", 'error'); };
                 newImg.src = data.imageUrl || data.imageBase64;
             } catch(err) {
                 toast.remove();
-                alert("Super Resolution Error: " + err.message);
+                showToast("Super Resolution error: " + err.message, 'error');
             }
 
         });
@@ -4938,6 +5811,7 @@ export function renderImageStudio(container) {
                             <button id="is-ai-create-revert-btn" style="background:transparent;color:#9ca3af;border:none;cursor:pointer;font-size:11px;display:none;text-decoration:underline;">Revert</button>
                         </div>
                     </div>
+                    <div style="font-size:11px;color:#9ca3af;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.18);border-radius:6px;padding:8px 10px;">Defaults are ready for quick generation. Change provider, model, or canvas size only when you need more control.</div>
                     <div style="display:flex; gap:12px; margin-bottom: 12px;">
                         <div style="flex:1;">
                             <label style="display:block;color:#d1d5db;font-size:12px;margin-bottom:6px;">Provider</label>
@@ -5092,7 +5966,7 @@ export function renderImageStudio(container) {
                     promptInput.value = data.prompt;
                     revertBtn.style.display = 'block';
                 } catch (err) {
-                    alert('Refine failed: ' + err.message);
+                    showToast('Refine failed: ' + err.message, 'error');
                 } finally {
                     refineBtn.innerHTML = "<i class='bx bx-brush'></i> Refine Prompt";
                     refineBtn.disabled = false;
@@ -5131,7 +6005,7 @@ export function renderImageStudio(container) {
                     let finalImageUrl = null;
                     
                     if (providerVal === 'puter') {
-                        if (typeof puter === 'undefined') throw new Error("Puter.js SDK is not loaded.");
+                        const puter = await ensurePuterLoaded();
                         const apiOptions = { model: modelVal };
                         if (ratioVal === "square_1_1") { apiOptions.width = 1024; apiOptions.height = 1024; }
                         else if (ratioVal === "widescreen_16_9") { apiOptions.width = 1024; apiOptions.height = 576; }
@@ -5226,24 +6100,25 @@ export function renderImageStudio(container) {
                         // Switch to Select tool to let user interact with object
                         if (typeof currentTool !== 'undefined') {
                             currentTool = 'select';
-                            document.querySelectorAll('.is-tool-btn').forEach(t => t.classList.remove('active'));
-                            const selBtn = document.querySelector('[data-tool="select"]');
+                            container.querySelectorAll('.is-tool').forEach(t => t.classList.remove('active'));
+                            const selBtn = container.querySelector('.is-tool[data-tool="select"]');
                             if (selBtn) selBtn.classList.add('active');
                             canvas.style.cursor = 'default';
                         }
                         
+                        markStudioStarted();
                         saveState();
                         drawSelectionOverlay();
                     };
                     newImg.onerror = () => {
                         closeModal();
-                        alert("Failed to load generated image.");
+                        showToast("Failed to load generated image.", 'error');
                     };
                     newImg.src = finalImageUrl;
                     
                 } catch (err) {
                     console.error(err);
-                    alert("Generation failed: " + err.message);
+                    showToast("Generation failed: " + err.message, 'error');
                     btnSubmit.innerHTML = "<i class='bx bxs-magic-wand'></i> Generate";
                     btnSubmit.disabled = false;
                     btnSubmit.style.opacity = '1';
@@ -5291,7 +6166,7 @@ export function renderImageStudio(container) {
                 let analysisResult = "";
 
                 if (settings.provider === 'puter') {
-                    if (typeof puter === 'undefined') throw new Error("Puter.js SDK is not loaded.");
+                    const puter = await ensurePuterLoaded();
                     
                     if (typeof puter.ai.img2txt === 'function') {
                         // Some APIs take (image, prompt) or just (image)
@@ -5353,7 +6228,7 @@ export function renderImageStudio(container) {
         }
         
         if (!window.aiAnalysisHistory || window.aiAnalysisHistory.length === 0) {
-            alert("Chưa có lịch sử phân tích ảnh nào.");
+            showToast("No AI analysis history yet.", 'info');
             popup.remove();
             return;
         }
@@ -5450,40 +6325,322 @@ export function renderImageStudio(container) {
     container.querySelector('#is-obj-copy').addEventListener('click', async (e) => {
         if (!activeVectorShape) return;
         try {
-            const s = activeVectorShape;
-            const minX = Math.min(s.x, s.x2);
-            const maxX = Math.max(s.x, s.x2);
-            const minY = Math.min(s.y, s.y2);
-            const maxY = Math.max(s.y, s.y2);
-            
-            const pad = s.type === 'image' ? 0 : ((s.strokeWidth || 0) + 10);
-            const targetW = Math.abs(maxX - minX) + pad*2;
-            const targetH = Math.abs(maxY - minY) + pad*2;
-            
-            const tempC = document.createElement('canvas');
-            tempC.width = targetW;
-            tempC.height = targetH;
-            const tCtx = tempC.getContext('2d');
-            
-            tCtx.translate(-minX + pad, -minY + pad);
-            if (typeof drawShape === 'function') drawShape(tCtx, s);
-            
-            tempC.toBlob(async (blob) => {
-                if (blob) {
-                    try {
-                        await navigator.clipboard.write([
-                            new window.ClipboardItem({ 'image/png': blob })
-                        ]);
-                        alert('Object copied to clipboard successfully!');
-                    } catch(clipboardErr) {
-                        console.error(clipboardErr);
-                        alert('Failed to copy. Your browser might not support clipboard API.');
-                    }
-                }
-            }, 'image/png');
+            copyObjectsToInternalClipboard();
+            const btn = container.querySelector('#is-obj-copy');
+            const original = btn.innerHTML;
+            btn.innerHTML = "<i class='bx bx-check'></i> Copied";
+            setTimeout(() => { btn.innerHTML = original; }, 900);
         } catch(err) {
             console.error(err);
-            alert("Error copying object: " + err.message);
+            showToast("Error copying object: " + err.message, 'error');
+        }
+    });
+
+    function getSelectedShapes() {
+        return multiSelected.size >= 2 ? [...multiSelected] : (activeVectorShape ? [activeVectorShape] : []);
+    }
+
+    function copyObjectsToInternalClipboard(shapes = getSelectedShapes()) {
+        if (!shapes || shapes.length === 0) return false;
+        objectClipboard = {
+            copiedAt: Date.now(),
+            shapes: shapes
+                .sort((a, b) => vectorShapes.indexOf(a) - vectorShapes.indexOf(b))
+                .map(s => cloneShape(s))
+        };
+        return true;
+    }
+
+    function shiftShapeRecursive(shape, dx, dy) {
+        shape.x += dx;
+        shape.x2 += dx;
+        shape.y += dy;
+        shape.y2 += dy;
+        if (shape.points) shape.points.forEach(p => { p.x += dx; p.y += dy; });
+        if (shape.originalPoints) shape.originalPoints.forEach(p => { p.x += dx; p.y += dy; });
+        if (shape.type === 'group' && shape.children) shape.children.forEach(child => shiftShapeRecursive(child, dx, dy));
+    }
+
+    async function copySelectedObjects() {
+        const selected = getSelectedShapes();
+        if (selected.length === 0) {
+            performCopy();
+            return;
+        }
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        selected.forEach(s => {
+            const pad = s.type === 'image' ? 0 : ((s.strokeWidth || 0) + 10);
+            minX = Math.min(minX, Math.min(s.x, s.x2) - pad);
+            minY = Math.min(minY, Math.min(s.y, s.y2) - pad);
+            maxX = Math.max(maxX, Math.max(s.x, s.x2) + pad);
+            maxY = Math.max(maxY, Math.max(s.y, s.y2) + pad);
+        });
+
+        const tempC = document.createElement('canvas');
+        tempC.width = Math.max(1, Math.ceil(maxX - minX));
+        tempC.height = Math.max(1, Math.ceil(maxY - minY));
+        const tCtx = tempC.getContext('2d');
+        tCtx.translate(-minX, -minY);
+        selected.forEach(s => drawShape(tCtx, s));
+
+        const blob = await new Promise(resolve => tempC.toBlob(resolve, 'image/png'));
+        if (!blob) return;
+        await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+    }
+
+    function deleteSelectedObjects() {
+        if (multiSelected.size > 0) {
+            vectorShapes = vectorShapes.filter(s => !multiSelected.has(s));
+            multiSelected.clear();
+            activeVectorShape = null;
+        } else if (activeVectorShape) {
+            vectorShapes = vectorShapes.filter(s => s !== activeVectorShape);
+            activeVectorShape = null;
+        } else if (selection) {
+            selection = null;
+        }
+        contextBar.style.display = 'none';
+        drawSelectionOverlay();
+        saveState();
+    }
+
+    function duplicateSelectedObjects() {
+        const selected = getSelectedShapes();
+        if (selected.length === 0) return;
+
+        const clones = selected
+            .sort((a, b) => vectorShapes.indexOf(a) - vectorShapes.indexOf(b))
+            .map(s => {
+                const clone = cloneShape(s);
+                shiftShapeRecursive(clone, 24, 24);
+                return clone;
+            });
+
+        vectorShapes.push(...clones);
+        multiSelected.clear();
+        if (clones.length > 1) clones.forEach(clone => multiSelected.add(clone));
+        activeVectorShape = clones[clones.length - 1];
+        drawSelectionOverlay();
+        saveState();
+    }
+
+    function selectAllObjects() {
+        multiSelected.clear();
+        vectorShapes.forEach(s => multiSelected.add(s));
+        activeVectorShape = vectorShapes[vectorShapes.length - 1] || null;
+        if (activeVectorShape) canvasSelected = false;
+        drawSelectionOverlay();
+    }
+
+    function bringSelectedToFront() {
+        const selected = getSelectedShapes();
+        if (selected.length === 0) return;
+        vectorShapes = vectorShapes.filter(s => !selected.includes(s));
+        vectorShapes.push(...selected);
+        drawSelectionOverlay();
+        saveState();
+    }
+
+    function sendSelectedToBack() {
+        const selected = getSelectedShapes();
+        if (selected.length === 0) return;
+        vectorShapes = vectorShapes.filter(s => !selected.includes(s));
+        vectorShapes.unshift(...selected);
+        drawSelectionOverlay();
+        saveState();
+    }
+
+    function flattenSelectedObjects() {
+        const selected = getSelectedShapes();
+        if (selected.length === 0) return;
+        selected
+            .sort((a, b) => vectorShapes.indexOf(a) - vectorShapes.indexOf(b))
+            .forEach(s => drawShape(ctx, s));
+        vectorShapes = vectorShapes.filter(s => !selected.includes(s));
+        activeVectorShape = null;
+        multiSelected.clear();
+        drawSelectionOverlay();
+        saveState();
+    }
+
+    async function editAttachedLabel(shape = activeVectorShape) {
+        if (!shape || shape.type === 'text') return;
+        const modal = document.createElement('div');
+        modal.className = 'is-modal-overlay';
+        modal.innerHTML = `
+            <div class="is-modal" style="max-width:380px;">
+                <h3>${shape.label ? 'Edit attached label' : 'Add attached label'}</h3>
+                <p>This label stays attached to the object and can be dragged directly on the canvas.</p>
+                <div class="is-prop-field" style="margin-bottom:10px;">
+                    <label>Label text</label>
+                    <input id="is-label-editor-text" type="text" value="${escapeHtml(shape.label || '')}" placeholder="Optional label">
+                </div>
+                <div class="is-prop-grid" style="margin-bottom:10px;">
+                    <div class="is-prop-field"><label>Size</label><input id="is-label-editor-size" type="number" min="8" max="96" value="${parseInt(shape.labelFontSize, 10) || 16}"></div>
+                    <div class="is-prop-field"><label>Font</label><select id="is-label-editor-font">
+                        ${['Arial','Inter','Be Vietnam Pro','Montserrat','Georgia','Times New Roman','Courier New'].map(f => `<option value="${escapeHtml(f)}" ${(shape.labelFontFamily || 'Arial') === f ? 'selected' : ''}>${escapeHtml(f)}</option>`).join('')}
+                    </select></div>
+                    <div class="is-prop-field"><label>Text</label><input id="is-label-editor-color" type="color" value="${normalizeHexColor(shape.labelColor, '#ffffff')}"></div>
+                    <div class="is-prop-field"><label>Fill</label><input id="is-label-editor-bg" type="color" value="${normalizeHexColor(shape.labelBg, '#111827')}"></div>
+                </div>
+                <div class="is-modal-actions">
+                    <button class="is-btn-secondary" id="is-label-editor-remove" type="button">Remove</button>
+                    <button class="is-btn-secondary" id="is-label-editor-cancel" type="button">Cancel</button>
+                    <button class="is-btn-primary" id="is-label-editor-apply" type="button">Apply Label</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        const close = () => modal.remove();
+        modal.querySelector('#is-label-editor-cancel').addEventListener('click', close);
+        modal.addEventListener('click', e => { if (e.target === modal) close(); });
+        modal.querySelector('#is-label-editor-remove').addEventListener('click', () => {
+            delete shape.label;
+            activeVectorShape = shape;
+            markStudioStarted();
+            drawSelectionOverlay();
+            saveState();
+            close();
+        });
+        modal.querySelector('#is-label-editor-apply').addEventListener('click', () => {
+            const label = modal.querySelector('#is-label-editor-text').value.trim();
+            if (label) shape.label = label;
+            else delete shape.label;
+            shape.labelFontSize = Math.max(8, Math.min(96, parseInt(modal.querySelector('#is-label-editor-size').value, 10) || 16));
+            shape.labelFontFamily = modal.querySelector('#is-label-editor-font').value || 'Arial';
+            shape.labelColor = normalizeHexColor(modal.querySelector('#is-label-editor-color').value, '#ffffff');
+            shape.labelBg = normalizeHexColor(modal.querySelector('#is-label-editor-bg').value, '#111827');
+            activeVectorShape = shape;
+            markStudioStarted();
+            drawSelectionOverlay();
+            saveState();
+            close();
+        });
+        setTimeout(() => modal.querySelector('#is-label-editor-text')?.focus(), 0);
+    }
+
+    function showStudioContextMenu(event, mode) {
+        container.querySelector('#is-right-click-menu')?.remove();
+
+        const selected = getSelectedShapes();
+        const hasObjects = selected.length > 0;
+        const isMulti = selected.length > 1;
+        const activeIsImage = activeVectorShape && activeVectorShape.type === 'image';
+        const menu = document.createElement('div');
+        menu.id = 'is-right-click-menu';
+        menu.style.cssText = 'position:fixed;z-index:100000;min-width:220px;background:#252526;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px;box-shadow:0 16px 40px rgba(0,0,0,0.5);display:flex;flex-direction:column;gap:2px;color:#ddd;font-size:12px;';
+
+        const item = (icon, label, action, opts = {}) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.disabled = !!opts.disabled;
+            btn.innerHTML = `<i class='bx ${icon}' style="font-size:16px;color:${opts.color || '#9ca3af'};"></i><span>${label}</span>${opts.shortcut ? `<span style="margin-left:auto;color:#666;font-size:11px;">${opts.shortcut}</span>` : ''}`;
+            btn.style.cssText = 'width:100%;height:30px;border:none;border-radius:5px;background:transparent;color:inherit;display:flex;align-items:center;gap:8px;padding:0 9px;text-align:left;cursor:pointer;font-family:inherit;font-size:12px;';
+            if (btn.disabled) {
+                btn.style.opacity = '0.4';
+                btn.style.cursor = 'not-allowed';
+            } else {
+                btn.onmouseenter = () => btn.style.background = 'rgba(255,255,255,0.08)';
+                btn.onmouseleave = () => btn.style.background = 'transparent';
+                btn.addEventListener('click', async () => {
+                    menu.remove();
+                    try { await action(); } catch (err) { showToast(err.message || err, 'error'); }
+                });
+            }
+            return btn;
+        };
+        const divider = () => {
+            const el = document.createElement('div');
+            el.style.cssText = 'height:1px;background:rgba(255,255,255,0.08);margin:4px 2px;';
+            return el;
+        };
+        const label = (text) => {
+            const el = document.createElement('div');
+            el.textContent = text;
+            el.style.cssText = 'padding:5px 9px 3px;color:#8b8b8b;text-transform:uppercase;font-size:10px;font-weight:700;letter-spacing:.45px;';
+            return el;
+        };
+
+        if (mode === 'object' && hasObjects) {
+            menu.appendChild(label(isMulti ? `${selected.length} objects` : 'Object'));
+            menu.appendChild(item('bx-copy', 'Copy object', () => { copyObjectsToInternalClipboard(); }, { shortcut: 'Ctrl+C' }));
+            menu.appendChild(item('bx-image', 'Copy preview PNG', copySelectedObjects));
+            menu.appendChild(item('bx-cut', 'Cut object', () => { copyObjectsToInternalClipboard(); deleteSelectedObjects(); }, { shortcut: 'Ctrl+X' }));
+            menu.appendChild(item('bx-duplicate', 'Duplicate', duplicateSelectedObjects));
+            menu.appendChild(item('bx-trash', 'Delete', deleteSelectedObjects, { shortcut: 'Del', color: '#f87171' }));
+            menu.appendChild(item('bx-text', activeVectorShape?.label ? 'Edit attached label' : 'Add attached label', () => editAttachedLabel(activeVectorShape), { disabled: isMulti || activeVectorShape?.type === 'text', color: '#60a5fa' }));
+            menu.appendChild(divider());
+            menu.appendChild(item('bx-arrow-to-top', 'Bring to front', bringSelectedToFront));
+            menu.appendChild(item('bx-arrow-to-bottom', 'Send to back', sendSelectedToBack));
+            menu.appendChild(item('bx-group', 'Group selected', () => container.querySelector('#is-ctx-group').click(), { disabled: !isMulti, color: '#22d3ee' }));
+            menu.appendChild(item('bx-unlink', 'Ungroup', () => container.querySelector('#is-ctx-ungroup').click(), { disabled: !(activeVectorShape && activeVectorShape.type === 'group'), color: '#fb923c' }));
+            if (isMulti) {
+                menu.appendChild(divider());
+                menu.appendChild(label('Align'));
+                menu.appendChild(item('bx-align-left', 'Left', () => container.querySelector('.is-obj-align[data-align="left"]').click()));
+                menu.appendChild(item('bx-align-middle', 'Center', () => container.querySelector('.is-obj-align[data-align="h-middle"]').click()));
+                menu.appendChild(item('bx-align-right', 'Right', () => container.querySelector('.is-obj-align[data-align="right"]').click()));
+                menu.appendChild(item('bx-align-left', 'Top', () => container.querySelector('.is-obj-align[data-align="top"]').click()));
+                menu.appendChild(item('bx-align-middle', 'Middle', () => container.querySelector('.is-obj-align[data-align="v-middle"]').click()));
+                menu.appendChild(item('bx-align-right', 'Bottom', () => container.querySelector('.is-obj-align[data-align="bottom"]').click()));
+            }
+            menu.appendChild(divider());
+            menu.appendChild(item('bx-layer-minus', 'Merge down', flattenSelectedObjects, { color: '#ef4444' }));
+            menu.appendChild(item('bxs-magic-wand', 'AI tool', () => container.querySelector('#is-obj-smart-remove').click(), { color: '#10b981' }));
+            menu.appendChild(item('bx-cut', 'Remove background', () => container.querySelector('#is-obj-remove-bg').click(), { disabled: !activeIsImage, color: '#ec4899' }));
+        } else {
+            menu.appendChild(label('Canvas'));
+            menu.appendChild(item('bx-paste', objectClipboard ? 'Paste objects' : 'Paste', performPaste, { disabled: !objectClipboard && !clipboardData, shortcut: 'Ctrl+V' }));
+            menu.appendChild(item('bx-copy', 'Copy canvas', performCopy, { shortcut: 'Ctrl+C' }));
+            menu.appendChild(item('bx-select-multiple', 'Select all objects', selectAllObjects, { shortcut: 'Ctrl+A', disabled: vectorShapes.length === 0 }));
+            menu.appendChild(divider());
+            menu.appendChild(item('bx-expand', 'Resize canvas', () => container.querySelector('#is-resize-btn').click()));
+            menu.appendChild(item('bxs-magic-wand', 'AI tool', () => container.querySelector('#is-canvas-smart-remove').click(), { color: '#10b981' }));
+            menu.appendChild(item('bx-cut', 'Remove background', () => container.querySelector('#is-canvas-remove-bg').click(), { color: '#ec4899' }));
+            menu.appendChild(item('bx-layer-minus', 'Merge all objects', () => container.querySelector('#is-flatten-all').click(), { disabled: vectorShapes.length === 0, color: '#ef4444' }));
+            menu.appendChild(item('bx-trash', 'Clear canvas', () => container.querySelector('#is-clear').click(), { color: '#f87171' }));
+        }
+
+        document.body.appendChild(menu);
+        const rect = menu.getBoundingClientRect();
+        let left = event.clientX;
+        let top = event.clientY;
+        if (left + rect.width > window.innerWidth) left = window.innerWidth - rect.width - 8;
+        if (top + rect.height > window.innerHeight) top = window.innerHeight - rect.height - 8;
+        menu.style.left = Math.max(8, left) + 'px';
+        menu.style.top = Math.max(8, top) + 'px';
+
+        const close = (ev) => {
+            if (!menu.contains(ev.target)) {
+                menu.remove();
+                document.removeEventListener('pointerdown', close);
+            }
+        };
+        setTimeout(() => document.addEventListener('pointerdown', close), 0);
+    }
+
+    canvas.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        const pos = getMousePos(event);
+        const hit = findTopShapeAt(pos);
+
+        if (hit) {
+            canvasSelected = false;
+            if (!multiSelected.has(hit)) {
+                multiSelected.clear();
+                activeVectorShape = hit;
+            } else {
+                activeVectorShape = hit;
+            }
+            selection = null;
+            drawSelectionOverlay();
+            showStudioContextMenu(event, 'object');
+        } else {
+            multiSelected.clear();
+            activeVectorShape = null;
+            selectCanvasBackground();
+            showStudioContextMenu(event, 'canvas');
         }
     });
 
