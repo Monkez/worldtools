@@ -37,11 +37,16 @@ export function renderImageStudio(container) {
                 <option value="#607d8b"></option>
             </datalist>
             <!-- ULTRA COMPACT TOP BAR -->
-            <div style="display: flex; justify-content: space-between; align-items: center; background: #252526; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <div style="display: flex; gap: 4px; align-items: center;">
+            <div class="is-topbar" style="display: flex; justify-content: space-between; align-items: center; background: #252526; padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div class="is-top-actions" style="display: flex; gap: 4px; align-items: center;">
                     <button class="is-btn-icon" id="is-upload-btn" title="Open (Ctrl+O)"><i class='bx bx-folder-open'></i></button>
                     <input type="file" id="is-upload" accept="image/*" style="display: none;">
-                    <button class="is-btn-icon" id="is-download-btn" title="Save (Ctrl+S)"><i class='bx bx-save'></i></button>
+                    <button class="is-btn-icon" id="is-project-open-btn" title="Open editable project"><i class='bx bx-folder'></i></button>
+                    <input type="file" id="is-project-open" accept=".wtools-image,.json,application/json" style="display:none;">
+                    <button class="is-btn-icon" id="is-project-save-btn" title="Save editable project (Ctrl+Shift+S)"><i class='bx bx-save'></i></button>
+                    <button class="is-btn-icon" id="is-project-save-as-btn" title="Save project as"><i class='bx bx-copy-alt'></i></button>
+                    <span id="is-project-status" title="Project status" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8b8b8b;font-size:10px;"></span>
+                    <button class="is-btn-text" id="is-download-btn" title="Export image (Ctrl+S)"><i class='bx bx-export'></i> Export</button>
                     <div class="is-divider"></div>
                     <button class="is-btn-icon" id="is-undo" title="Undo (Ctrl+Z)"><i class='bx bx-undo'></i></button>
                     <button class="is-btn-icon" id="is-redo" title="Redo (Ctrl+Y)"><i class='bx bx-redo'></i></button>
@@ -52,7 +57,7 @@ export function renderImageStudio(container) {
                     <div class="is-divider"></div>
                     <button class="is-btn-icon" id="is-clear" title="Clear Canvas" style="color: #fca5a5;"><i class='bx bx-trash'></i></button>
                     <div class="is-divider"></div>
-                    <button class="is-btn-text" id="is-ai-history-btn" title="View AI Analysis History"><i class='bx bx-history' style="color:#60a5fa;"></i> AI History</button>
+                    <button class="is-btn-text" id="is-ai-history-btn" title="View AI results"><i class='bx bx-history' style="color:#60a5fa;"></i> AI Results</button>
                     <div class="is-divider"></div>
                     
                     <!-- Adjustments Dropdown -->
@@ -83,10 +88,19 @@ export function renderImageStudio(container) {
 
                     <!-- Layout Tools -->
                     <button class="is-btn-text" id="is-flatten-all" style="color: #ef4444;"><i class='bx bx-layer-minus'></i> Merge All</button>
+                    <div id="is-more-container" style="position:relative;display:none;">
+                        <button class="is-btn-text" id="is-more-btn"><i class='bx bx-dots-horizontal-rounded'></i> More</button>
+                        <div id="is-more-menu" style="display:none;position:absolute;top:34px;left:0;min-width:190px;background:#252526;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:6px;z-index:1000;box-shadow:0 12px 30px rgba(0,0,0,.5);">
+                            <button data-more-action="ai"><i class='bx bx-history'></i> AI Results</button>
+                            <button data-more-action="adjust"><i class='bx bx-slider-alt'></i> Adjustments</button>
+                            <button data-more-action="merge" class="danger"><i class='bx bx-layer-minus'></i> Merge All</button>
+                        </div>
+                    </div>
                 </div>
                 
-                <div style="display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 6px;">
+                <div class="is-zoom-actions" style="display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 6px;">
                     <button class="is-btn-icon" id="is-zoom-fit" title="Fit to window" style="width: 24px; height: 24px; font-size: 14px;"><i class='bx bx-expand'></i></button>
+                    <button class="is-btn-icon" id="is-zoom-selection" title="Zoom to selection" style="width: 24px; height: 24px; font-size: 14px;"><i class='bx bx-selection'></i></button>
                     <button class="is-btn-icon" id="is-zoom-reset" title="Actual Size (100%)" style="width: 24px; height: 24px; font-size: 14px;"><i class='bx bx-target-lock'></i></button>
                     <div class="is-divider"></div>
                     <button class="is-btn-icon" onclick="document.getElementById('is-zoom').value = Math.max(10, parseInt(document.getElementById('is-zoom').value) - 10); document.getElementById('is-zoom').dispatchEvent(new Event('input'));" style="width: 24px; height: 24px;"><i class='bx bx-minus'></i></button>
@@ -96,6 +110,9 @@ export function renderImageStudio(container) {
                         <input type="number" id="is-zoom-val-input" value="100" min="10" max="400" title="Zoom %" style="background: rgba(0,0,0,0.2); color: #ccc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 14px 2px 4px; font-size: 11px; width: 44px; text-align: center; outline: none; -moz-appearance: textfield;">
                         <span style="font-size: 11px; color: #888; position: absolute; right: 4px; pointer-events: none;">%</span>
                     </div>
+                    <div class="is-divider"></div>
+                    <button class="is-btn-icon" id="is-shortcuts-btn" title="Keyboard shortcuts" style="width:24px;height:24px;"><i class='bx bx-help-circle'></i></button>
+                    <button class="is-btn-icon" id="is-panel-toggle" title="Toggle side panel" style="width:24px;height:24px;"><i class='bx bx-sidebar'></i></button>
                 </div>
             </div>
 
@@ -103,6 +120,7 @@ export function renderImageStudio(container) {
                 <!-- ULTRA COMPACT LEFT TOOLBAR -->
                 <div style="width: 40px; background: #252526; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 4px; z-index: 10;">
                     <button class="is-btn-icon is-tool active" data-tool="select" title="Select Object (V)"><i class='bx bx-pointer'></i></button>
+                    <button class="is-btn-icon is-tool" data-tool="hand" title="Pan canvas (H)"><i class='bx bx-move'></i></button>
                     <div style="width: 24px; height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0;"></div>
                     <button class="is-btn-icon is-tool" data-tool="brush" title="Brush"><i class='bx bx-paint'></i></button>
                     <button class="is-btn-icon is-tool" data-tool="fill" title="Paint Bucket"><i class='bx bx-color-fill'></i></button>
@@ -344,12 +362,17 @@ export function renderImageStudio(container) {
                     <div style="display:flex; border-bottom:1px solid rgba(255,255,255,0.08); padding:6px; gap:4px;">
                         <button class="is-panel-tab active" data-panel="layers" type="button"><i class='bx bx-layer'></i> Layers</button>
                         <button class="is-panel-tab" data-panel="props" type="button"><i class='bx bx-slider-alt'></i> Properties</button>
-                        <button class="is-panel-tab" data-panel="history" type="button"><i class='bx bx-history'></i> History</button>
+                        <button class="is-panel-tab" data-panel="history" type="button"><i class='bx bx-history'></i> Edit History</button>
                     </div>
                     <div class="is-panel-section active" id="is-panel-layers">
                         <div class="is-panel-head">
                             <span>Objects</span>
-                            <span id="is-layer-count">0</span>
+                            <span style="display:flex;align-items:center;gap:4px;"><button class="is-panel-icon" id="is-layer-show-all" title="Show and unlock all"><i class='bx bx-reset'></i></button><span id="is-layer-count">0</span></span>
+                        </div>
+                        <div id="is-group-edit-banner" style="display:none;margin-bottom:8px;"></div>
+                        <div style="display:grid;grid-template-columns:1fr 86px;gap:6px;margin-bottom:8px;">
+                            <input id="is-layer-search" type="search" placeholder="Search layers" aria-label="Search layers">
+                            <select id="is-layer-filter" aria-label="Filter layers"><option value="all">All</option><option value="shape">Shapes</option><option value="text">Text</option><option value="image">Images</option><option value="line">Lines</option><option value="group">Groups</option></select>
                         </div>
                         <div id="is-layer-list" class="is-layer-list"></div>
                     </div>
@@ -362,9 +385,11 @@ export function renderImageStudio(container) {
                         <div class="is-quick-actions">
                             <button type="button" id="is-panel-undo"><i class='bx bx-undo'></i> Undo</button>
                             <button type="button" id="is-panel-redo"><i class='bx bx-redo'></i> Redo</button>
-                            <button type="button" id="is-panel-save"><i class='bx bx-save'></i> Save PNG</button>
+                            <button type="button" id="is-panel-save"><i class='bx bx-export'></i> Export Image</button>
+                            <button type="button" id="is-panel-project"><i class='bx bx-save'></i> Save Project</button>
                         </div>
                         <div id="is-history-summary" class="is-panel-empty"></div>
+                        <div id="is-history-list" class="is-history-list"></div>
                     </div>
                 </aside>
             </div>
@@ -389,9 +414,17 @@ export function renderImageStudio(container) {
             .is-panel-head { display:flex; justify-content:space-between; align-items:center; color:#d4d4d8; font-size:11px; text-transform:uppercase; letter-spacing:.4px; font-weight:700; margin-bottom:8px; }
             .is-layer-list { display:flex; flex-direction:column; gap:6px; }
             .is-layer-item { border:1px solid rgba(255,255,255,0.08); background:#181818; color:#d4d4d8; border-radius:6px; padding:7px 8px; cursor:pointer; display:flex; align-items:center; gap:8px; min-height:34px; font-size:12px; }
+            .is-layer-item[draggable="true"] { cursor:grab; }
+            .is-layer-item.is-hidden { opacity:.5; }
+            .is-layer-item.is-locked { border-style:dashed; }
+            .is-layer-item.is-child { margin-left:18px; min-height:30px; background:#151515; }
             .is-layer-item:hover { border-color:rgba(96,165,250,0.4); background:#222; }
             .is-layer-item.active { border-color:#3b82f6; background:rgba(59,130,246,0.16); color:#fff; }
             .is-layer-meta { margin-left:auto; color:#71717a; font-size:10px; }
+            .is-layer-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+            .is-layer-actions { margin-left:auto; display:flex; gap:2px; }
+            .is-layer-action, .is-panel-icon { width:24px; height:24px; border:0; border-radius:4px; background:transparent; color:#8b8b8b; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
+            .is-layer-action:hover, .is-panel-icon:hover { background:rgba(255,255,255,.1); color:#fff; }
             .is-panel-empty { color:#8b8b8b; font-size:12px; line-height:1.45; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:10px; }
             .is-prop-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
             .is-prop-field label { display:block; color:#8b8b8b; font-size:10px; margin-bottom:4px; }
@@ -400,6 +433,33 @@ export function renderImageStudio(container) {
             .is-quick-actions button { height:32px; border:1px solid rgba(255,255,255,0.1); background:#181818; color:#d4d4d8; border-radius:6px; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:6px; }
             .is-quick-actions button:hover { background:#252525; color:#fff; }
             .is-toast { position:absolute; top:16px; left:50%; transform:translateX(-50%); background:rgba(24,24,27,0.94); color:#fff; border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:9px 14px; z-index:9999; font-size:12px; box-shadow:0 10px 30px rgba(0,0,0,0.35); display:flex; align-items:center; gap:8px; }
+            .is-modal-overlay { position:fixed; inset:0; z-index:100000; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.58); backdrop-filter:blur(4px); padding:24px; box-sizing:border-box; }
+            .is-modal { width:min(420px, 100%); background:#1f1f1f; border:1px solid rgba(255,255,255,0.12); border-radius:10px; box-shadow:0 18px 50px rgba(0,0,0,0.6); padding:18px; color:#f4f4f5; font-family:inherit; box-sizing:border-box; }
+            .is-modal h3 { margin:0 0 8px; font-size:16px; line-height:1.25; }
+            .is-modal p { margin:0 0 16px; color:#a1a1aa; font-size:13px; line-height:1.45; }
+            .is-modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+            .is-modal-actions button { height:34px; border-radius:6px; padding:0 12px; cursor:pointer; font-family:inherit; }
+            .is-btn-secondary { background:#303030; color:#d4d4d8; border:1px solid rgba(255,255,255,0.1); }
+            .is-btn-primary { background:#2563eb; color:#fff; border:1px solid rgba(37,99,235,0.8); font-weight:600; }
+            .is-history-list { display:flex; flex-direction:column; gap:4px; margin-top:8px; }
+            .is-history-item { width:100%; min-height:30px; border:1px solid rgba(255,255,255,.07); border-radius:5px; background:#181818; color:#aaa; display:flex; align-items:center; gap:7px; padding:0 8px; cursor:pointer; font:inherit; font-size:11px; text-align:left; }
+            .is-history-item.active { color:#fff; border-color:#3b82f6; background:rgba(59,130,246,.16); }
+            .is-prop-section-title { color:#d4d4d8; font-size:10px; font-weight:700; text-transform:uppercase; margin:12px 0 7px; letter-spacing:.4px; }
+            .is-prop-actions { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+            .is-prop-actions button { min-height:30px; border:1px solid rgba(255,255,255,.1); background:#181818; color:#ccc; border-radius:5px; cursor:pointer; font:inherit; font-size:11px; }
+            .is-label-popover { position:fixed; z-index:100000; width:min(360px,calc(100vw - 24px)); background:#1f1f1f; border:1px solid rgba(255,255,255,.14); border-radius:8px; box-shadow:0 18px 50px rgba(0,0,0,.6); padding:14px; color:#f4f4f5; box-sizing:border-box; }
+            #is-more-menu button { width:100%;height:32px;border:0;border-radius:5px;background:transparent;color:#ddd;display:flex;align-items:center;gap:8px;padding:0 9px;cursor:pointer;font:inherit;font-size:12px; }
+            #is-more-menu button:hover { background:rgba(255,255,255,.08); } #is-more-menu button.danger { color:#f87171; }
+            #is-adj-container.is-more-open { display:block !important;position:fixed !important;top:56px;left:70px;z-index:2000; }
+            #is-adj-container.is-more-open > #is-adj-btn { display:none; }
+            #is-adj-container.is-more-open #is-adj-menu { position:fixed !important;top:56px !important;left:70px !important;margin:0 !important; }
+            #is-layer-search, #is-layer-filter { width:100%;box-sizing:border-box;background:#111;color:#ddd;border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:6px;font:inherit;font-size:11px; }
+            .is-group-banner { border:1px solid rgba(34,211,238,.3);background:rgba(34,211,238,.08);border-radius:6px;padding:7px;color:#a5f3fc;font-size:11px;display:flex;align-items:center;justify-content:space-between;gap:6px; }
+            .is-group-banner button { border:0;background:rgba(255,255,255,.1);color:#fff;border-radius:4px;cursor:pointer;height:24px; }
+            .is-prop-details { border-top:1px solid rgba(255,255,255,.07);padding-top:7px;margin-top:8px; }
+            .is-prop-details summary { color:#d4d4d8;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;margin-bottom:8px; }
+            @media (max-width: 1100px) { .is-topbar { gap:6px; } .is-top-actions { min-width:0; } .is-zoom-actions { flex-shrink:0; } #is-ai-history-btn, #is-adj-container, #is-flatten-all, #is-project-status { display:none !important; } #is-more-container { display:block !important; } #is-zoom { width:42px !important; } }
+            @media (max-width: 900px) { #is-side-panel { position:absolute;right:0;top:0;bottom:0;z-index:40;box-shadow:-12px 0 28px rgba(0,0,0,.45); } #is-context-bar { right:0 !important; } }
             #is-zoom, #is-linewidth, .is-filter { accent-color: #3b82f6; }
             input[type="number"]::-webkit-outer-spin-button,
             input[type="number"]::-webkit-inner-spin-button {
@@ -570,11 +630,19 @@ export function renderImageStudio(container) {
     let draggingControlPointIdx = -1; // index of control point being dragged
     let labelDragState = null;
     let lastCanvasPointer = null;
+    let hoveredVectorShape = null;
+    let pendingDuplicateState = null;
+    let editingGroup = null;
+    const expandedGroups = new Set();
     let shapeIdCounter = 0;
     let canvasBgColor = '#ffffff';
     let canvasGrid = 'none';
     let canvasGridSize = 20;
+    let hasBaseImage = false;
     let studioStarted = false;
+    let currentProjectName = 'Untitled';
+    let currentProjectHandle = null;
+    let projectDirty = false;
     const DRAFT_KEY = 'worldtools_image_studio_draft_v2';
     
     function nextShapeId() { return 'shape_' + (++shapeIdCounter); }
@@ -713,6 +781,14 @@ export function renderImageStudio(container) {
         updateEmptyState();
     }
 
+    function updateProjectStatus() {
+        const status = container.querySelector('#is-project-status');
+        if (!status) return;
+        status.textContent = `${projectDirty ? '● ' : ''}${currentProjectName}`;
+        status.style.color = projectDirty ? '#fbbf24' : '#8b8b8b';
+        status.title = `${currentProjectName}${projectDirty ? ' · Unsaved changes' : ' · Saved'}`;
+    }
+
     function updateEmptyState() {
         const empty = container.querySelector('#is-empty-state');
         if (!empty) return;
@@ -754,8 +830,57 @@ export function renderImageStudio(container) {
             triangle: 'Triangle', diamond: 'Diamond', parallelogram: 'Parallelogram',
             pentagon: 'Pentagon', hexagon: 'Hexagon', star: 'Star'
         };
+        if (shape.name) return shape.name;
         if (shape.type === 'text' && shape.text) return '"' + shape.text.slice(0, 24) + (shape.text.length > 24 ? '...' : '') + '"';
-        return `${names[shape.type] || 'Object'} ${index + 1}`;
+        return `${names[shape.type] || 'Object'}${index >= 0 ? ` ${index + 1}` : ''}`;
+    }
+
+    function layerItemHtml(s, index, child = false) {
+        const active = s === activeVectorShape || multiSelected.has(s);
+        const groupOpen = s.type === 'group' && expandedGroups.has(s.id);
+        return `<div class="is-layer-item ${active ? 'active' : ''} ${s.hidden ? 'is-hidden' : ''} ${s.locked ? 'is-locked' : ''} ${child ? 'is-child' : ''}" draggable="${child ? 'false' : 'true'}" data-shape-id="${escapeHtml(s.id)}">
+            ${s.type === 'group' ? `<button class="is-layer-action" data-layer-action="expand" title="${groupOpen ? 'Collapse group' : 'Expand group'}"><i class='bx bx-chevron-${groupOpen ? 'down' : 'right'}'></i></button>` : '<span style="width:24px"></span>'}
+            <i class='bx ${shapeIcon(s.type)}'></i>
+            <span class="is-layer-name" title="Double-click to rename">${escapeHtml(shapeName(s, index))}</span>
+            <span class="is-layer-actions">
+                ${s.type === 'group' ? `<button class="is-layer-action" data-layer-action="edit-group" title="Edit group contents"><i class='bx bx-edit'></i></button>` : ''}
+                <button class="is-layer-action" data-layer-action="visibility" title="${s.hidden ? 'Show' : 'Hide'}"><i class='bx bx-${s.hidden ? 'hide' : 'show'}'></i></button>
+                <button class="is-layer-action" data-layer-action="lock" title="${s.locked ? 'Unlock' : 'Lock'}"><i class='bx bx-${s.locked ? 'lock' : 'lock-open-alt'}'></i></button>
+            </span>
+        </div>${groupOpen ? (s.children || []).map((c, i) => layerItemHtml(c, i, true)).join('') : ''}`;
+    }
+
+    function objectSpecificProperties(s) {
+        const color = normalizeHexColor(s.stroke, '#2563eb');
+        const fill = normalizeHexColor(s.fill, '#2563eb');
+        if (s.type === 'text') return `<details class="is-prop-details" open><summary>Text</summary><div class="is-prop-grid">
+            <div class="is-prop-field"><label>Color</label><input type="color" data-prop="stroke" value="${color}"></div>
+            <div class="is-prop-field"><label>Size</label><input type="number" data-prop="fontSize" min="8" max="240" value="${parseInt(s.fontSize, 10) || 48}"></div>
+            <div class="is-prop-field" style="grid-column:1/-1"><label>Font</label><select data-prop="fontFamily">${['Be Vietnam Pro','Inter','Arial','Montserrat','Georgia','Times New Roman','Courier New'].map(f => `<option value="${escapeHtml(f)}" ${(s.fontFamily || 'Be Vietnam Pro') === f ? 'selected' : ''}>${escapeHtml(f)}</option>`).join('')}</select></div>
+        </div></details>`;
+        if (['rect','circle','ellipse','triangle','diamond','parallelogram','pentagon','hexagon','star'].includes(s.type)) return `<details class="is-prop-details" open><summary>Appearance</summary><div class="is-prop-grid">
+            <div class="is-prop-field"><label>Stroke</label><input type="color" data-prop="stroke" value="${color}"></div>
+            <div class="is-prop-field"><label>Fill</label><input type="color" data-prop="fill" value="${fill}"></div>
+            <div class="is-prop-field"><label>Stroke Width</label><input type="number" data-prop="strokeWidth" min="1" max="50" value="${parseInt(s.strokeWidth,10)||5}"></div>
+            ${s.type === 'rect' ? `<div class="is-prop-field"><label>Corner Radius</label><input type="number" data-prop="borderRadius" min="0" max="200" value="${parseInt(s.borderRadius,10)||0}"></div>` : ''}
+        </div></details>`;
+        if (s.type === 'path' || s.type === 'polyarrow') return `<details class="is-prop-details" open><summary>Line</summary><div class="is-prop-grid">
+            <div class="is-prop-field"><label>Color</label><input type="color" data-prop="stroke" value="${color}"></div>
+            <div class="is-prop-field"><label>Width</label><input type="number" data-prop="strokeWidth" min="1" max="50" value="${parseInt(s.strokeWidth,10)||5}"></div>
+            <div class="is-prop-field"><label>Smoothing</label><input type="number" data-prop="smoothLevel" min="0" max="20" value="${parseInt(s.smoothLevel,10)||0}"></div>
+            ${s.type === 'polyarrow' ? `<div class="is-prop-field"><label>Mode</label><select data-prop="arrowMode"><option value="none" ${(s.arrowMode || 'none') === 'none' ? 'selected' : ''}>Line</option><option value="single" ${s.arrowMode === 'single' ? 'selected' : ''}>Arrow</option><option value="double" ${s.arrowMode === 'double' ? 'selected' : ''}>Double</option></select></div>
+            <div class="is-prop-field"><label>Style</label><select data-prop="lineStyle"><option value="solid" ${(s.lineStyle || 'solid') === 'solid' ? 'selected' : ''}>Solid</option><option value="dashed" ${s.lineStyle === 'dashed' ? 'selected' : ''}>Dashed</option><option value="dotted" ${s.lineStyle === 'dotted' ? 'selected' : ''}>Dotted</option><option value="dashdot" ${s.lineStyle === 'dashdot' ? 'selected' : ''}>Dash-dot</option></select></div>
+            <div class="is-prop-field"><label>Arrowhead</label><select data-prop="arrowHead"><option value="open" ${(s.arrowHead || 'open') === 'open' ? 'selected' : ''}>Open</option><option value="filled" ${s.arrowHead === 'filled' ? 'selected' : ''}>Filled</option><option value="diamond" ${s.arrowHead === 'diamond' ? 'selected' : ''}>Diamond</option><option value="circle" ${s.arrowHead === 'circle' ? 'selected' : ''}>Circle</option><option value="square" ${s.arrowHead === 'square' ? 'selected' : ''}>Square</option></select></div>` : ''}
+        </div></details>`;
+        if (s.type === 'image') return `<details class="is-prop-details" open><summary>Image</summary><div class="is-prop-actions"><button data-panel-action="remove-bg"><i class='bx bx-cut'></i> Remove BG</button><button data-panel-action="ai-object"><i class='bx bxs-magic-wand'></i> AI Tools</button></div></details>`;
+        return '';
+    }
+
+    function layerMatches(s, query, filter) {
+        const typeGroup = ['rect','circle','ellipse','triangle','diamond','parallelogram','pentagon','hexagon','star'].includes(s.type) ? 'shape' : (['path','polyarrow'].includes(s.type) ? 'line' : s.type);
+        const matchesType = filter === 'all' || typeGroup === filter;
+        const matchesText = !query || shapeName(s, 0).toLowerCase().includes(query);
+        return (matchesType && matchesText) || (s.children || []).some(child => layerMatches(child, query, filter));
     }
 
     function refreshStudioPanels() {
@@ -769,27 +894,34 @@ export function renderImageStudio(container) {
         if (!layerList || !props || !historySummary) return;
 
         layerCount.textContent = vectorShapes.length;
+        const groupBanner = container.querySelector('#is-group-edit-banner');
+        if (groupBanner) {
+            groupBanner.style.display = editingGroup ? 'block' : 'none';
+            groupBanner.innerHTML = editingGroup ? `<div class="is-group-banner"><span><i class='bx bx-edit'></i> Editing ${escapeHtml(shapeName(editingGroup, 0))}</span><button id="is-exit-group" type="button">Exit · Esc</button></div>` : '';
+        }
         if (!vectorShapes.length) {
             layerList.innerHTML = `<div class="is-panel-empty">No objects yet. Add text, shapes, brush strokes, pasted images, or AI-generated objects.</div>`;
         } else {
-            layerList.innerHTML = vectorShapes.map((shape, visualIdx) => {
-                const stackIndex = vectorShapes.length - 1 - visualIdx;
-                const s = vectorShapes[stackIndex];
-                const active = s === activeVectorShape || multiSelected.has(s);
-                const w = Math.round(Math.abs((s.x2 || 0) - (s.x || 0)));
-                const h = Math.round(Math.abs((s.y2 || 0) - (s.y || 0)));
-                return `<button class="is-layer-item ${active ? 'active' : ''}" type="button" data-shape-id="${escapeHtml(s.id)}">
-                    <i class='bx ${shapeIcon(s.type)}'></i>
-                    <span>${escapeHtml(shapeName(s, stackIndex))}</span>
-                    <span class="is-layer-meta">${w}x${h}</span>
-                </button>`;
+            const query = (container.querySelector('#is-layer-search')?.value || '').trim().toLowerCase();
+            const filter = container.querySelector('#is-layer-filter')?.value || 'all';
+            const visibleShapes = vectorShapes.filter(s => layerMatches(s, query, filter));
+            layerList.innerHTML = visibleShapes.map((shape, visualIdx) => {
+                const s = visibleShapes[visibleShapes.length - 1 - visualIdx];
+                const stackIndex = vectorShapes.indexOf(s);
+                return layerItemHtml(s, stackIndex);
             }).join('');
+            if (!visibleShapes.length) layerList.innerHTML = `<div class="is-panel-empty">No layers match this search.</div>`;
         }
 
         if (!activeVectorShape) {
             props.innerHTML = `<div class="is-panel-empty">Select an object on the canvas or from Layers to edit its position, size, opacity, and rotation.</div>`;
         } else if (multiSelected.size >= 2) {
-            props.innerHTML = `<div class="is-panel-empty">${multiSelected.size} objects selected. Use the context bar to group, align, or delete them.</div>`;
+            props.innerHTML = `<div class="is-panel-empty">${multiSelected.size} objects selected.</div><div class="is-prop-section-title">Arrange</div><div class="is-prop-actions">
+                <button data-panel-action="group"><i class='bx bx-group'></i> Group</button><button data-panel-action="delete"><i class='bx bx-trash'></i> Delete</button>
+                <button data-panel-action="align-left">Align Left</button><button data-panel-action="align-center">Center</button>
+                <button data-panel-action="align-top">Align Top</button><button data-panel-action="align-middle">Middle</button>
+                <button data-panel-action="distribute-h">Distribute H</button><button data-panel-action="distribute-v">Distribute V</button>
+            </div><div class="is-prop-field" style="margin-top:8px;"><label>Gap (px, blank = auto)</label><input id="is-distribute-gap" type="number" min="0" placeholder="Auto"></div>`;
         } else {
             const s = activeVectorShape;
             const opacity = Math.round((s.opacity ?? 1) * 100);
@@ -797,7 +929,7 @@ export function renderImageStudio(container) {
             const labelBg = normalizeHexColor(s.labelBg, '#111827');
             props.innerHTML = `
                 <div class="is-panel-empty" style="margin-bottom:10px;">${escapeHtml(shapeName(s, vectorShapes.indexOf(s)))} · ${escapeHtml(s.type)}</div>
-                ${s.type !== 'text' ? `<div class="is-prop-field" style="margin-bottom:8px;"><label>Attached Label</label><input type="text" data-prop="label" value="${escapeHtml(s.label || '')}" placeholder="Optional label on this object"></div>
+                ${s.type !== 'text' ? `<details class="is-prop-details" open><summary>Attached Label</summary><div class="is-prop-field" style="margin-bottom:8px;"><label>Text</label><input type="text" data-prop="label" value="${escapeHtml(s.label || '')}" placeholder="Optional label on this object"></div>
                 <div class="is-prop-grid" style="margin-bottom:10px;">
                     <div class="is-prop-field"><label>Label Size</label><input type="number" data-prop="labelFontSize" min="8" max="96" value="${parseInt(s.labelFontSize, 10) || 16}"></div>
                     <div class="is-prop-field"><label>Label Font</label><select data-prop="labelFontFamily">
@@ -805,7 +937,9 @@ export function renderImageStudio(container) {
                     </select></div>
                     <div class="is-prop-field"><label>Text Color</label><input type="color" data-prop="labelColor" value="${labelColor}"></div>
                     <div class="is-prop-field"><label>Label Fill</label><input type="color" data-prop="labelBg" value="${labelBg}"></div>
-                </div>` : ''}
+                </div><label style="display:flex;align-items:center;gap:6px;color:#aaa;font-size:11px;margin:8px 0;"><input type="checkbox" data-prop="labelTransparent" ${s.labelTransparent ? 'checked' : ''} style="width:auto;"> Transparent label fill</label><div class="is-prop-actions" style="margin-bottom:8px;"><button data-label-position="top">Top</button><button data-label-position="bottom">Bottom</button><button data-label-position="left">Left</button><button data-label-position="right">Right</button><button data-label-position="center">Center</button><button data-label-position="auto">Auto Place</button><button data-label-position="reset">Reset</button></div></details>` : ''}
+                ${objectSpecificProperties(s)}
+                <details class="is-prop-details" open><summary>Transform</summary>
                 <div class="is-prop-grid">
                     <div class="is-prop-field"><label>X</label><input type="number" data-prop="x" value="${Math.round(s.x || 0)}"></div>
                     <div class="is-prop-field"><label>Y</label><input type="number" data-prop="y" value="${Math.round(s.y || 0)}"></div>
@@ -813,10 +947,12 @@ export function renderImageStudio(container) {
                     <div class="is-prop-field"><label>Height</label><input type="number" data-prop="h" min="1" value="${Math.round(Math.abs((s.y2 || 0) - (s.y || 0)))}"></div>
                     <div class="is-prop-field"><label>Rotation</label><input type="number" data-prop="rotation" value="${Math.round(s.rotation || 0)}"></div>
                     <div class="is-prop-field"><label>Opacity %</label><input type="number" data-prop="opacity" min="1" max="100" value="${opacity}"></div>
-                </div>`;
+                </div></details>`;
         }
 
-        historySummary.innerHTML = `Undo history: ${Math.max(historyStep + 1, 0)} / ${history.length}<br>Canvas: ${canvas.width} x ${canvas.height}px<br>Objects: ${vectorShapes.length}`;
+        historySummary.innerHTML = `Canvas: ${canvas.width} x ${canvas.height}px · Objects: ${vectorShapes.length}`;
+        const historyList = container.querySelector('#is-history-list');
+        if (historyList) historyList.innerHTML = history.map((entry, idx) => `<button class="is-history-item ${idx === historyStep ? 'active' : ''}" data-history-index="${idx}"><i class='bx ${idx === historyStep ? 'bx-radio-circle-marked' : 'bx-radio-circle'}'></i><span>${escapeHtml(entry.action || 'Edit canvas')}</span></button>`).reverse().join('');
     }
 
     function applyPropertyEdit(prop, rawValue) {
@@ -830,6 +966,10 @@ export function renderImageStudio(container) {
             saveState();
             return;
         }
+        if (prop === 'labelTransparent') {
+            activeVectorShape.labelTransparent = rawValue === true || rawValue === 'true';
+            drawSelectionOverlay(); saveState('Change label background'); return;
+        }
         if (['labelFontSize', 'labelFontFamily', 'labelColor', 'labelBg'].includes(prop)) {
             const s = activeVectorShape;
             if (prop === 'labelFontSize') s.labelFontSize = Math.max(8, Math.min(96, parseInt(rawValue, 10) || 16));
@@ -839,6 +979,14 @@ export function renderImageStudio(container) {
             markStudioStarted();
             drawSelectionOverlay();
             saveState();
+            return;
+        }
+        if (['stroke', 'fill', 'fontFamily', 'arrowHead', 'arrowMode', 'lineStyle'].includes(prop)) {
+            activeVectorShape[prop] = rawValue;
+            if (prop === 'fontFamily' && activeVectorShape.type === 'text') recalcTextBounds(activeVectorShape);
+            markStudioStarted();
+            drawSelectionOverlay();
+            saveState(`Change ${prop}`);
             return;
         }
         const value = parseFloat(rawValue);
@@ -852,11 +1000,15 @@ export function renderImageStudio(container) {
         if (prop === 'h') s.y2 = s.y + Math.max(1, value) * (s.y2 >= s.y ? 1 : -1);
         if (prop === 'rotation') s.rotation = value;
         if (prop === 'opacity') s.opacity = Math.max(1, Math.min(100, value)) / 100;
+        if (prop === 'strokeWidth') s.strokeWidth = Math.max(1, Math.min(50, value));
+        if (prop === 'borderRadius') s.borderRadius = Math.max(0, Math.min(200, value));
+        if (prop === 'fontSize') { s.fontSize = Math.max(8, Math.min(240, value)); recalcTextBounds(s); }
+        if (prop === 'smoothLevel') { s.smoothLevel = Math.max(0, Math.min(20, value)); if (s.originalPoints) applySmoothToShape(s, s.smoothLevel); }
         if (prop === 'w' && s.type === 'text') recalcTextBounds(s, Math.max(1, value));
         if (prop === 'h' && height && s.type !== 'text') s.y2 = s.y + Math.max(1, value) * (s.y2 >= s.y ? 1 : -1);
         markStudioStarted();
         drawSelectionOverlay();
-        saveState();
+        saveState(`Change ${prop}`);
     }
 
     container.querySelectorAll('.is-panel-tab').forEach(tabBtn => {
@@ -869,11 +1021,95 @@ export function renderImageStudio(container) {
         });
     });
 
+    function findShapeById(id, shapes = vectorShapes) {
+        for (const shape of shapes) {
+            if (shape.id === id) return shape;
+            if (shape.children) {
+                const child = findShapeById(id, shape.children);
+                if (child) return child;
+            }
+        }
+        return null;
+    }
+
+    function findParentGroup(shape, shapes = vectorShapes) {
+        for (const item of shapes) {
+            if (item.type === 'group' && item.children?.includes(shape)) return item;
+            if (item.children) {
+                const parent = findParentGroup(shape, item.children);
+                if (parent) return parent;
+            }
+        }
+        return null;
+    }
+
+    function updateGroupBounds(group) {
+        if (!group?.children?.length) return;
+        group.x = Math.min(...group.children.map(s => Math.min(s.x, s.x2)));
+        group.y = Math.min(...group.children.map(s => Math.min(s.y, s.y2)));
+        group.x2 = Math.max(...group.children.map(s => Math.max(s.x, s.x2)));
+        group.y2 = Math.max(...group.children.map(s => Math.max(s.y, s.y2)));
+    }
+
+    function enterGroup(group) {
+        if (!group || group.type !== 'group') return;
+        editingGroup = group;
+        expandedGroups.add(group.id);
+        activeVectorShape = null; multiSelected.clear(); hoveredVectorShape = null;
+        drawSelectionOverlay();
+        showToast(`Editing ${shapeName(group, 0)} · Esc to exit`);
+    }
+
+    function exitGroup() {
+        if (!editingGroup) return;
+        updateGroupBounds(editingGroup);
+        activeVectorShape = editingGroup;
+        editingGroup = null; multiSelected.clear(); hoveredVectorShape = null;
+        drawSelectionOverlay();
+    }
+
     container.querySelector('#is-layer-list').addEventListener('click', e => {
         const item = e.target.closest('.is-layer-item');
         if (!item) return;
-        const shape = vectorShapes.find(s => s.id === item.dataset.shapeId);
+        const shape = findShapeById(item.dataset.shapeId);
         if (!shape) return;
+        const action = e.target.closest('[data-layer-action]')?.dataset.layerAction;
+        if (action === 'expand') {
+            if (expandedGroups.has(shape.id)) expandedGroups.delete(shape.id); else expandedGroups.add(shape.id);
+            refreshStudioPanels();
+            return;
+        }
+        if (action === 'edit-group') { enterGroup(shape); return; }
+        if (action === 'visibility') {
+            shape.hidden = !shape.hidden;
+            if (shape.hidden) { multiSelected.delete(shape); if (activeVectorShape === shape) activeVectorShape = null; }
+            drawSelectionOverlay();
+            saveState(shape.hidden ? 'Hide object' : 'Show object');
+            return;
+        }
+        if (action === 'lock') {
+            shape.locked = !shape.locked;
+            if (shape.locked && activeVectorShape === shape) activeVectorShape = null;
+            drawSelectionOverlay();
+            saveState(shape.locked ? 'Lock object' : 'Unlock object');
+            return;
+        }
+        if (shape.locked || (item.classList.contains('is-child') && findParentGroup(shape) !== editingGroup)) return;
+        if ((e.ctrlKey || e.metaKey) && !shape.locked) {
+            if (multiSelected.has(shape)) multiSelected.delete(shape); else multiSelected.add(shape);
+            if (activeVectorShape && activeVectorShape !== shape) multiSelected.add(activeVectorShape);
+            activeVectorShape = shape;
+            drawSelectionOverlay();
+            return;
+        }
+        if (e.shiftKey && activeVectorShape && vectorShapes.includes(activeVectorShape)) {
+            const a = vectorShapes.indexOf(activeVectorShape), b = vectorShapes.indexOf(shape);
+            multiSelected.clear();
+            vectorShapes.slice(Math.min(a,b), Math.max(a,b)+1).filter(s => !s.locked && !s.hidden).forEach(s => multiSelected.add(s));
+            activeVectorShape = shape;
+            drawSelectionOverlay();
+            return;
+        }
         activeVectorShape = shape;
         canvasSelected = false;
         selection = null;
@@ -884,15 +1120,151 @@ export function renderImageStudio(container) {
         drawSelectionOverlay();
     });
 
+    container.querySelector('#is-layer-list').addEventListener('dblclick', e => {
+        const item = e.target.closest('.is-layer-item');
+        const nameEl = e.target.closest('.is-layer-name');
+        if (!item || !nameEl || item.classList.contains('is-child')) return;
+        const shape = findShapeById(item.dataset.shapeId);
+        if (!shape) return;
+        const input = document.createElement('input');
+        input.value = shape.name || shapeName(shape, vectorShapes.indexOf(shape));
+        input.style.cssText = 'min-width:0;flex:1;background:#111;color:#fff;border:1px solid #3b82f6;border-radius:4px;padding:4px;';
+        nameEl.replaceWith(input);
+        input.focus(); input.select();
+        const commit = () => {
+            const name = input.value.trim();
+            if (name) shape.name = name; else delete shape.name;
+            saveState('Rename object');
+            refreshStudioPanels();
+        };
+        input.addEventListener('blur', commit, { once:true });
+        input.addEventListener('keydown', ke => { if (ke.key === 'Enter') input.blur(); if (ke.key === 'Escape') { input.value = shape.name || ''; input.blur(); } });
+    });
+    container.querySelector('#is-group-edit-banner').addEventListener('click', e => { if (e.target.closest('#is-exit-group')) exitGroup(); });
+    container.querySelector('#is-layer-search').addEventListener('input', refreshStudioPanels);
+    container.querySelector('#is-layer-filter').addEventListener('change', refreshStudioPanels);
+
+    let draggedLayerId = null;
+    container.querySelector('#is-layer-list').addEventListener('dragstart', e => {
+        const item = e.target.closest('.is-layer-item:not(.is-child)');
+        if (!item) return;
+        draggedLayerId = item.dataset.shapeId;
+        e.dataTransfer.effectAllowed = 'move';
+    });
+    container.querySelector('#is-layer-list').addEventListener('dragover', e => { if (e.target.closest('.is-layer-item:not(.is-child)')) e.preventDefault(); });
+    container.querySelector('#is-layer-list').addEventListener('drop', e => {
+        const target = e.target.closest('.is-layer-item:not(.is-child)');
+        if (!target || !draggedLayerId || target.dataset.shapeId === draggedLayerId) return;
+        e.preventDefault();
+        const from = vectorShapes.findIndex(s => s.id === draggedLayerId);
+        const to = vectorShapes.findIndex(s => s.id === target.dataset.shapeId);
+        if (from < 0 || to < 0) return;
+        const [moved] = vectorShapes.splice(from, 1);
+        vectorShapes.splice(to, 0, moved);
+        draggedLayerId = null;
+        drawSelectionOverlay();
+        saveState('Reorder layers');
+    });
+
     container.querySelector('#is-properties-content').addEventListener('change', e => {
         const input = e.target.closest('input[data-prop], select[data-prop]');
         if (!input) return;
-        applyPropertyEdit(input.dataset.prop, input.value);
+        applyPropertyEdit(input.dataset.prop, input.type === 'checkbox' ? input.checked : input.value);
     });
+    container.querySelector('#is-properties-content').addEventListener('click', e => {
+        const posBtn = e.target.closest('[data-label-position]');
+        if (posBtn && activeVectorShape) {
+            const w = Math.abs(activeVectorShape.x2 - activeVectorShape.x);
+            const h = Math.abs(activeVectorShape.y2 - activeVectorShape.y);
+            if (posBtn.dataset.labelPosition === 'auto') { autoPlaceLabel(activeVectorShape); drawSelectionOverlay(); saveState('Auto place attached label'); return; }
+            const offsets = { top:[0,-h/2-24], bottom:[0,h/2+24], left:[-w/2-40,0], right:[w/2+40,0], center:[0,0], reset:[0,-10] };
+            const [x,y] = offsets[posBtn.dataset.labelPosition] || offsets.reset;
+            activeVectorShape.labelOffsetX = x; activeVectorShape.labelOffsetY = y;
+            drawSelectionOverlay(); saveState('Move attached label');
+            return;
+        }
+        const action = e.target.closest('[data-panel-action]')?.dataset.panelAction;
+        if (!action) return;
+        if (action === 'group') container.querySelector('#is-ctx-group').click();
+        if (action === 'delete') deleteSelectedObjects();
+        if (action === 'align-left') container.querySelector('.is-obj-align[data-align="left"]')?.click();
+        if (action === 'align-center') container.querySelector('.is-obj-align[data-align="h-middle"]')?.click();
+        if (action === 'align-top') container.querySelector('.is-obj-align[data-align="top"]')?.click();
+        if (action === 'align-middle') container.querySelector('.is-obj-align[data-align="v-middle"]')?.click();
+        if (action === 'distribute-h') distributeSelected('horizontal', container.querySelector('#is-distribute-gap')?.value);
+        if (action === 'distribute-v') distributeSelected('vertical', container.querySelector('#is-distribute-gap')?.value);
+        if (action === 'remove-bg') container.querySelector('#is-obj-remove-bg')?.click();
+        if (action === 'ai-object') container.querySelector('#is-obj-smart-remove')?.click();
+    });
+
+    function distributeSelected(axis, rawGap) {
+        const selected = [...multiSelected];
+        if (selected.length < 3) { showToast('Select at least 3 objects to distribute'); return; }
+        const horizontal = axis === 'horizontal';
+        selected.sort((a,b) => (horizontal ? Math.min(a.x,a.x2)-Math.min(b.x,b.x2) : Math.min(a.y,a.y2)-Math.min(b.y,b.y2)));
+        const explicitGap = rawGap !== '' && Number.isFinite(Number(rawGap)) ? Math.max(0, Number(rawGap)) : null;
+        if (explicitGap !== null) {
+            let cursor = horizontal ? Math.min(selected[0].x,selected[0].x2) : Math.min(selected[0].y,selected[0].y2);
+            selected.forEach((s, index) => {
+                const start = horizontal ? Math.min(s.x,s.x2) : Math.min(s.y,s.y2);
+                if (index) shiftShapeRecursive(s, horizontal ? cursor-start : 0, horizontal ? 0 : cursor-start);
+                const size = horizontal ? Math.abs(s.x2-s.x) : Math.abs(s.y2-s.y);
+                cursor += size + explicitGap;
+            });
+        } else {
+            const first = selected[0], last = selected[selected.length-1];
+            const firstCenter = horizontal ? (first.x+first.x2)/2 : (first.y+first.y2)/2;
+            const lastCenter = horizontal ? (last.x+last.x2)/2 : (last.y+last.y2)/2;
+            const step = (lastCenter-firstCenter)/(selected.length-1);
+            selected.slice(1,-1).forEach((s,i) => {
+                const center = horizontal ? (s.x+s.x2)/2 : (s.y+s.y2)/2;
+                const target = firstCenter+step*(i+1);
+                shiftShapeRecursive(s, horizontal ? target-center : 0, horizontal ? 0 : target-center);
+            });
+        }
+        drawSelectionOverlay(); saveState(horizontal ? 'Distribute horizontally' : 'Distribute vertically');
+    }
 
     container.querySelector('#is-panel-undo').addEventListener('click', () => container.querySelector('#is-undo').click());
     container.querySelector('#is-panel-redo').addEventListener('click', () => container.querySelector('#is-redo').click());
     container.querySelector('#is-panel-save').addEventListener('click', () => container.querySelector('#is-download-btn').click());
+    container.querySelector('#is-panel-project').addEventListener('click', () => container.querySelector('#is-project-save-btn').click());
+    const moreMenu = container.querySelector('#is-more-menu');
+    container.querySelector('#is-more-btn').addEventListener('click', e => { e.stopPropagation(); moreMenu.style.display = moreMenu.style.display === 'none' ? 'block' : 'none'; });
+    moreMenu.addEventListener('click', e => {
+        e.stopPropagation();
+        const action = e.target.closest('[data-more-action]')?.dataset.moreAction;
+        if (!action) return;
+        moreMenu.style.display = 'none';
+        if (action === 'ai') container.querySelector('#is-ai-history-btn').click();
+        if (action === 'adjust') { const adj=container.querySelector('#is-adj-container'); adj.classList.add('is-more-open'); container.querySelector('#is-adj-menu').style.display='block'; }
+        if (action === 'merge') container.querySelector('#is-flatten-all').click();
+    });
+    document.addEventListener('click', e => { if (!container.querySelector('#is-more-container').contains(e.target)) moreMenu.style.display = 'none'; });
+    container.querySelector('#is-panel-toggle').addEventListener('click', () => {
+        const panel = container.querySelector('#is-side-panel');
+        panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
+        contextBar.style.right = panel.style.display === 'none' ? '0' : '248px';
+        setTimeout(fitCanvasToWindow, 0);
+    });
+    container.querySelector('#is-shortcuts-btn').addEventListener('click', () => {
+        const modal = document.createElement('div'); modal.className = 'is-modal-overlay';
+        modal.innerHTML = `<div class="is-modal"><h3>Keyboard Shortcuts</h3><div class="is-prop-grid" style="line-height:1.8;font-size:12px;color:#d4d4d8;">
+            <div>V · Select</div><div>H · Pan</div><div>Ctrl/Shift+click · Multi-select</div><div>Shift/Alt+drag · Duplicate</div><div>Space+drag · Pan</div><div>Alt+click · Select below</div><div>Double-click group · Edit inside</div><div>Esc · Exit group</div><div>Ctrl+G · Group</div><div>Ctrl+Shift+G · Ungroup</div><div>Ctrl+S · Export</div><div>Ctrl+Shift+S · Save Project</div><div>Ctrl+Z / Ctrl+Y · Undo / Redo</div><div>Delete · Remove object</div>
+        </div><div class="is-modal-actions"><button class="is-btn-primary" id="is-shortcuts-close">Close</button></div></div>`;
+        document.body.appendChild(modal);
+        const close = () => modal.remove(); modal.querySelector('#is-shortcuts-close').onclick = close; modal.onclick = e => { if (e.target === modal) close(); };
+    });
+    container.querySelector('#is-layer-show-all').addEventListener('click', () => {
+        const reset = shapes => shapes.forEach(s => { s.hidden = false; s.locked = false; if (s.children) reset(s.children); });
+        reset(vectorShapes); drawSelectionOverlay(); saveState('Show and unlock all');
+    });
+    container.querySelector('#is-history-list').addEventListener('click', e => {
+        const item = e.target.closest('[data-history-index]');
+        if (!item || _restorePending) return;
+        historyStep = parseInt(item.dataset.historyIndex, 10);
+        restoreState(historyStep);
+    });
     container.querySelector('#is-empty-open').addEventListener('click', () => container.querySelector('#is-upload-btn').click());
     container.querySelector('#is-empty-ai').addEventListener('click', () => {
         markStudioStarted();
@@ -928,6 +1300,35 @@ export function renderImageStudio(container) {
             clone.children = shape.children.map(child => serializeShape(child));
         }
         return clone;
+    }
+
+    function prepareDuplicateOnDrag(hitShape, pos, altKey = false) {
+        const previousActive = activeVectorShape;
+        activeVectorShape = hitShape;
+        pendingDuplicateState = {
+            startX: pos.x,
+            startY: pos.y,
+            targets: multiSelected.size > 1 && multiSelected.has(hitShape) ? [...multiSelected] : [hitShape],
+            hitShape,
+            previousActive,
+            previousSelection: new Set(multiSelected),
+            altKey,
+            activated: false
+        };
+    }
+
+    function activatePendingDuplicate() {
+        if (!pendingDuplicateState || pendingDuplicateState.activated) return;
+        const pool = editingGroup?.children || vectorShapes;
+        const clones = pendingDuplicateState.targets.map(s => {
+            const clone = cloneShape(s);
+            pool.push(clone);
+            return clone;
+        });
+        multiSelected.clear();
+        if (clones.length > 1) clones.forEach(s => multiSelected.add(s));
+        activeVectorShape = clones[clones.length - 1];
+        pendingDuplicateState.activated = true;
     }
 
     function snapshotShape(s) {
@@ -981,6 +1382,7 @@ export function renderImageStudio(container) {
                 canvasBgColor,
                 canvasGrid,
                 canvasGridSize,
+                hasBaseImage,
                 shapeIdCounter,
                 shapes: vectorShapes.map(shape => serializeShape(shape))
             };
@@ -1013,6 +1415,7 @@ export function renderImageStudio(container) {
             canvasBgColor = draft.canvasBgColor || '#ffffff';
             canvasGrid = draft.canvasGrid || 'none';
             canvasGridSize = draft.canvasGridSize || 20;
+            hasBaseImage = !!draft.hasBaseImage;
             shapeIdCounter = Math.max(shapeIdCounter, draft.shapeIdCounter || 0);
 
             const bgInput = container.querySelector('#is-canvas-bg-color');
@@ -1041,7 +1444,35 @@ export function renderImageStudio(container) {
         }
     }
 
-    function saveState() {
+    function inferHistoryAction() {
+        const previous = history[historyStep];
+        if (!previous) return 'Open editor';
+        const flatten = shapes => (shapes || []).flatMap(s => [s, ...(s.children ? flatten(s.children) : [])]);
+        const beforeShapes = flatten(previous.shapes);
+        const afterShapes = flatten(vectorShapes);
+        const before = beforeShapes.length;
+        const after = afterShapes.length;
+        if (after > before) return after - before > 1 ? `Add ${after - before} objects` : 'Add object';
+        if (after < before) return before - after > 1 ? `Remove ${before - after} objects` : 'Remove object';
+        if (previous.canvasWidth !== canvas.width || previous.canvasHeight !== canvas.height) return 'Resize canvas';
+        if (activeVectorShape?.id) {
+            const old = beforeShapes.find(s => s.id === activeVectorShape.id);
+            const cur = activeVectorShape;
+            if (old) {
+                if ((old.rotation || 0) !== (cur.rotation || 0)) return 'Rotate object';
+                if (Math.abs(old.x2-old.x) !== Math.abs(cur.x2-cur.x) || Math.abs(old.y2-old.y) !== Math.abs(cur.y2-cur.y)) return 'Resize object';
+                if (old.x !== cur.x || old.y !== cur.y) return 'Move object';
+                if (old.label !== cur.label || old.labelFontSize !== cur.labelFontSize || old.labelColor !== cur.labelColor) return 'Edit attached label';
+                if (old.fontFamily !== cur.fontFamily || old.fontSize !== cur.fontSize) return 'Change font';
+                if (old.stroke !== cur.stroke || old.fill !== cur.fill) return 'Change color';
+                if (old.opacity !== cur.opacity) return 'Change opacity';
+            }
+        }
+        return 'Edit object';
+    }
+
+    function saveState(action = '') {
+        if (editingGroup) updateGroupBounds(editingGroup);
         if (historyStep < history.length - 1) {
             history = history.slice(0, historyStep + 1);
         }
@@ -1056,7 +1487,9 @@ export function renderImageStudio(container) {
             canvasHeight: canvas.height,
             canvasBgColor,
             canvasGrid,
-            canvasGridSize
+            canvasGridSize,
+            hasBaseImage,
+            action: action || inferHistoryAction()
         });
         historyStep++;
         // Enforce history limit to prevent memory leaks
@@ -1067,11 +1500,13 @@ export function renderImageStudio(container) {
             if (historyStep < 0) historyStep = 0;
         }
         if (vectorShapes.length > 0) studioStarted = true;
+        projectDirty = action !== 'Open editor';
+        updateProjectStatus();
         scheduleDraftSave();
         refreshStudioPanels();
     }
 
-    const initialRestorePromise = restoreDraftIfAvailable().then(() => saveState());
+    const initialRestorePromise = restoreDraftIfAvailable().then(restored => { saveState(restored ? 'Restore draft' : 'Open editor'); projectDirty = !!restored; updateProjectStatus(); });
     window.addEventListener('beforeunload', persistDraft);
     
     // Flood fill (paint bucket) algorithm
@@ -1284,16 +1719,38 @@ export function renderImageStudio(container) {
     }
 
     function isPointInAttachedLabel(pos, s) {
+        if (!s || s.hidden || s.locked) return false;
         const b = getAttachedLabelBounds(s);
         if (!b) return false;
         return pos.x >= b.x && pos.x <= b.x + b.w && pos.y >= b.y && pos.y <= b.y + b.h;
     }
 
     function findTopLabelAt(pos) {
-        for (let i = vectorShapes.length - 1; i >= 0; i--) {
-            if (isPointInAttachedLabel(pos, vectorShapes[i])) return vectorShapes[i];
+        const shapes = editingGroup?.children || vectorShapes;
+        for (let i = shapes.length - 1; i >= 0; i--) {
+            if (isPointInAttachedLabel(pos, shapes[i])) return shapes[i];
         }
         return null;
+    }
+
+    function autoPlaceLabel(shape) {
+        const w = Math.abs(shape.x2-shape.x), h = Math.abs(shape.y2-shape.y);
+        const candidates = [[0,-h/2-24],[w/2+45,0],[0,h/2+24],[-w/2-45,0]];
+        const flatten = shapes => shapes.flatMap(s => [s,...(s.children ? flatten(s.children) : [])]);
+        const obstacles = flatten(vectorShapes).filter(s => s !== shape && !s.hidden);
+        let best=candidates[0],bestScore=Infinity;
+        candidates.forEach(([x,y]) => {
+            shape.labelOffsetX=x; shape.labelOffsetY=y;
+            const b=getAttachedLabelBounds(shape); if(!b)return;
+            let score=0;
+            obstacles.forEach(s => {
+                const sx=Math.min(s.x,s.x2),sy=Math.min(s.y,s.y2),sw=Math.abs(s.x2-s.x),sh=Math.abs(s.y2-s.y);
+                score += Math.max(0,Math.min(b.x+b.w,sx+sw)-Math.max(b.x,sx))*Math.max(0,Math.min(b.y+b.h,sy+sh)-Math.max(b.y,sy));
+                const lb=getAttachedLabelBounds(s); if(lb) score += Math.max(0,Math.min(b.x+b.w,lb.x+lb.w)-Math.max(b.x,lb.x))*Math.max(0,Math.min(b.y+b.h,lb.y+lb.h)-Math.max(b.y,lb.y));
+            });
+            if(score<bestScore){bestScore=score;best=[x,y];}
+        });
+        shape.labelOffsetX=best[0]; shape.labelOffsetY=best[1];
     }
 
     function drawAttachedLabel(targetCtx, s) {
@@ -1317,6 +1774,11 @@ export function renderImageStudio(container) {
         const boxH = bounds.h;
         const r = 5;
 
+        const anchor = getShapeLabelAnchor(s);
+        if (Math.hypot(x-anchor.x,y-anchor.y) > 24) {
+            targetCtx.beginPath(); targetCtx.moveTo(anchor.x,anchor.y); targetCtx.lineTo(x,y);
+            targetCtx.strokeStyle = s.labelColor || '#ffffff'; targetCtx.lineWidth = Math.max(1, fontSize/14); targetCtx.setLineDash([3,3]); targetCtx.stroke(); targetCtx.setLineDash([]);
+        }
         targetCtx.fillStyle = s.labelBg || 'rgba(17,24,39,0.82)';
         targetCtx.beginPath();
         targetCtx.moveTo(x - boxW / 2 + r, y - boxH / 2);
@@ -1329,7 +1791,7 @@ export function renderImageStudio(container) {
         targetCtx.lineTo(x - boxW / 2, y - boxH / 2 + r);
         targetCtx.quadraticCurveTo(x - boxW / 2, y - boxH / 2, x - boxW / 2 + r, y - boxH / 2);
         targetCtx.closePath();
-        targetCtx.fill();
+        if (!s.labelTransparent) targetCtx.fill();
 
         targetCtx.fillStyle = s.labelColor || '#ffffff';
         targetCtx.fillText(text, x, y + 0.5);
@@ -1337,7 +1799,7 @@ export function renderImageStudio(container) {
     }
     
     function drawShape(targetCtx, s) {
-        if (s.isEditing) return;
+        if (s.isEditing || s.hidden) return;
         targetCtx.save();
         targetCtx.globalAlpha = s.opacity ?? 1;
         
@@ -1678,6 +2140,7 @@ export function renderImageStudio(container) {
     }
     
     function drawSelectionOverlay() {
+        if (currentTool === 'select') setCanvasTooltip(`<b>${editingGroup ? 'Inside group' : 'Select'}</b> · Click object · Drag to move · <b style='color:#60a5fa;'>Ctrl</b>+click multi-select · <b style='color:#60a5fa;'>Shift/Alt</b>+drag duplicate`);
         queueStudioPanelRefresh();
         octx.clearRect(0, 0, overlay.width, overlay.height);
         
@@ -1692,6 +2155,17 @@ export function renderImageStudio(container) {
             octx.restore();
         } else {
             vectorShapes.forEach(s => drawShape(octx, s));
+        }
+
+        if (hoveredVectorShape && hoveredVectorShape !== activeVectorShape && !hoveredVectorShape.hidden) {
+            const hover = { ...hoveredVectorShape, stroke: '#22d3ee', opacity: 0.8 };
+            if (hover.type !== 'text' && hover.type !== 'image') hover.fill = 'transparent';
+            hover.strokeWidth = Math.max(hoveredVectorShape.strokeWidth || 1, 3);
+            octx.save();
+            octx.shadowColor = '#22d3ee';
+            octx.shadowBlur = 5;
+            drawShape(octx, hover);
+            octx.restore();
         }
         
         // Draw multi-selected outlines
@@ -2068,6 +2542,7 @@ export function renderImageStudio(container) {
             hideCanvasTooltip();
             if (currentTool === 'text') canvas.style.cursor = 'text';
             else if (currentTool === 'select' || currentTool === 'region') canvas.style.cursor = 'default';
+            else if (currentTool === 'hand') canvas.style.cursor = 'grab';
             else if (currentTool === 'line') canvas.style.cursor = 'crosshair';
             else if (currentTool === 'fill') canvas.style.cursor = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' stroke='%23000' stroke-width='1.5' d='M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15a1.49 1.49 0 000 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z'/%3E%3C/svg%3E") 2 22, crosshair`;
             else canvas.style.cursor = 'none'; // custom cursor for all drawing tools
@@ -2143,6 +2618,7 @@ export function renderImageStudio(container) {
             const _toolGuides = {
             
                 select: "Click to select · Drag to move · <b style='color:#60a5fa;'>Ctrl</b>+click multi-select · <b style='color:#60a5fa;'>Ctrl+G</b> group · <b style='color:#60a5fa;'>Shift</b>+handle lock ratio · <b style='color:#f0883e;'>Esc</b> select canvas",
+                hand: "Drag to pan the canvas · Press <b style='color:#60a5fa;'>V</b> to return to Select",
             
                 brush: "Click and drag to draw · Released stroke becomes vector object",
             
@@ -2430,6 +2906,18 @@ export function renderImageStudio(container) {
     container.querySelector('#is-zoom-fit').addEventListener('click', fitCanvasToWindow);
 
     container.querySelector('#is-zoom-reset').addEventListener('click', () => updateZoom(100));
+    container.querySelector('#is-zoom-selection').addEventListener('click', () => {
+        const selected = multiSelected.size ? [...multiSelected] : (activeVectorShape ? [activeVectorShape] : []);
+        if (!selected.length) { showToast('Select an object first'); return; }
+        const minX = Math.min(...selected.map(s => Math.min(s.x, s.x2)));
+        const minY = Math.min(...selected.map(s => Math.min(s.y, s.y2)));
+        const maxX = Math.max(...selected.map(s => Math.max(s.x, s.x2)));
+        const maxY = Math.max(...selected.map(s => Math.max(s.y, s.y2)));
+        const scaleX = Math.max(canvasContainer.clientWidth - 120, 50) / Math.max(1, maxX - minX);
+        const scaleY = Math.max(canvasContainer.clientHeight - 120, 50) / Math.max(1, maxY - minY);
+        updateZoom(Math.min(scaleX, scaleY, 4) * 100);
+        canvasWrapper.style.transformOrigin = `${(minX + maxX) / 2}px ${(minY + maxY) / 2}px`;
+    });
 
     initialRestorePromise.finally(() => {
         requestAnimationFrame(() => requestAnimationFrame(() => fitCanvasToWindow()));
@@ -2534,7 +3022,7 @@ export function renderImageStudio(container) {
     });
 
     canvasContainer.addEventListener('mousedown', (e) => {
-        if (e.button === 1 || isSpaceDown) {
+        if (e.button === 1 || isSpaceDown || currentTool === 'hand') {
             isPanning = true;
             canvasContainer.style.cursor = 'grabbing';
             canvas.style.cursor = 'grabbing';
@@ -2622,7 +3110,8 @@ export function renderImageStudio(container) {
             clone.fill = '#000000';
         }
         clone.stroke = '#000000';
-        clone.strokeWidth = Math.max(shape.strokeWidth || 1, 10);
+        const zoom = Math.max(0.1, (parseFloat(zoomSlider?.value) || 100) / 100);
+        clone.strokeWidth = Math.max(shape.strokeWidth || 1, 10 / zoom);
         if (shape.type !== 'image' && shape.type !== 'text') {
             clone.fill = shape.fill && shape.fill !== 'transparent' ? '#000000' : null;
         }
@@ -2635,7 +3124,7 @@ export function renderImageStudio(container) {
     }
 
     function isPointInShape(pos, s) {
-        if (!s) return false;
+        if (!s || s.hidden || s.locked) return false;
         const x = Math.round(pos.x);
         const y = Math.round(pos.y);
         if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return false;
@@ -2653,8 +3142,9 @@ export function renderImageStudio(container) {
     }
 
     function findTopShapeAt(pos) {
-        for (let i = vectorShapes.length - 1; i >= 0; i--) {
-            if (isPointInShape(pos, vectorShapes[i])) return vectorShapes[i];
+        const shapes = editingGroup?.children || vectorShapes;
+        for (let i = shapes.length - 1; i >= 0; i--) {
+            if (isPointInShape(pos, shapes[i])) return shapes[i];
         }
         return null;
     }
@@ -2783,39 +3273,10 @@ export function renderImageStudio(container) {
             // Check vector shapes (hit test in local rotated space)
             let hitShape = findTopShapeAt(pos);
             
-            if (hitShape && e.altKey && activeVectorShape) {
-                // Alt+Click: select the next object underneath at this position
-                canvasSelected = false;
-                const allHits = [];
-                for (let i = vectorShapes.length - 1; i >= 0; i--) {
-                    const sh = vectorShapes[i];
-                    const shcx = sh.x + (sh.x2 - sh.x) / 2;
-                    const shcy = sh.y + (sh.y2 - sh.y) / 2;
-                    const shw = Math.abs(sh.x2 - sh.x);
-                    const shh = Math.abs(sh.y2 - sh.y);
-                    const shrot = (sh.rotation || 0) * Math.PI / 180;
-                    const shdx = pos.x - shcx, shdy = pos.y - shcy;
-                    const shcos = Math.cos(-shrot), shsin = Math.sin(-shrot);
-                    const shlx = shdx * shcos - shdy * shsin;
-                    const shly = shdx * shsin + shdy * shcos;
-                    const shp = (sh.strokeWidth || 0) / 2 + 5;
-                    if (Math.abs(shlx) <= shw / 2 + shp && Math.abs(shly) <= shh / 2 + shp) allHits.push(sh);
-                }
-                if (allHits.length > 1) {
-                    const curIdx = allHits.indexOf(activeVectorShape);
-                    const nextIdx = (curIdx + 1) % allHits.length;
-                    activeVectorShape = allHits[nextIdx];
-                } else {
-                    activeVectorShape = hitShape;
-                }
-                selection = null;
-                drawSelectionOverlay();
-                return;
-                }
-                if (hitShape) {
+            if (hitShape) {
                 canvasSelected = false;
                 // Ctrl+Click: toggle multi-select
-                if (isCtrlDown) {
+                if (isCtrlDown || e.ctrlKey || e.metaKey) {
                     if (multiSelected.has(hitShape)) {
                         multiSelected.delete(hitShape);
                         if (hitShape === activeVectorShape) {
@@ -2849,52 +3310,16 @@ export function renderImageStudio(container) {
                 // clicking the shape body should not start a move - only handles work
                 if (hitShape === activeVectorShape && activeVectorShape.originalPoints && activeVectorShape.originalPoints.length > 1) {
                     // Allow move if not near a control point (control points checked above)
-                    // Shift+drag = duplicate the object and drag the clone
-                    if (isShiftDown) {
-                        if (multiSelected.size > 1 && multiSelected.has(hitShape)) {
-                            const newSelection = new Set();
-                            multiSelected.forEach(s => {
-                                const dupe = cloneShape(s);
-                                vectorShapes.push(dupe);
-                                newSelection.add(dupe);
-                            });
-                            multiSelected.clear();
-                            newSelection.forEach(s => multiSelected.add(s));
-                            activeVectorShape = [...newSelection][newSelection.size - 1];
-                        } else {
-                            const dupe = cloneShape(hitShape);
-                            vectorShapes.push(dupe);
-                            activeVectorShape = dupe;
-                        }
-                    } else {
-                        activeVectorShape = hitShape;
-                    }
+                    if (isShiftDown || e.shiftKey || e.altKey) prepareDuplicateOnDrag(hitShape, pos, e.altKey);
+                    else { pendingDuplicateState = null; activeVectorShape = hitShape; }
                     resizingHandle = 'move';
                     startX = pos.x; startY = pos.y;
                     drawSelectionOverlay();
                     return;
                 }
 
-                // Shift+drag = duplicate the object and drag the clone
-                if (isShiftDown) {
-                    if (multiSelected.size > 1 && multiSelected.has(hitShape)) {
-                        const newSelection = new Set();
-                        multiSelected.forEach(s => {
-                            const dupe = cloneShape(s);
-                            vectorShapes.push(dupe);
-                            newSelection.add(dupe);
-                        });
-                        multiSelected.clear();
-                        newSelection.forEach(s => multiSelected.add(s));
-                        activeVectorShape = [...newSelection][newSelection.size - 1];
-                    } else {
-                        const dupe = cloneShape(hitShape);
-                        vectorShapes.push(dupe);
-                        activeVectorShape = dupe;
-                    }
-                } else {
-                    activeVectorShape = hitShape;
-                }
+                if (isShiftDown || e.shiftKey || e.altKey) prepareDuplicateOnDrag(hitShape, pos, e.altKey);
+                else { pendingDuplicateState = null; activeVectorShape = hitShape; }
                 resizingHandle = 'move';
                 startX = pos.x; startY = pos.y;
                 selection = null; // drop raster selection
@@ -3118,6 +3543,13 @@ export function renderImageStudio(container) {
         lastCanvasPointer = pos;
 
         if (currentTool === 'select') {
+            if (!labelDragState && !resizingHandle && !isDrawing && !isResizingCanvas) {
+                const nextHover = findTopLabelAt(pos) || findTopShapeAt(pos);
+                if (nextHover !== hoveredVectorShape) {
+                    hoveredVectorShape = nextHover;
+                    drawSelectionOverlay();
+                }
+            }
             if (labelDragState) {
                 const dx = pos.x - labelDragState.startX;
                 const dy = pos.y - labelDragState.startY;
@@ -3242,6 +3674,11 @@ export function renderImageStudio(container) {
                     drawSelectionOverlay();
                     return;
                 } else if (resizingHandle === 'move') {
+                    if (pendingDuplicateState && !pendingDuplicateState.activated) {
+                        const threshold = 5 / Math.max(0.1, (parseFloat(zoomSlider.value) || 100) / 100);
+                        if (Math.hypot(pos.x - pendingDuplicateState.startX, pos.y - pendingDuplicateState.startY) < threshold) return;
+                        activatePendingDuplicate();
+                    }
                     const _shiftShape = (sh, ddx, ddy) => {
                         sh.x += ddx; sh.x2 += ddx;
                         sh.y += ddy; sh.y2 += ddy;
@@ -3375,11 +3812,10 @@ export function renderImageStudio(container) {
                 }
                 // Check if hovering body of shape for move cursor
                 if (!foundCursor) {
-                    let p = (s.strokeWidth || 0) / 2 + 5;
-                    if (Math.abs(localX) <= sw/2 + p && Math.abs(localY) <= sh/2 + p) {
+                    if (isPointInShape(pos, s)) {
                         canvas.style.cursor = 'move';
                     } else {
-                        canvas.style.cursor = 'default';
+                        canvas.style.cursor = hoveredVectorShape ? 'move' : 'default';
                     }
                 }
             }
@@ -3674,7 +4110,10 @@ export function renderImageStudio(container) {
         }
         // Escape: deselect object → select canvas background
         if (e.key === 'Escape' && currentTool === 'select') {
-            if (multiSelected.size > 0) {
+            if (editingGroup) {
+                e.preventDefault();
+                exitGroup();
+            } else if (multiSelected.size > 0) {
                 multiSelected.clear();
                 container.querySelector('#is-ctx-group').style.display = 'none';
                 drawSelectionOverlay();
@@ -3692,6 +4131,19 @@ export function renderImageStudio(container) {
     canvas.addEventListener('dblclick', (e) => {
         if (currentTool !== 'select') return;
         const pos = getMousePos(e);
+        const groupHit = findTopShapeAt(pos);
+        if (!editingGroup && groupHit?.type === 'group') {
+            e.preventDefault();
+            enterGroup(groupHit);
+            return;
+        }
+        const labelShape = findTopLabelAt(pos);
+        if (labelShape) {
+            e.preventDefault();
+            activeVectorShape = labelShape;
+            editAttachedLabel(labelShape);
+            return;
+        }
         
         // Find text shape under cursor
         for (let i = vectorShapes.length - 1; i >= 0; i--) {
@@ -3830,9 +4282,30 @@ export function renderImageStudio(container) {
                 return;
             }
             if (resizingHandle) {
+                const duplicated = !!pendingDuplicateState?.activated;
+                const wasPending = !!pendingDuplicateState;
+                const pendingState = pendingDuplicateState;
+                const completedHandle = resizingHandle;
+                pendingDuplicateState = null;
                 resizingHandle = null;
                 isDrawing = false;
-                saveState();
+                if (wasPending && !duplicated && pendingState) {
+                    if (pendingState.altKey) {
+                        const pool = editingGroup?.children || vectorShapes;
+                        const hits = [...pool].reverse().filter(s => isPointInShape(pos, s));
+                        const current = hits.indexOf(pendingState.previousActive);
+                        activeVectorShape = hits[(current + 1 + hits.length) % Math.max(1,hits.length)] || pendingState.hitShape;
+                        multiSelected.clear(); drawSelectionOverlay(); return;
+                    }
+                    multiSelected.clear(); pendingState.previousSelection.forEach(s => multiSelected.add(s));
+                    if (pendingState.previousActive && pendingState.previousActive !== pendingState.hitShape) multiSelected.add(pendingState.previousActive);
+                    if (multiSelected.has(pendingState.hitShape)) multiSelected.delete(pendingState.hitShape); else multiSelected.add(pendingState.hitShape);
+                    activeVectorShape = pendingState.hitShape;
+                    if (multiSelected.size < 2) multiSelected.clear();
+                    drawSelectionOverlay();
+                    return;
+                }
+                if (!wasPending || duplicated) saveState(duplicated ? 'Duplicate and move' : (completedHandle === 'move' ? 'Move object' : completedHandle === 'rotate' ? 'Rotate object' : 'Resize object'));
                 return;
             }
             if (isDrawing) {
@@ -4036,6 +4509,7 @@ export function renderImageStudio(container) {
                 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0);
+                hasBaseImage = true;
                 markStudioStarted();
                 saveState();
             };
@@ -4097,19 +4571,171 @@ export function renderImageStudio(container) {
         }
     });
 
-    // Download
-    container.querySelector('#is-download-btn').addEventListener('click', () => {
+    function getExportBounds(mode, shapes) {
+        if (mode === 'selection' && selection) return { x:selection.x, y:selection.y, w:selection.w, h:selection.h };
+        if (mode === 'objects' && shapes.length) {
+            let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+            shapes.forEach(s => {
+                const pad = Math.max(6, (s.strokeWidth || 0) + 4);
+                minX=Math.min(minX,Math.min(s.x,s.x2)-pad); minY=Math.min(minY,Math.min(s.y,s.y2)-pad);
+                maxX=Math.max(maxX,Math.max(s.x,s.x2)+pad); maxY=Math.max(maxY,Math.max(s.y,s.y2)+pad);
+                const label = getAttachedLabelBounds(s);
+                if (label) { minX=Math.min(minX,label.x); minY=Math.min(minY,label.y); maxX=Math.max(maxX,label.x+label.w); maxY=Math.max(maxY,label.y+label.h); }
+            });
+            return { x:Math.floor(minX), y:Math.floor(minY), w:Math.ceil(maxX-minX), h:Math.ceil(maxY-minY) };
+        }
+        return { x:0, y:0, w:canvas.width, h:canvas.height };
+    }
+
+    function buildExportCanvas(scale = 1, options = {}) {
+        const mode = options.mode || 'canvas';
+        const shapes = mode === 'objects' ? getSelectedShapes().filter(s => !s.hidden) : vectorShapes.filter(s => !s.hidden);
+        const bounds = getExportBounds(mode, shapes);
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
+        tempCanvas.width = Math.max(1, Math.round(bounds.w * scale));
+        tempCanvas.height = Math.max(1, Math.round(bounds.h * scale));
         const tctx = tempCanvas.getContext('2d');
-        tctx.drawImage(canvas, 0, 0);
-        vectorShapes.forEach(s => drawShape(tctx, s));
-        
+        tctx.scale(scale, scale);
+        if (options.format === 'jpeg') { tctx.fillStyle='#ffffff'; tctx.fillRect(0,0,bounds.w,bounds.h); }
+        tctx.translate(-bounds.x, -bounds.y);
+        const omitBase = mode === 'objects' || (options.transparent && !hasBaseImage);
+        if (!omitBase) tctx.drawImage(canvas, 0, 0);
+        shapes.forEach(s => drawShape(tctx, s));
+        return tempCanvas;
+    }
+
+    function downloadBlob(blob, filename) {
         const link = document.createElement('a');
-        link.download = 'worldtools-image.png';
-        link.href = tempCanvas.toDataURL('image/png');
+        link.download = filename;
+        link.href = URL.createObjectURL(blob);
         link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1200);
+    }
+
+    function createProjectData() {
+        return {
+            app: 'WorldTools Image Studio Pro', version: 1, savedAt: new Date().toISOString(),
+            canvasWidth: canvas.width, canvasHeight: canvas.height,
+            canvasBgColor, canvasGrid, canvasGridSize, shapeIdCounter, hasBaseImage,
+            baseDataURL: canvas.toDataURL('image/png'),
+            shapes: vectorShapes.map(serializeShape)
+        };
+    }
+
+    async function saveProject(saveAs = false) {
+        const blob = new Blob([JSON.stringify(createProjectData())], { type: 'application/json' });
+        try {
+            if ((saveAs || !currentProjectHandle) && window.showSaveFilePicker) {
+                currentProjectHandle = await window.showSaveFilePicker({
+                    suggestedName: `${currentProjectName === 'Untitled' ? 'worldtools-image' : currentProjectName.replace(/\.wtools-image$/i, '')}.wtools-image`,
+                    types: [{ description: 'WorldTools Image Project', accept: { 'application/json': ['.wtools-image'] } }]
+                });
+                currentProjectName = currentProjectHandle.name;
+            }
+            if (currentProjectHandle?.createWritable) {
+                const writable = await currentProjectHandle.createWritable();
+                await writable.write(blob); await writable.close();
+            } else {
+                const filename = `${currentProjectName === 'Untitled' ? 'worldtools-image' : currentProjectName.replace(/\.wtools-image$/i, '')}.wtools-image`;
+                downloadBlob(blob, filename);
+                currentProjectName = filename;
+            }
+            projectDirty = false; updateProjectStatus();
+            showToast(`Project saved: ${currentProjectName}`, 'success');
+        } catch (err) {
+            if (err?.name !== 'AbortError') showToast(err.message || 'Could not save project', 'error');
+        }
+    }
+
+    container.querySelector('#is-project-save-btn').addEventListener('click', () => saveProject(false));
+    container.querySelector('#is-project-save-as-btn').addEventListener('click', () => saveProject(true));
+
+    async function loadProjectFile(file, handle = null) {
+        if (!file) return;
+        try {
+            const project = JSON.parse(await file.text());
+            if (!project.baseDataURL || !Array.isArray(project.shapes)) throw new Error('This is not a valid Image Studio project.');
+            const base = await loadImage(project.baseDataURL);
+            canvas.width = project.canvasWidth || base.width;
+            canvas.height = project.canvasHeight || base.height;
+            overlay.width = canvas.width; overlay.height = canvas.height;
+            ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(base, 0, 0);
+            vectorShapes = await Promise.all(project.shapes.map(deserializeShape));
+            canvasBgColor = project.canvasBgColor || '#ffffff';
+            canvasGrid = project.canvasGrid || 'none'; canvasGridSize = project.canvasGridSize || 20;
+            hasBaseImage = !!project.hasBaseImage;
+            shapeIdCounter = Math.max(shapeIdCounter, project.shapeIdCounter || 0);
+            activeVectorShape = null; editingGroup = null; multiSelected.clear(); selection = null; studioStarted = true;
+            history = []; historyStep = -1;
+            currentProjectHandle = handle; currentProjectName = file.name || 'Untitled';
+            drawSelectionOverlay(); saveState('Open project'); projectDirty = false; updateProjectStatus(); fitCanvasToWindow();
+            showToast(`Project opened: ${file.name}`, 'success');
+        } catch (err) { showToast(err.message || 'Could not open project', 'error', 4200); }
+    }
+
+    container.querySelector('#is-project-open-btn').addEventListener('click', async () => {
+        if (projectDirty && !await showStudioConfirm({ title:'Open another project?', message:'Your current project has unsaved changes.', confirmText:'Open Project', danger:true })) return;
+        if (window.showOpenFilePicker) {
+            try {
+                const [handle] = await window.showOpenFilePicker({ types:[{ description:'WorldTools Image Project', accept:{ 'application/json':['.wtools-image','.json'] } }], multiple:false });
+                await loadProjectFile(await handle.getFile(), handle);
+                return;
+            } catch (err) { if (err?.name === 'AbortError') return; }
+        }
+        container.querySelector('#is-project-open').click();
+    });
+    container.querySelector('#is-project-open').addEventListener('change', async e => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        await loadProjectFile(file, null);
+    });
+
+    // Export flattened image
+    container.querySelector('#is-download-btn').addEventListener('click', () => {
+        document.querySelector('#is-export-modal')?.remove();
+        const modal = document.createElement('div');
+        modal.id = 'is-export-modal'; modal.className = 'is-modal-overlay';
+        modal.innerHTML = `<div class="is-modal" style="max-width:400px;"><h3>Export Image</h3><p>Exports a flattened image. Use Save Project when you need to edit objects again.</p>
+            <div class="is-prop-grid">
+                <div class="is-prop-field"><label>Format</label><select id="is-export-format"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select></div>
+                <div class="is-prop-field"><label>Scale</label><select id="is-export-scale"><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></div>
+                <div class="is-prop-field" style="grid-column:1/-1"><label>Area</label><select id="is-export-area"><option value="canvas">Entire canvas</option>${selection ? '<option value="selection">Selected region</option>' : ''}${getSelectedShapes().length ? '<option value="objects">Selected object(s)</option>' : ''}</select></div>
+                <label style="grid-column:1/-1;display:flex;align-items:center;gap:8px;color:#ccc;font-size:12px;"><input id="is-export-transparent" type="checkbox" style="width:auto;"> Transparent background</label>
+                <div class="is-prop-field" style="grid-column:1/-1"><label>Quality <span id="is-export-quality-value">92%</span></label><input id="is-export-quality" type="range" min="30" max="100" value="92"></div>
+            </div>
+            <div id="is-export-size" class="is-panel-empty" style="margin-top:10px;">${canvas.width} x ${canvas.height}px</div>
+            <div class="is-modal-actions"><button class="is-btn-secondary" id="is-export-cancel">Cancel</button><button class="is-btn-primary" id="is-export-confirm"><i class='bx bx-export'></i> Export</button></div></div>`;
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelector('#is-export-cancel').addEventListener('click', close);
+        modal.addEventListener('click', e => { if (e.target === modal) close(); });
+        const quality = modal.querySelector('#is-export-quality');
+        const scale = modal.querySelector('#is-export-scale');
+        const format = modal.querySelector('#is-export-format');
+        const area = modal.querySelector('#is-export-area');
+        const transparent = modal.querySelector('#is-export-transparent');
+        const refresh = () => {
+            const factor = parseInt(scale.value, 10);
+            modal.querySelector('#is-export-size').textContent = `${canvas.width * factor} x ${canvas.height * factor}px · ${format.value.toUpperCase()}`;
+            modal.querySelector('#is-export-quality-value').textContent = `${quality.value}%`;
+            const bounds = getExportBounds(area.value, area.value === 'objects' ? getSelectedShapes() : vectorShapes);
+            modal.querySelector('#is-export-size').textContent = `${Math.round(bounds.w * factor)} x ${Math.round(bounds.h * factor)}px · ${format.value.toUpperCase()}`;
+            quality.closest('.is-prop-field').style.display = format.value === 'png' ? 'none' : '';
+            transparent.disabled = format.value === 'jpeg' || (hasBaseImage && area.value !== 'objects');
+            if (transparent.disabled) transparent.checked = false;
+            transparent.parentElement.title = hasBaseImage && area.value !== 'objects' ? 'The canvas contains a base image.' : '';
+        };
+        [quality, scale, format, area, transparent].forEach(el => el.addEventListener('input', refresh)); refresh();
+        modal.querySelector('#is-export-confirm').addEventListener('click', () => {
+            const btn = modal.querySelector('#is-export-confirm'); btn.disabled = true; btn.textContent = 'Preparing...';
+            const type = `image/${format.value}`;
+            const factor = parseInt(scale.value, 10);
+            buildExportCanvas(factor, { mode:area.value, transparent:transparent.checked, format:format.value }).toBlob(blob => {
+                if (!blob) { btn.disabled = false; btn.textContent = 'Export'; return; }
+                downloadBlob(blob, `worldtools-image.${format.value === 'jpeg' ? 'jpg' : format.value}`);
+                close(); showToast(`Exported ${format.value.toUpperCase()} at ${factor}x`, 'success');
+            }, type, parseInt(quality.value, 10) / 100);
+        });
     });
 
     // Clear
@@ -4126,6 +4752,7 @@ export function renderImageStudio(container) {
             activeVectorShape = null;
             selection = null;
             studioStarted = false;
+            hasBaseImage = false;
             drawSelectionOverlay();
             saveState();
             showToast('Canvas cleared', 'success');
@@ -4569,13 +5196,9 @@ export function renderImageStudio(container) {
     
     // Context bar delete
     container.querySelector('#is-ctx-del').addEventListener('click', () => {
-        if (multiSelected.size > 0) {
-            vectorShapes = vectorShapes.filter(s => !multiSelected.has(s));
-            multiSelected.clear();
-            activeVectorShape = null;
-        } else if (activeVectorShape) {
-            vectorShapes = vectorShapes.filter(s => s !== activeVectorShape);
-            activeVectorShape = null;
+        if (activeVectorShape || multiSelected.size > 0) {
+            deleteSelectedObjects();
+            return;
         } else if (selection) {
             if (!selection.isFloating) {
                 ctx.fillStyle = '#ffffff';
@@ -4592,10 +5215,11 @@ export function renderImageStudio(container) {
     // Layer ordering: Bring to Front
     container.querySelector('#is-ctx-front').addEventListener('click', () => {
         if (!activeVectorShape) return;
-        const idx = vectorShapes.indexOf(activeVectorShape);
-        if (idx < vectorShapes.length - 1) {
-            vectorShapes.splice(idx, 1);
-            vectorShapes.push(activeVectorShape);
+        const pool = editingGroup?.children || vectorShapes;
+        const idx = pool.indexOf(activeVectorShape);
+        if (idx < pool.length - 1) {
+            pool.splice(idx, 1);
+            pool.push(activeVectorShape);
             drawSelectionOverlay();
             saveState();
         }
@@ -4604,10 +5228,11 @@ export function renderImageStudio(container) {
     // Layer ordering: Send to Back
     container.querySelector('#is-ctx-back').addEventListener('click', () => {
         if (!activeVectorShape) return;
-        const idx = vectorShapes.indexOf(activeVectorShape);
+        const pool = editingGroup?.children || vectorShapes;
+        const idx = pool.indexOf(activeVectorShape);
         if (idx > 0) {
-            vectorShapes.splice(idx, 1);
-            vectorShapes.unshift(activeVectorShape);
+            pool.splice(idx, 1);
+            pool.unshift(activeVectorShape);
             drawSelectionOverlay();
             saveState();
         }
@@ -4616,9 +5241,10 @@ export function renderImageStudio(container) {
     // Group selected objects
     container.querySelector('#is-ctx-group').addEventListener('click', () => {
         if (multiSelected.size < 2) return;
-        const children = [...multiSelected].sort((a, b) => vectorShapes.indexOf(a) - vectorShapes.indexOf(b));
+        const pool = editingGroup?.children || vectorShapes;
+        const children = [...multiSelected].sort((a, b) => pool.indexOf(a) - pool.indexOf(b));
         const topObject = children[children.length - 1];
-        const topIdx = vectorShapes.indexOf(topObject);
+        const topIdx = pool.indexOf(topObject);
         const selectedBelowCount = children.length - 1; // All except the top one
 
         // Calculate bounding box of all children
@@ -4630,7 +5256,8 @@ export function renderImageStudio(container) {
             gy2 = Math.max(gy2, Math.max(s.y, s.y2));
         });
         // Remove children from main array
-        vectorShapes = vectorShapes.filter(s => !multiSelected.has(s));
+        const remaining = pool.filter(s => !multiSelected.has(s));
+        if (editingGroup) editingGroup.children = remaining; else vectorShapes = remaining;
         // Create group shape
         const group = {
             type: 'group',
@@ -4641,7 +5268,8 @@ export function renderImageStudio(container) {
             stroke: 'transparent', strokeWidth: 0
         };
         // Insert at the original top-most position
-        vectorShapes.splice(topIdx - selectedBelowCount, 0, group);
+        const destination = editingGroup?.children || vectorShapes;
+        destination.splice(topIdx - selectedBelowCount, 0, group);
         multiSelected.clear();
         activeVectorShape = group;
         container.querySelector('#is-ctx-group').style.display = 'none';
@@ -4710,9 +5338,11 @@ export function renderImageStudio(container) {
     container.querySelector('#is-ctx-ungroup').addEventListener('click', () => {
         if (!activeVectorShape || activeVectorShape.type !== 'group') return;
         const group = activeVectorShape;
-        const idx = vectorShapes.indexOf(group);
+        const pool = editingGroup?.children || vectorShapes;
+        const idx = pool.indexOf(group);
+        if (idx < 0) return;
         // Restore children to main array at the same position
-        vectorShapes.splice(idx, 1, ...group.children);
+        pool.splice(idx, 1, ...group.children);
         activeVectorShape = null;
         multiSelected.clear();
         container.querySelector('#is-ctx-ungroup').style.display = 'none';
@@ -4764,6 +5394,7 @@ export function renderImageStudio(container) {
         canvasBgColor = entry.canvasBgColor || canvasBgColor;
         canvasGrid = entry.canvasGrid || canvasGrid;
         canvasGridSize = entry.canvasGridSize || canvasGridSize;
+        hasBaseImage = !!entry.hasBaseImage;
         const img = new Image();
         img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -4778,7 +5409,11 @@ export function renderImageStudio(container) {
         // Restore vector shapes (deep clone including nested objects)
         vectorShapes = entry.shapes.map(s => snapshotShape(s));
         activeVectorShape = null;
+        editingGroup = null;
+        multiSelected.clear();
         selection = null;
+        projectDirty = true;
+        updateProjectStatus();
         studioStarted = vectorShapes.length > 0 || historyStep > 0;
         refreshStudioPanels();
     };
@@ -4846,13 +5481,23 @@ export function renderImageStudio(container) {
             e.preventDefault();
             performCut();
         }
-        if (e.ctrlKey && e.key.toLowerCase() === 's') {
+        if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 's') {
             e.preventDefault();
             container.querySelector('#is-download-btn').click();
         }
         if (e.ctrlKey && e.key.toLowerCase() === 'o') {
             e.preventDefault();
             uploadBtn.click();
+        }
+        if (!e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'v') {
+            container.querySelector('.is-tool[data-tool="select"]')?.click();
+        }
+        if (!e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'h') {
+            container.querySelector('.is-tool[data-tool="hand"]')?.click();
+        }
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            container.querySelector('#is-project-save-btn').click();
         }
     });
 
@@ -4869,6 +5514,7 @@ export function renderImageStudio(container) {
         if (!document.getElementById('is-adj-container')) return;
         if (!container.querySelector('#is-adj-container').contains(e.target)) {
             adjMenu.style.display = 'none';
+            container.querySelector('#is-adj-container').classList.remove('is-more-open');
         }
     });
 
@@ -6342,10 +6988,11 @@ export function renderImageStudio(container) {
 
     function copyObjectsToInternalClipboard(shapes = getSelectedShapes()) {
         if (!shapes || shapes.length === 0) return false;
+        const pool = editingGroup?.children || vectorShapes;
         objectClipboard = {
             copiedAt: Date.now(),
             shapes: shapes
-                .sort((a, b) => vectorShapes.indexOf(a) - vectorShapes.indexOf(b))
+                .sort((a, b) => pool.indexOf(a) - pool.indexOf(b))
                 .map(s => cloneShape(s))
         };
         return true;
@@ -6390,13 +7037,13 @@ export function renderImageStudio(container) {
     }
 
     function deleteSelectedObjects() {
-        if (multiSelected.size > 0) {
-            vectorShapes = vectorShapes.filter(s => !multiSelected.has(s));
-            multiSelected.clear();
-            activeVectorShape = null;
-        } else if (activeVectorShape) {
-            vectorShapes = vectorShapes.filter(s => s !== activeVectorShape);
-            activeVectorShape = null;
+        const pool = editingGroup?.children || vectorShapes;
+        const selected = multiSelected.size > 0 ? [...multiSelected] : (activeVectorShape ? [activeVectorShape] : []);
+        if (selected.length) {
+            const remaining = pool.filter(s => !selected.includes(s));
+            if (editingGroup) editingGroup.children = remaining; else vectorShapes = remaining;
+            multiSelected.clear(); activeVectorShape = null;
+            if (editingGroup && !editingGroup.children.length) { const emptyGroup = editingGroup; exitGroup(); vectorShapes = vectorShapes.filter(s => s !== emptyGroup); }
         } else if (selection) {
             selection = null;
         }
@@ -6417,7 +7064,8 @@ export function renderImageStudio(container) {
                 return clone;
             });
 
-        vectorShapes.push(...clones);
+        const pool = editingGroup?.children || vectorShapes;
+        pool.push(...clones);
         multiSelected.clear();
         if (clones.length > 1) clones.forEach(clone => multiSelected.add(clone));
         activeVectorShape = clones[clones.length - 1];
@@ -6426,9 +7074,10 @@ export function renderImageStudio(container) {
     }
 
     function selectAllObjects() {
+        const pool = editingGroup?.children || vectorShapes;
         multiSelected.clear();
-        vectorShapes.forEach(s => multiSelected.add(s));
-        activeVectorShape = vectorShapes[vectorShapes.length - 1] || null;
+        pool.filter(s => !s.locked && !s.hidden).forEach(s => multiSelected.add(s));
+        activeVectorShape = pool[pool.length - 1] || null;
         if (activeVectorShape) canvasSelected = false;
         drawSelectionOverlay();
     }
@@ -6436,8 +7085,10 @@ export function renderImageStudio(container) {
     function bringSelectedToFront() {
         const selected = getSelectedShapes();
         if (selected.length === 0) return;
-        vectorShapes = vectorShapes.filter(s => !selected.includes(s));
-        vectorShapes.push(...selected);
+        const pool = editingGroup?.children || vectorShapes;
+        const remaining = pool.filter(s => !selected.includes(s));
+        remaining.push(...selected);
+        if (editingGroup) editingGroup.children = remaining; else vectorShapes = remaining;
         drawSelectionOverlay();
         saveState();
     }
@@ -6445,8 +7096,10 @@ export function renderImageStudio(container) {
     function sendSelectedToBack() {
         const selected = getSelectedShapes();
         if (selected.length === 0) return;
-        vectorShapes = vectorShapes.filter(s => !selected.includes(s));
-        vectorShapes.unshift(...selected);
+        const pool = editingGroup?.children || vectorShapes;
+        const remaining = pool.filter(s => !selected.includes(s));
+        remaining.unshift(...selected);
+        if (editingGroup) editingGroup.children = remaining; else vectorShapes = remaining;
         drawSelectionOverlay();
         saveState();
     }
@@ -6457,7 +7110,9 @@ export function renderImageStudio(container) {
         selected
             .sort((a, b) => vectorShapes.indexOf(a) - vectorShapes.indexOf(b))
             .forEach(s => drawShape(ctx, s));
-        vectorShapes = vectorShapes.filter(s => !selected.includes(s));
+        const pool = editingGroup?.children || vectorShapes;
+        const remaining = pool.filter(s => !selected.includes(s));
+        if (editingGroup) editingGroup.children = remaining; else vectorShapes = remaining;
         activeVectorShape = null;
         multiSelected.clear();
         drawSelectionOverlay();
@@ -6466,10 +7121,10 @@ export function renderImageStudio(container) {
 
     async function editAttachedLabel(shape = activeVectorShape) {
         if (!shape || shape.type === 'text') return;
+        document.querySelector('.is-label-popover')?.remove();
         const modal = document.createElement('div');
-        modal.className = 'is-modal-overlay';
+        modal.className = 'is-label-popover is-modal';
         modal.innerHTML = `
-            <div class="is-modal" style="max-width:380px;">
                 <h3>${shape.label ? 'Edit attached label' : 'Add attached label'}</h3>
                 <p>This label stays attached to the object and can be dragged directly on the canvas.</p>
                 <div class="is-prop-field" style="margin-bottom:10px;">
@@ -6484,23 +7139,33 @@ export function renderImageStudio(container) {
                     <div class="is-prop-field"><label>Text</label><input id="is-label-editor-color" type="color" value="${normalizeHexColor(shape.labelColor, '#ffffff')}"></div>
                     <div class="is-prop-field"><label>Fill</label><input id="is-label-editor-bg" type="color" value="${normalizeHexColor(shape.labelBg, '#111827')}"></div>
                 </div>
+                <label style="display:flex;align-items:center;gap:7px;color:#aaa;font-size:12px;"><input id="is-label-editor-transparent" type="checkbox" ${shape.labelTransparent ? 'checked' : ''} style="width:auto;"> Transparent fill</label>
                 <div class="is-modal-actions">
                     <button class="is-btn-secondary" id="is-label-editor-remove" type="button">Remove</button>
                     <button class="is-btn-secondary" id="is-label-editor-cancel" type="button">Cancel</button>
                     <button class="is-btn-primary" id="is-label-editor-apply" type="button">Apply Label</button>
-                </div>
-            </div>`;
+                </div>`;
         document.body.appendChild(modal);
 
-        const close = () => modal.remove();
+        const bounds = getAttachedLabelBounds(shape);
+        const canvasRect = canvas.getBoundingClientRect();
+        const objectAnchor = getShapeLabelAnchor(shape);
+        const anchorX = canvasRect.left + (bounds ? bounds.cx : objectAnchor.x) * canvasRect.width / canvas.width;
+        const anchorY = canvasRect.top + (bounds ? bounds.y + bounds.h : Math.max(shape.y, shape.y2) + 12) * canvasRect.height / canvas.height + 10;
+        const popupRect = modal.getBoundingClientRect();
+        modal.style.left = `${Math.max(12, Math.min(window.innerWidth - popupRect.width - 12, anchorX - popupRect.width / 2))}px`;
+        modal.style.top = `${Math.max(12, Math.min(window.innerHeight - popupRect.height - 12, anchorY))}px`;
+
+        const close = () => { modal.remove(); document.removeEventListener('pointerdown', outside); };
+        const outside = e => { if (!modal.contains(e.target)) close(); };
+        setTimeout(() => document.addEventListener('pointerdown', outside), 0);
         modal.querySelector('#is-label-editor-cancel').addEventListener('click', close);
-        modal.addEventListener('click', e => { if (e.target === modal) close(); });
         modal.querySelector('#is-label-editor-remove').addEventListener('click', () => {
             delete shape.label;
             activeVectorShape = shape;
             markStudioStarted();
             drawSelectionOverlay();
-            saveState();
+            saveState('Remove attached label');
             close();
         });
         modal.querySelector('#is-label-editor-apply').addEventListener('click', () => {
@@ -6511,10 +7176,11 @@ export function renderImageStudio(container) {
             shape.labelFontFamily = modal.querySelector('#is-label-editor-font').value || 'Arial';
             shape.labelColor = normalizeHexColor(modal.querySelector('#is-label-editor-color').value, '#ffffff');
             shape.labelBg = normalizeHexColor(modal.querySelector('#is-label-editor-bg').value, '#111827');
+            shape.labelTransparent = modal.querySelector('#is-label-editor-transparent').checked;
             activeVectorShape = shape;
             markStudioStarted();
             drawSelectionOverlay();
-            saveState();
+            saveState(shape.label ? 'Edit attached label' : 'Remove attached label');
             close();
         });
         setTimeout(() => modal.querySelector('#is-label-editor-text')?.focus(), 0);
@@ -6574,6 +7240,7 @@ export function renderImageStudio(container) {
             menu.appendChild(item('bx-arrow-to-top', 'Bring to front', bringSelectedToFront));
             menu.appendChild(item('bx-arrow-to-bottom', 'Send to back', sendSelectedToBack));
             menu.appendChild(item('bx-group', 'Group selected', () => container.querySelector('#is-ctx-group').click(), { disabled: !isMulti, color: '#22d3ee' }));
+            menu.appendChild(item('bx-edit', 'Edit group contents', () => enterGroup(activeVectorShape), { disabled: !(activeVectorShape && activeVectorShape.type === 'group'), color: '#22d3ee' }));
             menu.appendChild(item('bx-unlink', 'Ungroup', () => container.querySelector('#is-ctx-ungroup').click(), { disabled: !(activeVectorShape && activeVectorShape.type === 'group'), color: '#fb923c' }));
             if (isMulti) {
                 menu.appendChild(divider());
@@ -6587,7 +7254,7 @@ export function renderImageStudio(container) {
             }
             menu.appendChild(divider());
             menu.appendChild(item('bx-layer-minus', 'Merge down', flattenSelectedObjects, { color: '#ef4444' }));
-            menu.appendChild(item('bxs-magic-wand', 'AI tool', () => container.querySelector('#is-obj-smart-remove').click(), { color: '#10b981' }));
+            menu.appendChild(item('bxs-magic-wand', 'AI tools for object', () => container.querySelector('#is-obj-smart-remove').click(), { color: '#10b981' }));
             menu.appendChild(item('bx-cut', 'Remove background', () => container.querySelector('#is-obj-remove-bg').click(), { disabled: !activeIsImage, color: '#ec4899' }));
         } else {
             menu.appendChild(label('Canvas'));
@@ -6596,7 +7263,7 @@ export function renderImageStudio(container) {
             menu.appendChild(item('bx-select-multiple', 'Select all objects', selectAllObjects, { shortcut: 'Ctrl+A', disabled: vectorShapes.length === 0 }));
             menu.appendChild(divider());
             menu.appendChild(item('bx-expand', 'Resize canvas', () => container.querySelector('#is-resize-btn').click()));
-            menu.appendChild(item('bxs-magic-wand', 'AI tool', () => container.querySelector('#is-canvas-smart-remove').click(), { color: '#10b981' }));
+            menu.appendChild(item('bxs-magic-wand', 'AI tools for canvas', () => container.querySelector('#is-canvas-smart-remove').click(), { color: '#10b981' }));
             menu.appendChild(item('bx-cut', 'Remove background', () => container.querySelector('#is-canvas-remove-bg').click(), { color: '#ec4899' }));
             menu.appendChild(item('bx-layer-minus', 'Merge all objects', () => container.querySelector('#is-flatten-all').click(), { disabled: vectorShapes.length === 0, color: '#ef4444' }));
             menu.appendChild(item('bx-trash', 'Clear canvas', () => container.querySelector('#is-clear').click(), { color: '#f87171' }));
