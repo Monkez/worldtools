@@ -3,6 +3,16 @@ import { AIClient } from '../utils/aiClient.js';
 import { getApiBase } from '../utils/apiBase.js';
 import { ensurePuterLoaded } from '../utils/puterLoader.js';
 
+const IMAGE_STUDIO_PROJECT_EXTENSION = '.wtoolsimage';
+const IMAGE_STUDIO_LEGACY_PROJECT_EXTENSION = '.wtools-image';
+
+function getProjectFilename(projectName) {
+    const baseName = projectName === 'Untitled'
+        ? 'worldtools-image'
+        : projectName.replace(/\.(?:wtoolsimage|wtools-image|json)$/i, '');
+    return `${baseName}${IMAGE_STUDIO_PROJECT_EXTENSION}`;
+}
+
 export function renderImageStudio(container) {
     window._isGetCVal = function(id) {
         const el = container.querySelector(id);
@@ -42,7 +52,7 @@ export function renderImageStudio(container) {
                     <button class="is-btn-icon" id="is-upload-btn" title="Open (Ctrl+O)"><i class='bx bx-folder-open'></i></button>
                     <input type="file" id="is-upload" accept="image/*" style="display: none;">
                     <button class="is-btn-icon" id="is-project-open-btn" title="Open editable project"><i class='bx bx-folder'></i></button>
-                    <input type="file" id="is-project-open" accept=".wtools-image,.json,application/json" style="display:none;">
+                    <input type="file" id="is-project-open" accept="${IMAGE_STUDIO_PROJECT_EXTENSION},${IMAGE_STUDIO_LEGACY_PROJECT_EXTENSION},.json,application/json" style="display:none;">
                     <button class="is-btn-icon" id="is-project-save-btn" title="Save editable project (Ctrl+Shift+S)"><i class='bx bx-save'></i></button>
                     <button class="is-btn-icon" id="is-project-save-as-btn" title="Save project as"><i class='bx bx-copy-alt'></i></button>
                     <span id="is-project-status" title="Project status" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8b8b8b;font-size:10px;"></span>
@@ -4627,8 +4637,8 @@ export function renderImageStudio(container) {
         try {
             if ((saveAs || !currentProjectHandle) && window.showSaveFilePicker) {
                 currentProjectHandle = await window.showSaveFilePicker({
-                    suggestedName: `${currentProjectName === 'Untitled' ? 'worldtools-image' : currentProjectName.replace(/\.wtools-image$/i, '')}.wtools-image`,
-                    types: [{ description: 'WorldTools Image Project', accept: { 'application/json': ['.wtools-image'] } }]
+                    suggestedName: getProjectFilename(currentProjectName),
+                    types: [{ description: 'WorldTools Image Project', accept: { 'application/json': [IMAGE_STUDIO_PROJECT_EXTENSION] } }]
                 });
                 currentProjectName = currentProjectHandle.name;
             }
@@ -4636,7 +4646,7 @@ export function renderImageStudio(container) {
                 const writable = await currentProjectHandle.createWritable();
                 await writable.write(blob); await writable.close();
             } else {
-                const filename = `${currentProjectName === 'Untitled' ? 'worldtools-image' : currentProjectName.replace(/\.wtools-image$/i, '')}.wtools-image`;
+                const filename = getProjectFilename(currentProjectName);
                 downloadBlob(blob, filename);
                 currentProjectName = filename;
             }
@@ -4677,7 +4687,7 @@ export function renderImageStudio(container) {
         if (projectDirty && !await showStudioConfirm({ title:'Open another project?', message:'Your current project has unsaved changes.', confirmText:'Open Project', danger:true })) return;
         if (window.showOpenFilePicker) {
             try {
-                const [handle] = await window.showOpenFilePicker({ types:[{ description:'WorldTools Image Project', accept:{ 'application/json':['.wtools-image','.json'] } }], multiple:false });
+                const [handle] = await window.showOpenFilePicker({ types:[{ description:'WorldTools Image Project', accept:{ 'application/json':[IMAGE_STUDIO_PROJECT_EXTENSION,'.json'] } }], multiple:false });
                 await loadProjectFile(await handle.getFile(), handle);
                 return;
             } catch (err) { if (err?.name === 'AbortError') return; }
