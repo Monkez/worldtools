@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "electron .",
-    "package": "npm run build && electron-builder --win"
+    "generate:icon": "node scripts/generate-icon.cjs",
+    "package": "npm run generate:icon && npm run build && electron-builder --win"
   },
   "build": {
     "appId": "com.monkez.worldtools",
@@ -19,6 +20,7 @@
     },
     "win": {
       "target": "nsis",
+      "icon": "build/worldtools.ico",
       "signAndEditExecutable": false
     },
     "asarUnpack": [

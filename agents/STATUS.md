@@ -16,6 +16,8 @@
 - `.wtools-image` is legacy-only because Chromium rejects its hyphen when it is
   used in File System Access API picker options.
 - Preserve legacy opening through the hidden HTML file input.
+- Windows packaging uses `build/worldtools.ico`, generated from
+  `public/worldtools.png` before `electron-builder` runs.
 
 ## Change workflow
 
